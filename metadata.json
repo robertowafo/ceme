@@ -1,0 +1,8 @@
+{
+  "name": "Chapelle de l'Eternel Mon Étendard",
+  "description": "Site officiel de la Chapelle de l'Eternel Mon Étendard, église chrétienne évangélique. Rejoignez-nous pour nos cultes en direct, enseignements et temps de prière.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

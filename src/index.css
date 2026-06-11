@@ -1,0 +1,147 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800&display=swap');
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'CabinetGrotesk-Extrabold';
+  src: url('../fonts/CabinetGrotesk-Extrabold.woff2') format('woff2'),
+       url('../fonts/CabinetGrotesk-Extrabold.woff') format('woff'),
+       url('../fonts/CabinetGrotesk-Extrabold.ttf') format('truetype');
+  font-weight: 800;
+  font-display: swap;
+  font-style: normal;
+}
+
+.roboto-text {
+  font-family: "Roboto", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings: "wdth" 100;
+}
+
+@theme {
+  --color-gold: #C9A84C;
+  --color-burgundy: #7B1D1D;
+  --color-soft-black: #1A1A1A;
+
+  --font-serif: "CabinetGrotesk-Extrabold", "Cabinet Grotesk", "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+@layer base {
+  body {
+    @apply font-sans bg-white text-soft-black antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif tracking-tight text-soft-black;
+  }
+}
+
+.bg-burgundy { background-color: var(--color-burgundy); }
+.text-burgundy { color: var(--color-burgundy); }
+.text-gold { color: var(--color-gold); }
+.bg-gold { background-color: var(--color-gold); }
+.border-gold { border-color: var(--color-gold); }
+.bg-soft-black { background-color: var(--color-soft-black); }
+.text-soft-black { color: var(--color-soft-black); }
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+}
+
+.glass-panel-dark {
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(10px);
+}
+
+/* ====== CROSS / GRID PATTERN ====== */
+.cross-pattern {
+  background-image:
+    linear-gradient(rgba(201, 168, 76, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201, 168, 76, 0.045) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+.cross-pattern-dark {
+  background-image:
+    linear-gradient(rgba(201, 168, 76, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201, 168, 76, 0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* ====== SHIMMER TEXT (gold) ====== */
+@keyframes shimmer-text {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    #C9A84C 0%,
+    #f0d080 25%,
+    #fff8dc 50%,
+    #f0d080 75%,
+    #C9A84C 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-text 4s linear infinite;
+}
+
+/* ====== DIVINE GLOW (pulsing gold halo) ====== */
+@keyframes divine-glow {
+  0%, 100% {
+    box-shadow:
+      0 0 15px rgba(201, 168, 76, 0.20),
+      0 0 30px rgba(201, 168, 76, 0.10);
+  }
+  50% {
+    box-shadow:
+      0 0 25px rgba(201, 168, 76, 0.45),
+      0 0 55px rgba(201, 168, 76, 0.20),
+      0 0 90px rgba(201, 168, 76, 0.08);
+  }
+}
+
+.animate-divine-glow {
+  animation: divine-glow 3s ease-in-out infinite;
+}
+
+/* ====== SOFT FLOAT ====== */
+@keyframes float-up {
+  0%, 100% { transform: translateY(0px);  }
+  50%       { transform: translateY(-9px); }
+}
+
+.animate-float {
+  animation: float-up 4s ease-in-out infinite;
+}
+
+/* ====== FADE-IN SCALE (for hero badge etc.) ====== */
+@keyframes pop-in {
+  0%   { opacity: 0; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1);   }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.5s ease-out forwards;
+}
+
+/* ====== GRADIENT GOLD TEXT ====== */
+.gradient-text-gold {
+  background: linear-gradient(135deg, #C9A84C 0%, #f5d98b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ====== SECTION DIVIDER ====== */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.35), transparent);
+}

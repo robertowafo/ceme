@@ -1,0 +1,267 @@
+import { apiFetch, authHeaders } from './auth';
+
+// ─── Interfaces (inchangées pour compatibilité) ────────────────────────────────
+
+export interface RecommendedLink {
+  id: string;
+  title: string;
+  youtubeId: string;
+  description?: string;
+  category: string;
+}
+
+export interface GalleryPhoto {
+  id: string;
+  category: string;
+  title: string;
+  location?: string;
+  url: string;
+  desc?: string;
+}
+
+export interface ChurchEvent {
+  id: string;
+  title: string;
+  type: 'special' | 'upcoming' | 'annonce';
+  dateStr: string;
+  isoDate: string;
+  location: string;
+  preacher?: string;
+  desc: string;
+  badge: string;
+  badgeColor?: string;
+  image: string;
+  isPopular?: boolean;
+}
+
+export interface TestimonialItem {
+  id: string;
+  author: string;
+  since: string;
+  text: string;
+  img?: string;
+  category: string;
+}
+
+export interface StudyDocument {
+  id: string;
+  title: string;
+  description?: string;
+  url: string;
+  category?: string;
+  fileType: string;
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+async function getAll<T>(endpoint: string): Promise<T[]> {
+  const res = await fetch(endpoint);
+  if (!res.ok) throw new Error(`Erreur ${res.status} sur ${endpoint}`);
+  return res.json();
+}
+
+async function upsert(endpoint: string, id: string, body: object): Promise<void> {
+  const res = await apiFetch(`${endpoint}/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+async function remove(endpoint: string, id: string): Promise<void> {
+  const res = await apiFetch(`${endpoint}/${id}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+// ─── recommended_links ─────────────────────────────────────────────────────────
+
+export async function getRecommendedLinks(): Promise<RecommendedLink[]> {
+  return getAll<RecommendedLink>('/api/recommended-links');
+}
+
+export async function saveRecommendedLink(link: RecommendedLink): Promise<void> {
+  return upsert('/api/recommended-links', link.id, link);
+}
+
+export async function deleteRecommendedLink(id: string): Promise<void> {
+  return remove('/api/recommended-links', id);
+}
+
+// ─── gallery_photos ────────────────────────────────────────────────────────────
+
+export async function getGalleryPhotos(): Promise<GalleryPhoto[]> {
+  return getAll<GalleryPhoto>('/api/gallery-photos');
+}
+
+export async function saveGalleryPhoto(photo: GalleryPhoto): Promise<void> {
+  return upsert('/api/gallery-photos', photo.id, photo);
+}
+
+export async function deleteGalleryPhoto(id: string): Promise<void> {
+  return remove('/api/gallery-photos', id);
+}
+
+// ─── church_events ─────────────────────────────────────────────────────────────
+
+export async function getChurchEvents(): Promise<ChurchEvent[]> {
+  return getAll<ChurchEvent>('/api/church-events');
+}
+
+export async function saveChurchEvent(event: ChurchEvent): Promise<void> {
+  return upsert('/api/church-events', event.id, event);
+}
+
+export async function deleteChurchEvent(id: string): Promise<void> {
+  return remove('/api/church-events', id);
+}
+
+// ─── testimonials ──────────────────────────────────────────────────────────────
+
+export async function getTestimonials(): Promise<TestimonialItem[]> {
+  return getAll<TestimonialItem>('/api/testimonials');
+}
+
+export async function saveTestimonial(testimonial: TestimonialItem): Promise<void> {
+  return upsert('/api/testimonials', testimonial.id, testimonial);
+}
+
+export async function deleteTestimonial(id: string): Promise<void> {
+  return remove('/api/testimonials', id);
+}
+
+// ─── study_documents ───────────────────────────────────────────────────────────
+
+export async function getStudyDocuments(): Promise<StudyDocument[]> {
+  return getAll<StudyDocument>('/api/study-documents');
+}
+
+export async function saveStudyDocument(document: StudyDocument): Promise<void> {
+  return upsert('/api/study-documents', document.id, document);
+}
+
+export async function deleteStudyDocument(id: string): Promise<void> {
+  return remove('/api/study-documents', id);
+}
+
+// ─── donations ────────────────────────────────────────────────────────────────
+
+export interface Donation {
+  id: string;
+  donorName?: string;
+  phone?: string;
+  amount: number;
+  currency: string;
+  contribType: string;
+  paymentMethod: string;
+  reference?: string;
+  submittedAt: string;
+}
+
+export interface DonationStats {
+  totalCount: number;
+  totalAmount: number;
+  thisMonthAmount: number;
+  thisMonthCount: number;
+  byType: { type: string; count: number; total: number }[];
+  byMethod: { method: string; count: number; total: number }[];
+  monthly: { month: string; count: number; total: number }[];
+}
+
+export async function submitDonation(data: {
+  donorName?: string;
+  phone?: string;
+  amount: number;
+  currency?: string;
+  contribType: string;
+  paymentMethod: string;
+  reference?: string;
+}): Promise<void> {
+  const res = await fetch('/api/donations', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function getAllDonations(): Promise<Donation[]> {
+  const res = await fetch('/api/donations', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function getDonationStats(): Promise<DonationStats> {
+  const res = await fetch('/api/donations/stats', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function deleteDonation(id: string): Promise<void> {
+  return remove('/api/donations', id);
+}
+
+// ─── prayer_requests ───────────────────────────────────────────────────────────
+
+export interface PrayerRequest {
+  id: string;
+  name?: string;
+  phone?: string;
+  message: string;
+  type: 'prayer' | 'testimony';
+  isPublic: boolean;
+  submittedAt: string;
+}
+
+export interface PrayerRequestPublic {
+  id: string;
+  name?: string;
+  message: string;
+  type: 'prayer' | 'testimony';
+  submittedAt: string;
+}
+
+export async function submitPrayerRequest(data: {
+  name?: string;
+  phone?: string;
+  message: string;
+  type: 'prayer' | 'testimony';
+  isPublic: boolean;
+}): Promise<void> {
+  const res = await fetch('/api/prayer-requests', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function getPublicPrayerRequests(): Promise<PrayerRequestPublic[]> {
+  const res = await fetch('/api/prayer-requests/public');
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function getAllPrayerRequests(): Promise<PrayerRequest[]> {
+  const res = await fetch('/api/prayer-requests', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() }
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function deletePrayerRequest(id: string): Promise<void> {
+  return remove('/api/prayer-requests', id);
+}

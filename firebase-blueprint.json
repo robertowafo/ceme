@@ -1,0 +1,106 @@
+{
+  "entities": {
+    "recommended_links": {
+      "title": "Recommended YouTube Video",
+      "description": "YouTube videos curated by CEME admins.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique video ID in Firestore" },
+        "title": { "type": "string", "description": "Title of the sermon or praise" },
+        "youtubeId": { "type": "string", "description": "YouTube video sequence ID" },
+        "description": { "type": "string", "description": "Short explanation of video scope" },
+        "category": { "type": "string", "description": "Video category e.g. Sermon, Louange" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["id", "title", "youtubeId", "category"]
+    },
+    "gallery_photos": {
+      "title": "Gallery Photo",
+      "description": "Church life and assembly media photos.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique photo identifier" },
+        "category": { "type": "string", "description": "Category folder" },
+        "title": { "type": "string", "description": "Photo title" },
+        "location": { "type": "string", "description": "Location capture" },
+        "url": { "type": "string", "description": "Direct Unsplash or hosted image url" },
+        "desc": { "type": "string", "description": "Detailed description text" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["id", "category", "title", "url"]
+    },
+    "church_events": {
+      "title": "Church Event",
+      "description": "Special programs, services and calendar events.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique event identifier" },
+        "title": { "type": "string", "description": "Event program title" },
+        "type": { "type": "string", "enum": ["special", "upcoming", "annonce"], "description": "Kind of event" },
+        "dateStr": { "type": "string", "description": "Human-friendly date duration text" },
+        "isoDate": { "type": "string", "format": "date", "description": "Strict date calendar marker" },
+        "location": { "type": "string", "description": "Location venue" },
+        "preacher": { "type": "string", "description": "Visiting minister or pastoral teacher" },
+        "desc": { "type": "string", "description": "Brief description outlining scope" },
+        "badge": { "type": "string", "description": "Visible ribbon tag text" },
+        "badgeColor": { "type": "string", "description": "Tailwind color class string" },
+        "image": { "type": "string", "description": "Hero representation image url" },
+        "isPopular": { "type": "boolean", "description": "Highlights event in lists" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["id", "title", "type", "dateStr", "isoDate", "location", "badge", "image"]
+    },
+    "testimonials": {
+      "title": "Testimonial",
+      "description": "Fidèles testimonies and praises.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique testimonial record id" },
+        "author": { "type": "string", "description": "Author name" },
+        "since": { "type": "string", "description": "Since marker or role label" },
+        "text": { "type": "string", "description": "Detailed healing or restoration story" },
+        "img": { "type": "string", "description": "Optional author profile image url" },
+        "category": { "type": "string", "description": "Placement category e.g. home, horizontal, vertical" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "author", "since", "text", "category"]
+    },
+    "study_documents": {
+      "title": "Study Document",
+      "description": "PDF notes, programs, and religious resources for church-life.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique document identifier" },
+        "title": { "type": "string", "description": "Resource title" },
+        "description": { "type": "string", "description": "File synopsis" },
+        "url": { "type": "string", "description": "Direct file or document download web url" },
+        "category": { "type": "string", "description": "Category classification" },
+        "fileType": { "type": "string", "description": "Type text such as PDF, DOCX" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "url", "fileType"]
+    }
+  },
+  "firestore": {
+    "recommended_links": {
+      "schema": "recommended_links",
+      "description": "List of recommended YouTube videos displayed in the Sermons tab."
+    },
+    "gallery_photos": {
+      "schema": "gallery_photos",
+      "description": "Photos of church life and worship displayed in the About Us page."
+    },
+    "church_events": {
+      "schema": "church_events",
+      "description": "Church schedule, calendar, and special activities items."
+    },
+    "testimonials": {
+      "schema": "testimonials",
+      "description": "Faith testimonies from members placed on the homepage and testimonial cross."
+    },
+    "study_documents": {
+      "schema": "study_documents",
+      "description": "Academic resources, programs, and PDF scriptures notes."
+    }
+  }
+}

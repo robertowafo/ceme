@@ -1,0 +1,117 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. catch-all secure gate
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Global Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedAdmin() {
+      return isSignedIn() &&
+             request.auth.token.email == "impacttech237@gmail.com" &&
+             request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 3. Entity Validation Helpers
+    function isValidLink(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.youtubeId is string && data.youtubeId.size() <= 64 &&
+             data.category is string && data.category.size() <= 100 &&
+             (!data.keys().hasAny(['description']) || (data.description is string && data.description.size() <= 2000));
+    }
+
+    function isValidPhoto(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.category is string && data.category.size() <= 100 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.url is string && data.url.size() <= 1000 &&
+             (!data.keys().hasAny(['location']) || (data.location is string && data.location.size() <= 200)) &&
+             (!data.keys().hasAny(['desc']) || (data.desc is string && data.desc.size() <= 2000));
+    }
+
+    function isValidEvent(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.type is string && (data.type == 'special' || data.type == 'upcoming' || data.type == 'annonce') &&
+             data.dateStr is string && data.dateStr.size() <= 150 &&
+             data.isoDate is string && data.isoDate.size() <= 30 &&
+             data.location is string && data.location.size() <= 200 &&
+             data.badge is string && data.badge.size() <= 100 &&
+             data.image is string && data.image.size() <= 1000 &&
+             (!data.keys().hasAny(['preacher']) || (data.preacher is string && data.preacher.size() <= 150)) &&
+             (!data.keys().hasAny(['desc']) || (data.desc is string && data.desc.size() <= 2000)) &&
+             (!data.keys().hasAny(['badgeColor']) || (data.badgeColor is string && data.badgeColor.size() <= 100)) &&
+             (!data.keys().hasAny(['isPopular']) || (data.isPopular is bool));
+    }
+
+    function isValidTestimonial(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.author is string && data.author.size() <= 150 &&
+             data.since is string && data.since.size() <= 100 &&
+             data.text is string && data.text.size() <= 3000 &&
+             data.category is string && data.category.size() <= 100 &&
+             (!data.keys().hasAny(['img']) || (data.img is string && data.img.size() <= 1000));
+    }
+
+    function isValidDocument(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.url is string && data.url.size() <= 1000 &&
+             data.fileType is string && data.fileType.size() <= 30 &&
+             (!data.keys().hasAny(['description']) || (data.description is string && data.description.size() <= 2000)) &&
+             (!data.keys().hasAny(['category']) || (data.category is string && data.category.size() <= 100));
+    }
+
+    // 4. Matches Section
+    match /recommended_links/{linkId} {
+      allow read, list: if true;
+      allow create: if isVerifiedAdmin() && isValidId(linkId) && isValidLink(request.resource.data);
+      allow update: if isVerifiedAdmin() && isValidId(linkId) && isValidLink(request.resource.data) &&
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'youtubeId', 'description', 'category']));
+      allow delete: if isVerifiedAdmin() && isValidId(linkId);
+    }
+
+    match /gallery_photos/{photoId} {
+      allow read, list: if true;
+      allow create: if isVerifiedAdmin() && isValidId(photoId) && isValidPhoto(request.resource.data);
+      allow update: if isVerifiedAdmin() && isValidId(photoId) && isValidPhoto(request.resource.data) &&
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['category', 'title', 'location', 'url', 'desc']));
+      allow delete: if isVerifiedAdmin() && isValidId(photoId);
+    }
+
+    match /church_events/{eventId} {
+      allow read, list: if true;
+      allow create: if isVerifiedAdmin() && isValidId(eventId) && isValidEvent(request.resource.data);
+      allow update: if isVerifiedAdmin() && isValidId(eventId) && isValidEvent(request.resource.data) &&
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'type', 'dateStr', 'isoDate', 'location', 'preacher', 'desc', 'badge', 'badgeColor', 'image', 'isPopular']));
+      allow delete: if isVerifiedAdmin() && isValidId(eventId);
+    }
+
+    match /testimonials/{testimonialId} {
+      allow read, list: if true;
+      allow create: if isVerifiedAdmin() && isValidId(testimonialId) && isValidTestimonial(request.resource.data);
+      allow update: if isVerifiedAdmin() && isValidId(testimonialId) && isValidTestimonial(request.resource.data) &&
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['author', 'since', 'text', 'img', 'category']));
+      allow delete: if isVerifiedAdmin() && isValidId(testimonialId);
+    }
+
+    match /study_documents/{documentId} {
+      allow read, list: if true;
+      allow create: if isVerifiedAdmin() && isValidId(documentId) && isValidDocument(request.resource.data);
+      allow update: if isVerifiedAdmin() && isValidId(documentId) && isValidDocument(request.resource.data) &&
+                    (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'url', 'category', 'fileType']));
+      allow delete: if isVerifiedAdmin() && isValidId(documentId);
+    }
+  }
+}
