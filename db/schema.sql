@@ -1,6 +1,7 @@
--- Schéma PostgreSQL pour Chapelle de l'Éternel Mon Étendard
--- Exécuter ce fichier une fois pour initialiser la base de données :
---   psql -U <utilisateur> -d <nom_bd> -f db/schema.sql
+-- Schéma D1/SQLite pour Chapelle de l'Éternel Mon Étendard
+-- Créer la base    : wrangler d1 create ceme-db
+-- Initialiser (dev): wrangler d1 execute ceme-db --local --file=db/schema.sql
+-- Initialiser (prod): wrangler d1 execute ceme-db --file=db/schema.sql
 
 CREATE TABLE IF NOT EXISTS recommended_links (
   id          TEXT PRIMARY KEY,
@@ -31,7 +32,7 @@ CREATE TABLE IF NOT EXISTS church_events (
   badge       TEXT NOT NULL,
   badge_color TEXT,
   image       TEXT NOT NULL,
-  is_popular  BOOLEAN NOT NULL DEFAULT false
+  is_popular  INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS testimonials (
@@ -61,7 +62,7 @@ CREATE TABLE IF NOT EXISTS donations (
   contrib_type   TEXT NOT NULL DEFAULT 'Offrande',
   payment_method TEXT NOT NULL DEFAULT 'OM',
   reference      TEXT,
-  submitted_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  submitted_at   TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS prayer_requests (
@@ -70,6 +71,6 @@ CREATE TABLE IF NOT EXISTS prayer_requests (
   phone        TEXT,
   message      TEXT NOT NULL,
   type         TEXT NOT NULL DEFAULT 'prayer' CHECK (type IN ('prayer', 'testimony')),
-  is_public    BOOLEAN NOT NULL DEFAULT true,
-  submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  is_public    INTEGER NOT NULL DEFAULT 1,
+  submitted_at TEXT NOT NULL
 );

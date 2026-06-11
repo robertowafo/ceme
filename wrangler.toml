@@ -1,0 +1,20 @@
+name = "ceme"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-11-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ceme-db"
+database_id = "REMPLACER_PAR_VOTRE_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "ceme-uploads"
+
+[vars]
+BUCKET_URL = "https://pub-REMPLACER.r2.dev"
+
+# Secrets à configurer via le dashboard Cloudflare ou :
+#   wrangler secret put JWT_SECRET
+#   wrangler secret put ADMIN_EMAIL
+#   wrangler secret put YOUTUBE_API_KEY
