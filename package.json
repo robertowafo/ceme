@@ -7,7 +7,7 @@
     "dev:vite": "vite",
     "dev": "wrangler pages dev --proxy 5173",
     "build": "vite build",
-    "deploy": "vite build && wrangler pages deploy dist",
+    "deploy": "vite build && wrangler pages deploy dist --project-name=ceme",
     "db:local": "wrangler d1 execute ceme-db --local --file=db/schema.sql",
     "db:remote": "wrangler d1 execute ceme-db --file=db/schema.sql",
     "lint": "tsc --noEmit"
