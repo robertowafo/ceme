@@ -5,7 +5,7 @@ compatibility_date = "2024-11-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "ceme-db"
-database_id = "REMPLACER_PAR_VOTRE_DATABASE_ID"
+database_id = "9bda7f77-4ca9-41b5-b6fc-3cc2a6b681cb"
 
 [[r2_buckets]]
 binding = "BUCKET"
