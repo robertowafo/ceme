@@ -298,13 +298,13 @@ export function Live() {
 
               <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-serif font-bold mb-3 leading-tight">
-                    {streamMode === 'live' 
+                  <h2 className="text-xl sm:text-2xl font-serif font-bold mb-3 leading-tight text-white">
+                    {streamMode === 'live'
                       ? (liveData.title || 'Service de Célébration Prophétique')
                       : 'Grâce TV H24 - La Présence Divine en Continu'
                     }
                   </h2>
-                  <p className="text-white/70 text-base mb-4">
+                  <p className="text-white/80 text-base mb-4">
                     {streamMode === 'live'
                       ? `Par ${liveData.title ? parsePreacher(liveData.title) : 'Rev. Dr. Alphonse ESSOMBA'}`
                       : 'Diffusion continue depuis les régies CEME • Réseau de Grâce'
@@ -313,8 +313,8 @@ export function Live() {
                   <span className="inline-block bg-white/10 text-white text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-md">
                     {streamMode === 'live' ? 'Grâce TV • Canal Divin' : 'Retransmission VMix Active'}
                   </span>
-                  
-                  <p className="text-white/50 text-xs font-light mt-4 leading-relaxed max-w-2xl line-clamp-3">
+
+                  <p className="text-white/60 text-xs font-light mt-4 leading-relaxed max-w-2xl line-clamp-3">
                     {streamMode === 'live'
                       ? (liveData.description || "Découvrez la prédication inspirante diffusée sur notre plateforme en ligne et laissez l'onction d'élévation toucher votre vie.")
                       : "Connectez-vous à l'atmosphère prophétique 24 heures sur 24, 7 jours sur 7. Retrouvez des flux d'enseignements, des prières de délivrances, des cantiques inspirés et des cultes historiques diffusés sans interruption."
@@ -346,7 +346,7 @@ export function Live() {
 
             {/* Upcoming Streams — dates calculées dynamiquement */}
             <div className="mt-12">
-              <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-3">
+              <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-3 text-white">
                 <CalendarClock className="w-6 h-6 text-gold" />
                 Prochains Directs
               </h3>
@@ -378,7 +378,7 @@ export function Live() {
                           <span className="block text-2xl font-serif">{ev.date.getDate()}</span>
                         </div>
                         <div>
-                          <h4 className="font-bold text-lg mb-1">{ev.label}</h4>
+                          <h4 className="font-bold text-lg mb-1 text-white">{ev.label}</h4>
                           <p className="text-white/60 text-sm leading-relaxed">{ev.time} - {ev.desc}</p>
                         </div>
                       </div>
