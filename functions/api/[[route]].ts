@@ -835,4 +835,36 @@ app.get('/audit-log', requireAdmin, async (c) => {
   return c.json(results)
 })
 
+// ─── admin counts (all tabs in one query) ──────────────────────────────────────
+
+app.get('/admin/counts', requireAdmin, async (c) => {
+  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog] =
+    await Promise.all([
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM recommended_links').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM gallery_photos').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM church_events').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM testimonials').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM study_documents').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM prayer_requests').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM donations').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM blog_posts').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM newsletter_subscribers').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM donation_projects').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM audit_log').first<{n:number}>(),
+    ])
+  return c.json({
+    links:        Number(links?.n        ?? 0),
+    photos:       Number(photos?.n       ?? 0),
+    events:       Number(events?.n       ?? 0),
+    testimonials: Number(testimonials?.n ?? 0),
+    documents:    Number(documents?.n    ?? 0),
+    prayers:      Number(prayers?.n      ?? 0),
+    donations:    Number(donations?.n    ?? 0),
+    blog:         Number(blog?.n         ?? 0),
+    newsletter:   Number(newsletter?.n   ?? 0),
+    projects:     Number(projects?.n     ?? 0),
+    audit:        Number(auditLog?.n     ?? 0),
+  })
+})
+
 export const onRequest = handle(app)

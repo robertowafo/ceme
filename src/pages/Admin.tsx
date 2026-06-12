@@ -47,6 +47,7 @@ import {
   getAdmins, addAdmin, removeAdmin, AdminUser,
   getAuditLog, AuditEntry,
   getDonationProjects, saveDonationProject, deleteDonationProject, DonationProject,
+  getAdminCounts, AdminCounts,
 } from '../lib/dbService';
 
 type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'admins' | 'audit';
@@ -82,6 +83,9 @@ export function Admin() {
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [isSavingCat, setIsSavingCat] = useState(false);
+
+  // Modal / Form States
+  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, audit:0 });
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -249,8 +253,15 @@ export function Admin() {
       showStatus(errorMsg, 'error');
     } finally {
       setIsLoadingData(false);
+      getAdminCounts().then(setCounts).catch(() => {});
     }
   };
+
+  // Charger tous les compteurs dès la connexion
+  useEffect(() => {
+    if (!isAdmin) return;
+    getAdminCounts().then(setCounts).catch(() => {});
+  }, [isAdmin]);
 
   useEffect(() => {
     loadData();
@@ -655,7 +666,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <Youtube className="w-4.5 h-4.5" /> 🔴 Recommandés Youtube
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{links.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.links}</span>
             </button>
 
             <button
@@ -669,7 +680,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <ImageIcon className="w-4.5 h-4.5" /> 📸 Galerie de Vie
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{photos.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.photos}</span>
             </button>
 
             <button
@@ -683,7 +694,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <Calendar className="w-4.5 h-4.5" /> 📅 Événements & Activités
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{events.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.events}</span>
             </button>
 
             <button
@@ -697,7 +708,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <Quote className="w-4.5 h-4.5" /> 💬 Témoignages Fidèles
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{testimonials.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.testimonials}</span>
             </button>
 
             <button
@@ -711,7 +722,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <FileText className="w-4.5 h-4.5" /> 📄 Documents d'Étude PDF
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{documents.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.documents}</span>
             </button>
 
             <button
@@ -725,7 +736,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <Heart className="w-4.5 h-4.5" /> 🙏 Requêtes de Prière
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{prayers.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.prayers}</span>
             </button>
 
             <button
@@ -739,7 +750,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <DollarSign className="w-4.5 h-4.5" /> 💰 Dons & Finances
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{donations.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.donations}</span>
             </button>
 
             <button
@@ -753,7 +764,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <FileText className="w-4.5 h-4.5" /> 📝 Articles du Blog
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{blogPosts.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.blog}</span>
             </button>
 
             <button
@@ -767,7 +778,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <Mail className="w-4.5 h-4.5" /> 📧 Abonnés Newsletter
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{subscribers.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.newsletter}</span>
             </button>
 
             <button
@@ -781,7 +792,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <Target className="w-4.5 h-4.5" /> 🎯 Projets & Collectes
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{donationProjects.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.projects}</span>
             </button>
 
             <div className="border-t border-white/10 my-2 pt-2">
@@ -801,7 +812,7 @@ export function Admin() {
               <span className="flex items-center gap-3">
                 <FileText className="w-4.5 h-4.5" /> 📋 Registre des Actions
               </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{auditLog.length}</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.audit}</span>
             </button>
 
             {isSuperAdmin && (

@@ -395,6 +395,22 @@ export async function deleteNewsletterSubscriber(id: string): Promise<void> {
   return remove('/api/newsletter', id);
 }
 
+// ─── admin counts ─────────────────────────────────────────────────────────────
+
+export interface AdminCounts {
+  links: number; photos: number; events: number; testimonials: number;
+  documents: number; prayers: number; donations: number; blog: number;
+  newsletter: number; projects: number; audit: number;
+}
+
+export async function getAdminCounts(): Promise<AdminCounts> {
+  const res = await fetch('/api/admin/counts', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
 // ─── admins ────────────────────────────────────────────────────────────────────
 
 export interface AdminUser {
