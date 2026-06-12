@@ -1,21 +1,44 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, Calendar, User, Search, Tag, Mail, Loader2, BookOpen } from 'lucide-react';
+import { ArrowRight, Calendar, User, Search, Tag, Mail, Loader2, BookOpen, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { getBlogPosts, getBlogCategories, BlogPost, BlogCategory } from '../lib/dbService';
+import { getBlogPosts, BlogPost, subscribeNewsletter } from '../lib/dbService';
 
 export function Blog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterStatus, setNewsletterStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [newsletterErrorMsg, setNewsletterErrorMsg] = useState('');
 
   useEffect(() => {
-    Promise.all([getBlogPosts(), getBlogCategories()])
-      .then(([p, c]) => { setPosts(p); setCategories(c); })
+    getBlogPosts()
+      .then(setPosts)
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim()) return;
+    setNewsletterStatus('loading');
+    setNewsletterErrorMsg('');
+    try {
+      await subscribeNewsletter(newsletterEmail.trim());
+      setNewsletterStatus('success');
+      setNewsletterEmail('');
+    } catch (err: any) {
+      setNewsletterStatus('error');
+      setNewsletterErrorMsg(err.message || "Erreur lors de l'inscription.");
+    }
+  };
+
+  const sidebarCategoryMap = posts.reduce((map, p) => {
+    map.set(p.category, (map.get(p.category) || 0) + 1);
+    return map;
+  }, new Map<string, number>());
+  const sidebarCategories = Array.from(sidebarCategoryMap.entries()).sort((a, b) => b[1] - a[1]);
 
   const filtered = posts.filter(p =>
     p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -154,7 +177,7 @@ export function Blog() {
             </div>
 
             {/* Categories */}
-            {categories.length > 0 && (
+            {posts.length > 0 && (
               <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
                 <h3 className="font-serif text-xl font-bold mb-4 border-b border-gray-100 pb-3">Catégories</h3>
                 <ul className="space-y-3">
@@ -170,23 +193,20 @@ export function Blog() {
                       <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{posts.length}</span>
                     </button>
                   </li>
-                  {categories.map(cat => {
-                    const count = posts.filter(p => p.category === cat.name).length;
-                    return (
-                      <li key={cat.id}>
-                        <button
-                          onClick={() => setSearchQuery(cat.name)}
-                          className={`flex items-center justify-between w-full text-sm font-medium transition-colors group ${searchQuery === cat.name ? 'text-burgundy' : 'text-gray-600 hover:text-burgundy'}`}
-                        >
-                          <span className="flex items-center gap-2">
-                            <span className={`w-1.5 h-1.5 rounded-full transition-colors ${searchQuery === cat.name ? 'bg-burgundy' : 'bg-gray-300 group-hover:bg-burgundy'}`}></span>
-                            {cat.name}
-                          </span>
-                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{count}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
+                  {sidebarCategories.map(([catName, count]) => (
+                    <li key={catName}>
+                      <button
+                        onClick={() => setSearchQuery(catName)}
+                        className={`flex items-center justify-between w-full text-sm font-medium transition-colors group ${searchQuery === catName ? 'text-burgundy' : 'text-gray-600 hover:text-burgundy'}`}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className={`w-1.5 h-1.5 rounded-full transition-colors ${searchQuery === catName ? 'bg-burgundy' : 'bg-gray-300 group-hover:bg-burgundy'}`}></span>
+                          {catName}
+                        </span>
+                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{count}</span>
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
@@ -198,10 +218,36 @@ export function Blog() {
               </div>
               <h3 className="font-serif text-2xl font-bold mb-2">Restez nourris</h3>
               <p className="text-white/70 text-sm mb-6 relative z-10">Recevez chaque vendredi le résumé de nos meilleurs articles et le verset d'encouragement de la semaine.</p>
-              <form className="relative z-10" onSubmit={e => e.preventDefault()}>
-                <input type="email" placeholder="Votre email" className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 mb-3 text-sm focus:outline-none focus:border-gold text-white placeholder-white/40" />
-                <button className="w-full bg-gold text-soft-black py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-yellow-500 transition-colors">S'abonner</button>
-              </form>
+              {newsletterStatus === 'success' ? (
+                <div className="relative z-10 flex flex-col items-center gap-3 py-4 text-center">
+                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <Check className="w-6 h-6 text-emerald-400" />
+                  </div>
+                  <p className="text-emerald-400 font-bold text-sm">Vous êtes abonné(e) !</p>
+                  <p className="text-white/50 text-xs">Vous recevrez nos prochains articles par email.</p>
+                </div>
+              ) : (
+                <form className="relative z-10" onSubmit={handleNewsletterSubmit}>
+                  <input
+                    type="email"
+                    required
+                    value={newsletterEmail}
+                    onChange={e => { setNewsletterEmail(e.target.value); setNewsletterStatus('idle'); }}
+                    placeholder="Votre email"
+                    className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 mb-3 text-sm focus:outline-none focus:border-gold text-white placeholder-white/40"
+                  />
+                  {newsletterStatus === 'error' && (
+                    <p className="text-red-400 text-xs mb-2 -mt-1">{newsletterErrorMsg}</p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={newsletterStatus === 'loading'}
+                    className="w-full bg-gold text-soft-black py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-yellow-500 transition-colors disabled:opacity-60"
+                  >
+                    {newsletterStatus === 'loading' ? 'Inscription...' : "S'abonner"}
+                  </button>
+                </form>
+              )}
             </div>
 
           </div>

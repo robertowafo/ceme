@@ -641,4 +641,35 @@ app.delete('/blog-posts/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
+// ─── newsletter_subscribers ────────────────────────────────────────────────────
+
+app.post('/newsletter', async (c) => {
+  const { email } = await c.req.json()
+  if (!email?.trim() || !email.includes('@')) return c.json({ error: 'Adresse email invalide' }, 400)
+  const id = 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+  try {
+    await c.env.DB.prepare(
+      'INSERT INTO newsletter_subscribers (id, email, subscribed_at) VALUES (?,?,?)'
+    ).bind(id, email.trim().toLowerCase(), new Date().toISOString()).run()
+  } catch (e: any) {
+    if (e?.message?.includes('UNIQUE') || e?.message?.includes('unique')) {
+      return c.json({ error: 'Cette adresse email est déjà abonnée.' }, 409)
+    }
+    throw e
+  }
+  return c.json({ success: true })
+})
+
+app.get('/newsletter', requireAdmin, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT id, email, subscribed_at AS subscribedAt FROM newsletter_subscribers ORDER BY subscribed_at DESC'
+  ).all()
+  return c.json(results)
+})
+
+app.delete('/newsletter/:id', requireAdmin, async (c) => {
+  await c.env.DB.prepare('DELETE FROM newsletter_subscribers WHERE id=?').bind(c.req.param('id')).run()
+  return c.json({ success: true })
+})
+
 export const onRequest = handle(app)

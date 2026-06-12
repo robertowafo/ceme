@@ -332,3 +332,35 @@ export async function saveBlogPost(post: BlogPost): Promise<void> {
 export async function deleteBlogPost(id: string): Promise<void> {
   return remove('/api/blog-posts', id);
 }
+
+// ─── newsletter_subscribers ────────────────────────────────────────────────────
+
+export interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  subscribedAt: string;
+}
+
+export async function subscribeNewsletter(email: string): Promise<void> {
+  const res = await fetch('/api/newsletter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+  const res = await fetch('/api/newsletter', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function deleteNewsletterSubscriber(id: string): Promise<void> {
+  return remove('/api/newsletter', id);
+}

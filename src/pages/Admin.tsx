@@ -27,6 +27,7 @@ import {
   CreditCard,
   Smartphone,
   BarChart3,
+  Mail,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -41,9 +42,10 @@ import {
   getAllDonations, getDonationStats, deleteDonation, Donation, DonationStats,
   getAllBlogPosts, saveBlogPost, deleteBlogPost, BlogPost,
   getBlogCategories, saveBlogCategory, deleteBlogCategory, BlogCategory,
+  getNewsletterSubscribers, deleteNewsletterSubscriber, NewsletterSubscriber,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter';
 
 export function Admin() {
   const { user, isAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
@@ -62,6 +64,7 @@ export function Admin() {
   const [donationStats, setDonationStats] = useState<DonationStats | null>(null);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([]);
+  const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [isSavingCat, setIsSavingCat] = useState(false);
@@ -202,6 +205,9 @@ export function Admin() {
         const [data, cats] = await Promise.all([getAllBlogPosts(), getBlogCategories()]);
         setBlogPosts(data);
         setBlogCategories(cats);
+      } else if (activeTab === 'newsletter') {
+        const data = await getNewsletterSubscribers();
+        setSubscribers(data);
       }
     } catch (err: any) {
       console.error('Failure loading data:', err);
@@ -334,6 +340,8 @@ export function Admin() {
         await deleteDonation(deleteConfirmId);
       } else if (activeTab === 'blog') {
         await deleteBlogPost(deleteConfirmId);
+      } else if (activeTab === 'newsletter') {
+        await deleteNewsletterSubscriber(deleteConfirmId);
       }
       showStatus('Élément supprimé avec succès !', 'success');
       loadData();
@@ -701,6 +709,20 @@ export function Admin() {
               </span>
               <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{blogPosts.length}</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('newsletter')}
+              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                activeTab === 'newsletter'
+                  ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-900/30'
+                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <Mail className="w-4.5 h-4.5" /> 📧 Abonnés Newsletter
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{subscribers.length}</span>
+            </button>
           </div>
 
           {/* Workspace Right Workspace Content */}
@@ -716,6 +738,7 @@ export function Admin() {
                   {activeTab === 'prayers' && 'Requêtes de Prière & Intercessions'}
                   {activeTab === 'donations' && 'Reporting Financier & Dons'}
                   {activeTab === 'blog' && 'Gestion des Articles du Blog'}
+                  {activeTab === 'newsletter' && 'Abonnés à la Newsletter'}
                 </h3>
                 <p className="text-white/40 text-[11px] font-mono">
                   Table PostgreSQL: {activeTab === 'links' && 'recommended_links'}
@@ -726,10 +749,11 @@ export function Admin() {
                   {activeTab === 'prayers' && 'prayer_requests'}
                   {activeTab === 'donations' && 'donations'}
                   {activeTab === 'blog' && 'blog_posts'}
+                  {activeTab === 'newsletter' && 'newsletter_subscribers'}
                 </p>
               </div>
 
-              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && (
+              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1201,6 +1225,49 @@ export function Admin() {
                     </div>
                   </div>
                 )}
+                {/* 9. Newsletter Subscribers View */}
+                {activeTab === 'newsletter' && (
+                  <div className="overflow-x-auto">
+                    {subscribers.length === 0 ? (
+                      <EmptyMessage />
+                    ) : (
+                      <>
+                        <p className="text-xs text-white/40 mb-4">
+                          {subscribers.length} abonné{subscribers.length > 1 ? 's' : ''} inscrit{subscribers.length > 1 ? 's' : ''} via le blog.
+                        </p>
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
+                              <th className="pb-3 pr-4">Adresse Email</th>
+                              <th className="pb-3 pr-4">Date d'inscription</th>
+                              <th className="pb-3 text-right">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {subscribers.map((sub) => (
+                              <tr key={sub.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                                <td className="py-4 pr-4 font-mono text-sky-400">{sub.email}</td>
+                                <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                  {new Date(sub.subscribedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                                <td className="py-4 text-right">
+                                  <button
+                                    onClick={() => handleDelete(sub.id)}
+                                    className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"
+                                    title="Désinscrire cet abonné"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+                  </div>
+                )}
+
                 {/* 8. Blog Posts View */}
                 {activeTab === 'blog' && (
                   <div className="overflow-x-auto">

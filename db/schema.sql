@@ -91,3 +91,9 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   published_at TEXT NOT NULL,
   is_published INTEGER NOT NULL DEFAULT 1
 );
+
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  id            TEXT PRIMARY KEY,
+  email         TEXT NOT NULL UNIQUE,
+  subscribed_at TEXT NOT NULL
+);
