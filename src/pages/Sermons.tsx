@@ -7,18 +7,15 @@ import {
   Share2,
   Calendar,
   Youtube,
-  Plus,
   X,
   ChevronDown,
-  CheckCircle,
   AlertCircle,
   ExternalLink,
   Video,
   Tv,
   Radio
 } from 'lucide-react';
-import { getRecommendedLinks, saveRecommendedLink, RecommendedLink } from '../lib/dbService';
-import { useAuth } from '../lib/AuthContext';
+import { getRecommendedLinks, RecommendedLink } from '../lib/dbService';
 
 
 interface RecommendedVideo {
@@ -40,7 +37,7 @@ function extractYoutubeId(url: string): string | null {
 }
 
 export function Sermons() {
-  const { isAdmin } = useAuth();
+
   const [activeTab, setActiveTab] = useState<'church' | 'recommended'>('church');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeries, setSelectedSeries] = useState('Tous');
@@ -60,51 +57,8 @@ export function Sermons() {
   const [activePlayId, setActivePlayId] = useState<string | null>(null);
   const [activePlayInfo, setActivePlayInfo] = useState<{ title: string; preacher: string; date: string; description?: string } | null>(null);
   const playerRef = useRef<HTMLDivElement>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  
-  // Form elements for adding a YouTube video recommendation
-  const [fTitle, setFTitle] = useState('');
-  const [fYoutubeUrl, setFYoutubeUrl] = useState('');
-  const [fPreacher, setFPreacher] = useState('');
-  const [fCategory, setFCategory] = useState('Enseignement de Foi');
-  const [fDuration, setFDuration] = useState('10 min');
-  const [fDescription, setFDescription] = useState('');
-  const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState(false);
-  const [isFetchingInfo, setIsFetchingInfo] = useState(false);
 
-  useEffect(() => {
-    const parsedId = extractYoutubeId(fYoutubeUrl);
-    if (!parsedId) return;
 
-    let isCancelled = false;
-
-    const triggerDetailFetch = async () => {
-      setIsFetchingInfo(true);
-      try {
-        const res = await fetch(`/api/youtube/video-info?urlOrId=${encodeURIComponent(parsedId)}`);
-        if (!isCancelled && res.ok) {
-          const info = await res.json();
-          setFTitle((prev) => prev ? prev : (info.title || ''));
-          setFPreacher((prev) => prev ? prev : (info.preacher || 'Chaîne Recommandée'));
-          setFDuration((prev) => prev ? prev : (info.duration || '15 min'));
-          setFDescription((prev) => prev ? prev : (info.description || ''));
-        }
-      } catch (err) {
-        console.error("Auto fetch error in Sermons: ", err);
-      } finally {
-        if (!isCancelled) {
-          setIsFetchingInfo(false);
-        }
-      }
-    };
-
-    triggerDetailFetch();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [fYoutubeUrl]);
 
   // Load backend content
   useEffect(() => {
@@ -189,68 +143,6 @@ export function Sermons() {
     return matchesSearch;
   });
 
-  // Handle addition of a recommended video
-  const handleAddVideoSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-    setFormSuccess(false);
-
-    if (!fTitle.trim()) {
-      setFormError("Veuillez saisir un titre pour le message.");
-      return;
-    }
-    if (!fPreacher.trim()) {
-      setFormError("Veuillez indiquer l'orateur ou la chaîne YouTube originelle.");
-      return;
-    }
-    
-    const parsedId = extractYoutubeId(fYoutubeUrl);
-    if (!parsedId) {
-      setFormError("Le lien YouTube saisi est invalide. Veuillez copier un lien valide du type : https://www.youtube.com/watch?v=... ou https://youtu.be/...");
-      return;
-    }
-
-    const newVideo: RecommendedVideo = {
-      id: `rec-${Date.now()}`,
-      title: fTitle.trim(),
-      youtubeId: parsedId,
-      preacher: fPreacher.trim(),
-      duration: fDuration,
-      category: fCategory,
-      date: "Ajouté aujourd'hui",
-      description: fDescription.trim() || "Un précieux message recommandé par un membre de l'assemblée pour motiver et édifier l'église."
-    };
-
-    // Save also into Firestore if they use this form
-    try {
-      saveRecommendedLink({
-        id: newVideo.id,
-        title: newVideo.title,
-        youtubeId: newVideo.youtubeId,
-        description: newVideo.description,
-        category: newVideo.category
-      });
-    } catch (fsErr) {
-      console.error("Non-blocking Firestore sync failure: ", fsErr);
-    }
-
-
-    const updatedList = [newVideo, ...recommendedList];
-    setRecommendedList(updatedList);
-    localStorage.setItem('ceme_recommended_youtube', JSON.stringify(updatedList));
-
-    // Reset fields
-    setFTitle('');
-    setFYoutubeUrl('');
-    setFPreacher('');
-    setFDescription('');
-    setFormSuccess(true);
-    
-    setTimeout(() => {
-      setFormSuccess(false);
-      setIsAddModalOpen(false);
-    }, 1800);
-  };
 
   const playVideo = (youtubeId: string, info: { title: string; preacher: string; date: string; description?: string }) => {
     setActivePlayId(youtubeId);
@@ -264,9 +156,6 @@ export function Sermons() {
     setActivePlayId(null);
     setActivePlayInfo(null);
   };
-
-  // Live parsed YouTube preview id
-  const tempParsedId = extractYoutubeId(fYoutubeUrl);
 
   return (
     <div className="pt-24 pb-20 bg-[#f5f2ed] min-h-screen">
@@ -354,24 +243,9 @@ export function Sermons() {
               « Sa parole court avec vitesse. » Retrouvez ici les enregistrements audios de nos cultes hebdomadaires à la chapelle de l'Éternel.
             </p>
           ) : (
-            <div className="bg-white rounded-3xl p-6 border border-gold/10 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
-              <div className="text-left sm:max-w-md">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#B59437] block mb-1">Cœur à Coeur Virtuel</span>
-                <h3 className="font-serif text-xl font-bold text-soft-black">Vidéos Spirituelles Sélectionnées</h3>
-                <p className="text-gray-500 font-light text-xs mt-1">
-                  Une curation vivante des meilleures conférences et moments de louange sur YouTube, partagés pour fortifier votre culte personnel.
-                </p>
-              </div>
-              {isAdmin && (
-                <button
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white text-xs font-bold uppercase tracking-widest px-6 py-3.5 rounded-2xl flex items-center gap-2.5 shadow-md hover:shadow-lg transition-all"
-                >
-                  <Plus className="w-4 h-4" />
-                  Recommander un lien YouTube
-                </button>
-              )}
-            </div>
+            <p className="text-gray-500 font-light text-sm italic">
+              Une sélection soignée de conférences et moments de louange partagés pour fortifier votre culte personnel.
+            </p>
           )}
         </div>
 
@@ -608,18 +482,8 @@ export function Sermons() {
                 <Youtube className="w-12 h-12 text-red-600 mx-auto mb-4" />
                 <h3 className="font-serif text-2xl font-bold text-soft-black mb-2">Aucune recommandation YouTube</h3>
                 <p className="text-gray-500 font-light text-sm leading-relaxed mb-6">
-                  Aucune vidéo ne correspond à votre recherche. Proposez-en une nouvelle pour enrichir le catalogue spirituel de l'église !
+                  Aucune vidéo ne correspond à votre recherche. Les vidéos recommandées sont ajoutées par l'administration depuis le tableau de bord.
                 </p>
-                {isAdmin ? (
-                  <button
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="bg-soft-black hover:bg-gold text-white hover:text-soft-black text-xs font-bold uppercase tracking-widest px-6 py-3 rounded-full transition-colors"
-                  >
-                    Ajouter la première vidéo
-                  </button>
-                ) : (
-                  <span className="text-gray-400 text-xs italic">Les suggestions de vidéos sont réservées aux membres du bureau pastoral et aux administrateurs.</span>
-                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
@@ -690,169 +554,7 @@ export function Sermons() {
 
       </div>
 
-      {/* ======================================================
-          MODAL: ADD NEW YOUTUBE RECOMMENDATION FORM
-      ====================================================== */}
-      <AnimatePresence>
-        {isAddModalOpen && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-md"
-            onClick={() => setIsAddModalOpen(false)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 30 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 30 }}
-              className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 border border-red-600/20 shadow-2xl relative overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Gold styling line top boundary */}
-              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-red-600 via-gold to-red-600" />
-              
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-2">
-                  <Youtube className="w-6 h-6 text-red-600" />
-                  <h3 className="font-serif text-2xl font-bold text-soft-black">Recommander une Vidéo</h3>
-                </div>
-                <button 
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="text-gray-400 hover:text-soft-black p-1 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
 
-              {formSuccess ? (
-                <div className="text-center py-10">
-                  <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle className="w-10 h-10" />
-                  </div>
-                  <h4 className="font-serif text-xl font-bold text-soft-black">Ajouté avec succès !</h4>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Le sermon YouTube a été ajouté à la catégorie Messages Recommandés.
-                  </p>
-                </div>
-              ) : (
-                <form onSubmit={handleAddVideoSubmit} className="space-y-4">
-                  
-                  {formError && (
-                    <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs font-semibold flex items-start gap-2 border border-red-200">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{formError}</span>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Titre de la vidéo</label>
-                    <input 
-                      type="text"
-                      placeholder="Ex: Le secret de la guérison invisible"
-                      value={fTitle}
-                      onChange={(e) => setFTitle(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Lien de la vidéo YouTube</label>
-                    <input 
-                      type="text"
-                      placeholder="Ex: https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                      value={fYoutubeUrl}
-                      onChange={(e) => {
-                        setFYoutubeUrl(e.target.value);
-                        setFormError('');
-                      }}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none"
-                    />
-                    {isFetchingInfo && (
-                      <p className="text-[10px] text-red-600 font-medium mt-1 animate-pulse flex items-center gap-1.5">
-                        <span className="w-2 h-2 border border-red-600 border-t-transparent rounded-full animate-spin shrink-0"></span>
-                        Récupération des informations depuis YouTube...
-                      </p>
-                    )}
-                  </div>
-
-                  {/* YouTube Live Parsed Preview */}
-                  {tempParsedId && (
-                    <div className="bg-[#FAF8F5] p-3 rounded-xl border border-gold/10 flex items-center gap-3">
-                      <div className="relative w-20 h-12 bg-black rounded overflow-hidden shadow-inner shrink-0">
-                        <img 
-                          src={`https://img.youtube.com/vi/${tempParsedId}/0.jpg`} 
-                          alt="Live Thumb Preview" 
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="text-left">
-                        <p className="text-[10px] text-green-600 font-bold uppercase">Vidéo YouTube Extraite !</p>
-                        <p className="text-[9px] text-gray-400 font-mono">ID de la vidéo : {tempParsedId}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Prédicateur / Chaîne</label>
-                      <input 
-                        type="text"
-                        placeholder="Ex: Evangéliste Paul C."
-                        value={fPreacher}
-                        onChange={(e) => setFPreacher(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Durée approximative</label>
-                      <input 
-                        type="text"
-                        placeholder="Ex: 22 min"
-                        value={fDuration}
-                        onChange={(e) => setFDuration(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Thème principal</label>
-                      <select 
-                        value={fCategory}
-                        onChange={(e) => setFCategory(e.target.value)}
-                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none font-medium"
-                      >
-                        <option value="Louange & Adoration">Louange & Adoration</option>
-                        <option value="Enseignement de Foi">Enseignement de Foi</option>
-                        <option value="Témoignage & Miracles">Témoignage & Miracles</option>
-                        <option value="Prière & Délivrance">Prière & Délivrance</option>
-                        <option value="Conférence & Séminaire">Conférence & Séminaire</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Description courte (facultative)</label>
-                    <textarea 
-                      rows={2}
-                      placeholder="Pourquoi recommandez-vous cette vidéo ?"
-                      value={fDescription}
-                      onChange={(e) => setFDescription(e.target.value)}
-                      className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none resize-none"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-soft-black hover:bg-gold text-white hover:text-soft-black text-xs font-bold uppercase tracking-widest py-3 rounded-full transition-colors cursor-pointer mt-4"
-                  >
-                    Enregistrer la recommandation
-                  </button>
-                </form>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
     </div>
   );
