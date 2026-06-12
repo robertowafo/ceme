@@ -1,20 +1,27 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Chapelle de l'Éternel Mon Étendard
 
-# Run and deploy your AI Studio app
+Site web officiel de la Chapelle de l'Éternel Mon Étendard (CEME).
 
-This contains everything you need to run your app locally.
+## Stack technique
 
-View your app in AI Studio: https://ai.studio/apps/48467633-0eb3-4e9b-853d-33dfcae2b955
+- **Frontend** : React 19 + TypeScript + Vite + TailwindCSS
+- **Backend** : Cloudflare Pages Functions (Hono)
+- **Base de données** : Cloudflare D1 (SQLite)
+- **Stockage fichiers** : Cloudflare R2
+- **Auth** : Google OAuth + JWT (jose)
 
-## Run Locally
+## Développement local
 
-**Prerequisites:**  Node.js
+```bash
+npm install
+npm run dev
+```
 
+## Déploiement
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Le site est déployé automatiquement sur Cloudflare Pages à chaque push sur `master`.
+
+```bash
+# Initialiser la base de données en production
+npx wrangler d1 execute ceme-db --remote --file=db/schema.sql
+```
