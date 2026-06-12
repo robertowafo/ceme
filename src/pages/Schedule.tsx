@@ -750,27 +750,6 @@ export function Schedule() {
                   )}
                 </div>
 
-                {/* Submitting inscription action button and general options */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-150">
-                  <button
-                    onClick={() => {
-                      triggerFeedback("INSCRIPTION ENREGISTRÉE AU CATALOGUE DIVIN !");
-                      setActiveSpecialDetail(null);
-                    }}
-                    className="flex-1 bg-burgundy hover:bg-gold text-white hover:text-soft-black text-xs font-bold uppercase tracking-widest py-3.5 rounded-full transition-colors cursor-pointer text-center"
-                  >
-                    S'inscrire au Programme
-                  </button>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`Rejoignez-nous pour ${activeSpecialDetail.title} le ${activeSpecialDetail.dateStr} à ${activeSpecialDetail.location}!`);
-                      triggerFeedback("LIEN COPIÉ DANS LE PRESSE-PAPIERS !");
-                    }}
-                    className="bg-[#f5f2ed] hover:bg-gray-250 text-soft-black hover:scale-105 px-6 py-3.5 rounded-full text-xs font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2"
-                  >
-                    <Copy className="w-4 h-4" /> Partager l'annonce
-                  </button>
-                </div>
 
               </div>
 
