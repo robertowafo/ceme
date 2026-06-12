@@ -38,11 +38,11 @@ const testimonials = [
 
 const ministries = [
   { icon: Users,     title: "L'École du Dimanche",     desc: 'Pour les enfants de 3 à 12 ans, un enseignement ludique et profond de la Parole.',                            img: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&q=80&w=600', tag: '3-12 ans'  },
-  { icon: Music,     title: 'Louange & Adoration',      desc: 'Un ministère dédié à élever le nom de l\'Éternel par la musique et le chant prophétique.',                  img: 'https://images.unsplash.com/photo-1516280440502-1249764a780b?auto=format&fit=crop&q=80&w=600', tag: 'Musique'   },
+  { icon: Music,     title: 'Louange & Adoration',      desc: 'Un ministère dédié à élever le nom de l\'Éternel par la musique et le chant prophétique.',                  img: '/uploads/louange%20et%20adoration.png', tag: 'Musique'   },
   { icon: HandHeart, title: 'Action Sociale',            desc: 'Soutenir les démunis, distribuer des repas et manifester l\'amour de Christ en actes concrets.',            img: 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?auto=format&fit=crop&q=80&w=600', tag: 'Service'   },
   { icon: Flame,     title: "Ministère d'Intercession", desc: 'Des guerriers de prière qui se battent sur leurs genoux pour l\'église, la ville et les nations.',           img: 'https://images.unsplash.com/photo-1504052434569-70ad5836ab65?auto=format&fit=crop&q=80&w=600', tag: 'Prière'    },
   { icon: BookOpen,  title: 'École Biblique',            desc: 'Formation doctrinale approfondie pour tout croyant désirant maîtriser les Écritures.',                      img: 'https://images.unsplash.com/photo-1491841550275-ad7854e35ca6?auto=format&fit=crop&q=80&w=600', tag: 'Formation' },
-  { icon: Star,      title: 'Impact Jeunesse',           desc: 'Pour les 15-25 ans : rencontres dynamiques, retraites et mission pour une génération en feu.',              img: 'https://images.unsplash.com/photo-1529070538774-1843cb3265df?auto=format&fit=crop&q=80&w=600', tag: '15-25 ans' },
+  { icon: Star,      title: 'Impact Jeunesse',           desc: 'Pour les 15-25 ans : rencontres dynamiques, retraites et mission pour une génération en feu.',              img: '/uploads/impact%20jeunesse.png', tag: '15-25 ans' },
 ];
 
 const program = [
@@ -101,7 +101,7 @@ export function Home() {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-soft-black">
         <div className="absolute inset-0">
           <img
-            src="https://images.unsplash.com/photo-1438032005730-c779502df39b?auto=format&fit=crop&q=80&w=2600"
+            src="/uploads/fonde%20en.jpeg"
             alt="Culte"
             className="w-full h-full object-cover opacity-20"
           />
@@ -207,7 +207,7 @@ export function Home() {
                 {/* Background Image - Open Bible on Pulpit */}
                 <div className="absolute inset-0">
                   <img
-                    src="https://images.unsplash.com/photo-1507434965515-61970f2bd7c6?auto=format&fit=crop&q=80&w=800"
+                    src="/uploads/sermons.jpeg"
                     alt="Sermons"
                     className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-110"
                   />
@@ -293,7 +293,7 @@ export function Home() {
                 {/* Background Image - Church congregation with hands raised in deep pray */}
                 <div className="absolute inset-0">
                   <img
-                    src="https://images.unsplash.com/photo-1510590337019-5ef8d3d32116?auto=format&fit=crop&q=80&w=800"
+                    src="/uploads/priere.jpeg"
                     alt="Prière"
                     className="w-full h-full object-cover transition-transform duration-750 group-hover:scale-110"
                   />
@@ -462,7 +462,7 @@ export function Home() {
           >
             <div className="absolute -inset-4 border-2 border-gold rounded-[2rem] rotate-2 hover:rotate-4 transition-transform duration-500" />
             <img
-              src="https://images.unsplash.com/photo-1510590337019-5ef8d3d32116?auto=format&fit=crop&q=80&w=800"
+              src="/uploads/reverand_essomba.png"
               alt="Communauté en Adoration"
               className="relative rounded-[2rem] w-full h-[500px] object-cover shadow-2xl"
             />
