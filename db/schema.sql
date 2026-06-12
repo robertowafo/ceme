@@ -74,3 +74,15 @@ CREATE TABLE IF NOT EXISTS prayer_requests (
   is_public    INTEGER NOT NULL DEFAULT 1,
   submitted_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id           TEXT PRIMARY KEY,
+  title        TEXT NOT NULL,
+  category     TEXT NOT NULL DEFAULT 'Dévotions',
+  author       TEXT NOT NULL,
+  cover_image  TEXT,
+  excerpt      TEXT,
+  content      TEXT NOT NULL,
+  published_at TEXT NOT NULL,
+  is_published INTEGER NOT NULL DEFAULT 1
+);

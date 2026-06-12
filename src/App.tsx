@@ -14,6 +14,7 @@ import { JoinUs } from './pages/JoinUs';
 import { About } from './pages/About';
 import { Give } from './pages/Give';
 import { Blog } from './pages/Blog';
+import { BlogPost } from './pages/BlogPost';
 import { Contact } from './pages/Contact';
 import { Admin } from './pages/Admin';
 import { DocumentReader } from './pages/DocumentReader';
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="about" element={<About />} />
             <Route path="give" element={<Give />} />
             <Route path="blog" element={<Blog />} />
+            <Route path="blog/:id" element={<BlogPost />} />
             <Route path="contact" element={<Contact />} />
             <Route path="admin" element={<Admin />} />
           </Route>

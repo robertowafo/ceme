@@ -39,9 +39,10 @@ import {
   getStudyDocuments, saveStudyDocument, deleteStudyDocument, StudyDocument,
   getAllPrayerRequests, deletePrayerRequest, PrayerRequest,
   getAllDonations, getDonationStats, deleteDonation, Donation, DonationStats,
+  getAllBlogPosts, saveBlogPost, deleteBlogPost, BlogPost,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog';
 
 export function Admin() {
   const { user, isAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
@@ -58,6 +59,7 @@ export function Admin() {
   const [prayers, setPrayers] = useState<PrayerRequest[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [donationStats, setDonationStats] = useState<DonationStats | null>(null);
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -104,6 +106,16 @@ export function Admin() {
   const [docUrl, setDocUrl] = useState('');
   const [docCategory, setDocCategory] = useState('Sermon Notes');
   const [docFileType, setDocFileType] = useState('PDF');
+
+  // 6. Blog Fields
+  const [blogTitle, setBlogTitle] = useState('');
+  const [blogCategory, setBlogCategory] = useState('Dévotions Quotidiennes');
+  const [blogAuthor, setBlogAuthor] = useState('Rev. Dr. Alphonse ESSOMBA');
+  const [blogCoverImage, setBlogCoverImage] = useState('');
+  const [blogExcerpt, setBlogExcerpt] = useState('');
+  const [blogContent, setBlogContent] = useState('');
+  const [blogPublishedAt, setBlogPublishedAt] = useState('');
+  const [blogIsPublished, setBlogIsPublished] = useState(true);
 
   const [isAdminFetchingInfo, setIsAdminFetchingInfo] = useState(false);
 
@@ -181,6 +193,9 @@ export function Admin() {
         const [data, stats] = await Promise.all([getAllDonations(), getDonationStats()]);
         setDonations(data);
         setDonationStats(stats);
+      } else if (activeTab === 'blog') {
+        const data = await getAllBlogPosts();
+        setBlogPosts(data);
       }
     } catch (err: any) {
       console.error('Failure loading data:', err);
@@ -224,6 +239,9 @@ export function Admin() {
     setEvtTitle(''); setEvtType('special'); setEvtDateStr(''); setEvtIsoDate(''); setEvtLocation(''); setEvtPreacher(''); setEvtDesc(''); setEvtBadge(''); setEvtBadgeColor('bg-gold text-soft-black font-extrabold'); setEvtImage(''); setEvtIsPopular(false);
     setTestAuthor(''); setTestSince(''); setTestText(''); setTestImg(''); setTestCategory('home');
     setDocTitle(''); setDocDesc(''); setDocUrl(''); setDocCategory('Sermon Notes'); setDocFileType('PDF');
+    setBlogTitle(''); setBlogCategory('Dévotions Quotidiennes'); setBlogAuthor('Rev. Dr. Alphonse ESSOMBA');
+    setBlogCoverImage(''); setBlogExcerpt(''); setBlogContent('');
+    setBlogPublishedAt(new Date().toISOString().slice(0, 10)); setBlogIsPublished(true);
   };
 
   // Open Form for Editing
@@ -271,6 +289,16 @@ export function Admin() {
       setDocUrl(docItem.url);
       setDocCategory(docItem.category || 'Sermon Notes');
       setDocFileType(docItem.fileType);
+    } else if (activeTab === 'blog') {
+      const bp = item as BlogPost;
+      setBlogTitle(bp.title);
+      setBlogCategory(bp.category);
+      setBlogAuthor(bp.author);
+      setBlogCoverImage(bp.coverImage || '');
+      setBlogExcerpt(bp.excerpt || '');
+      setBlogContent(bp.content);
+      setBlogPublishedAt(bp.publishedAt.slice(0, 10));
+      setBlogIsPublished(bp.isPublished);
     }
   };
 
@@ -297,6 +325,8 @@ export function Admin() {
         await deletePrayerRequest(deleteConfirmId);
       } else if (activeTab === 'donations') {
         await deleteDonation(deleteConfirmId);
+      } else if (activeTab === 'blog') {
+        await deleteBlogPost(deleteConfirmId);
       }
       showStatus('Élément supprimé avec succès !', 'success');
       loadData();
@@ -390,6 +420,21 @@ export function Admin() {
           fileType: docFileType
         };
         await saveStudyDocument(payload);
+
+      } else if (activeTab === 'blog') {
+        const blogId = editingItem ? editingItem.id : 'blog_' + Date.now();
+        const payload: BlogPost = {
+          id: blogId,
+          title: blogTitle,
+          category: blogCategory,
+          author: blogAuthor,
+          coverImage: blogCoverImage || undefined,
+          excerpt: blogExcerpt || undefined,
+          content: blogContent,
+          publishedAt: blogPublishedAt ? new Date(blogPublishedAt).toISOString() : new Date().toISOString(),
+          isPublished: blogIsPublished
+        };
+        await saveBlogPost(payload);
       }
 
       showStatus('Élément sauvegardé avec succès !', 'success');
@@ -635,6 +680,20 @@ export function Admin() {
               </span>
               <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{donations.length}</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('blog')}
+              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                activeTab === 'blog'
+                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
+                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <FileText className="w-4.5 h-4.5" /> 📝 Articles du Blog
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{blogPosts.length}</span>
+            </button>
           </div>
 
           {/* Workspace Right Workspace Content */}
@@ -649,6 +708,7 @@ export function Admin() {
                   {activeTab === 'documents' && "Gestion de la Bibliothèque d'Étude (PDFs etc)"}
                   {activeTab === 'prayers' && 'Requêtes de Prière & Intercessions'}
                   {activeTab === 'donations' && 'Reporting Financier & Dons'}
+                  {activeTab === 'blog' && 'Gestion des Articles du Blog'}
                 </h3>
                 <p className="text-white/40 text-[11px] font-mono">
                   Table PostgreSQL: {activeTab === 'links' && 'recommended_links'}
@@ -658,15 +718,24 @@ export function Admin() {
                   {activeTab === 'documents' && 'study_documents'}
                   {activeTab === 'prayers' && 'prayer_requests'}
                   {activeTab === 'donations' && 'donations'}
+                  {activeTab === 'blog' && 'blog_posts'}
                 </p>
               </div>
 
-              {activeTab !== 'prayers' && activeTab !== 'donations' && (
+              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" /> Ajouter Nouveau
+                </button>
+              )}
+              {activeTab === 'blog' && (
+                <button
+                  onClick={handleAddNew}
+                  className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Nouvel Article
                 </button>
               )}
             </div>
@@ -1125,6 +1194,57 @@ export function Admin() {
                     </div>
                   </div>
                 )}
+                {/* 8. Blog Posts View */}
+                {activeTab === 'blog' && (
+                  <div className="overflow-x-auto">
+                    {blogPosts.length === 0 ? (
+                      <EmptyMessage />
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
+                            <th className="pb-3 pr-4">Titre</th>
+                            <th className="pb-3 pr-4">Catégorie</th>
+                            <th className="pb-3 pr-4">Auteur</th>
+                            <th className="pb-3 pr-4">Date</th>
+                            <th className="pb-3 pr-4">Statut</th>
+                            <th className="pb-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {blogPosts.map((bp) => (
+                            <tr key={bp.id} className="border-b border-white/5 hover:bg-white/[0.02]">
+                              <td className="py-4 pr-4">
+                                <div className="flex items-center gap-3">
+                                  {bp.coverImage && <img src={bp.coverImage} className="w-10 h-10 object-cover rounded-md bg-stone-950 shrink-0" />}
+                                  <p className="font-bold text-white truncate max-w-xs">{bp.title}</p>
+                                </div>
+                              </td>
+                              <td className="py-4 pr-4">
+                                <span className="bg-gold/10 text-gold px-2 py-0.5 rounded text-[10px] font-bold">{bp.category}</span>
+                              </td>
+                              <td className="py-4 pr-4 text-white/60 truncate max-w-[120px]">{bp.author}</td>
+                              <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                {new Date(bp.publishedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </td>
+                              <td className="py-4 pr-4">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${bp.isPublished ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/40'}`}>
+                                  {bp.isPublished ? 'Publié' : 'Brouillon'}
+                                </span>
+                              </td>
+                              <td className="py-4 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <button onClick={() => handleEdit(bp)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                  <button onClick={() => handleDelete(bp.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -1383,6 +1503,63 @@ export function Admin() {
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Courte description du contenu (Optionnel)</label>
                       <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={docDesc} onChange={e => setDocDesc(e.target.value)} placeholder="Que contient ce fichier ? (matières d'études, exhortation etc...)" />
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Blog Form Fields */}
+                {activeTab === 'blog' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre de l'article</label>
+                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogTitle} onChange={e => setBlogTitle(e.target.value)} placeholder="Ex: Comment vivre par la Foi au quotidien" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie</label>
+                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogCategory} onChange={e => setBlogCategory(e.target.value)}>
+                          <option value="Dévotions Quotidiennes">Dévotions Quotidiennes</option>
+                          <option value="Enseignements Profonds">Enseignements Profonds</option>
+                          <option value="Témoignages">Témoignages</option>
+                          <option value="Nouvelles de l'Église">Nouvelles de l'Église</option>
+                          <option value="Ministère des Jeunes">Ministère des Jeunes</option>
+                          <option value="Encouragement">Encouragement</option>
+                          <option value="Événements">Événements</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Auteur</label>
+                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogAuthor} onChange={e => setBlogAuthor(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date de publication</label>
+                        <input type="date" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogPublishedAt} onChange={e => setBlogPublishedAt(e.target.value)} />
+                      </div>
+                      <div className="flex items-center gap-3 pt-6">
+                        <input type="checkbox" id="chkPublished" className="w-4 h-4 accent-gold cursor-pointer" checked={blogIsPublished} onChange={e => setBlogIsPublished(e.target.checked)} />
+                        <label htmlFor="chkPublished" className="text-xs text-white/80 cursor-pointer select-none">Publier immédiatement (visible sur le blog)</label>
+                      </div>
+                    </div>
+                    <div>
+                      <AdminFileUpload
+                        value={blogCoverImage}
+                        onChange={setBlogCoverImage}
+                        label="Image de couverture (optionnel)"
+                        placeholder="https://images.unsplash.com/..."
+                        accept="image/*"
+                        description="Image d'illustration pour l'article."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Résumé / Accroche (optionnel)</label>
+                      <textarea rows={2} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={blogExcerpt} onChange={e => setBlogExcerpt(e.target.value)} placeholder="Une phrase courte qui donne envie de lire l'article..." />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Contenu complet de l'article</label>
+                      <textarea rows={12} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white resize-y font-mono leading-relaxed" value={blogContent} onChange={e => setBlogContent(e.target.value)} placeholder="Rédigez ici le contenu complet de l'article. Vous pouvez utiliser des sauts de ligne pour structurer votre texte." />
+                      <p className="text-[10px] text-white/30 mt-1">Utilisez des sauts de ligne pour les paragraphes. Le texte sera formaté automatiquement.</p>
                     </div>
                   </div>
                 )}

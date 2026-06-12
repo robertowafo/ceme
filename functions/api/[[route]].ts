@@ -573,4 +573,48 @@ app.get('/youtube/video-info', async (c) => {
   }
 })
 
+// ─── blog_posts ────────────────────────────────────────────────────────────────
+
+app.get('/blog-posts/all', requireAdmin, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT id, title, category, author, cover_image AS coverImage, excerpt, content, published_at AS publishedAt, is_published AS isPublished FROM blog_posts ORDER BY published_at DESC'
+  ).all()
+  return c.json(results.map((r: any) => ({ ...r, isPublished: r.isPublished === 1 })))
+})
+
+app.get('/blog-posts/:id', async (c) => {
+  const row = await c.env.DB.prepare(
+    'SELECT id, title, category, author, cover_image AS coverImage, excerpt, content, published_at AS publishedAt, is_published AS isPublished FROM blog_posts WHERE id=? AND is_published=1'
+  ).bind(c.req.param('id')).first() as any
+  if (!row) return c.json({ error: 'Article introuvable' }, 404)
+  return c.json({ ...row, isPublished: row.isPublished === 1 })
+})
+
+app.get('/blog-posts', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT id, title, category, author, cover_image AS coverImage, excerpt, published_at AS publishedAt FROM blog_posts WHERE is_published=1 ORDER BY published_at DESC'
+  ).all()
+  return c.json(results)
+})
+
+app.put('/blog-posts/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const data = await c.req.json() as any
+  await c.env.DB.prepare(`
+    INSERT INTO blog_posts (id, title, category, author, cover_image, excerpt, content, published_at, is_published)
+    VALUES (?,?,?,?,?,?,?,?,?)
+    ON CONFLICT(id) DO UPDATE SET
+      title=excluded.title, category=excluded.category, author=excluded.author,
+      cover_image=excluded.cover_image, excerpt=excluded.excerpt, content=excluded.content,
+      published_at=excluded.published_at, is_published=excluded.is_published
+  `).bind(id, data.title, data.category, data.author, data.coverImage ?? null,
+           data.excerpt ?? null, data.content, data.publishedAt, data.isPublished ? 1 : 0).run()
+  return c.json({ success: true })
+})
+
+app.delete('/blog-posts/:id', requireAdmin, async (c) => {
+  await c.env.DB.prepare('DELETE FROM blog_posts WHERE id=?').bind(c.req.param('id')).run()
+  return c.json({ success: true })
+})
+
 export const onRequest = handle(app)

@@ -10,9 +10,9 @@ const navLinks = [
   { path: '/prayer', label: 'Prière', icon: Heart },
   { path: '/join', label: 'Nous rejoindre', icon: MapPin },
   { path: '/about', label: 'À propos', icon: Users },
-  { path: '/give', label: 'Donner', icon: HandHeart },
   { path: '/blog', label: 'Blog', icon: BookOpen },
   { path: '/contact', label: 'Contact', icon: Mail },
+  { path: '/give', label: 'Donner', icon: HandHeart },
 ];
 
 export function Navbar() {
@@ -64,8 +64,8 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden xl:flex items-center space-x-1 lg:space-x-6">
-            {navLinks.slice(0, 6).map((link) => (
+          <nav className="hidden xl:flex items-center space-x-1 lg:space-x-5">
+            {navLinks.slice(0, 7).map((link) => (
               <NavLink
                 key={link.path}
                 to={link.path}

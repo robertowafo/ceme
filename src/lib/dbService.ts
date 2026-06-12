@@ -265,3 +265,49 @@ export async function getAllPrayerRequests(): Promise<PrayerRequest[]> {
 export async function deletePrayerRequest(id: string): Promise<void> {
   return remove('/api/prayer-requests', id);
 }
+
+// ─── blog_posts ────────────────────────────────────────────────────────────────
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  category: string;
+  author: string;
+  coverImage?: string;
+  excerpt?: string;
+  content: string;
+  publishedAt: string;
+  isPublished: boolean;
+}
+
+export async function getBlogPosts(): Promise<BlogPost[]> {
+  const res = await fetch('/api/blog-posts');
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function getBlogPost(id: string): Promise<BlogPost> {
+  const res = await fetch(`/api/blog-posts/${id}`);
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function getAllBlogPosts(): Promise<BlogPost[]> {
+  const res = await fetch('/api/blog-posts/all', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() }
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function saveBlogPost(post: BlogPost): Promise<void> {
+  return upsert('/api/blog-posts', post.id, {
+    title: post.title, category: post.category, author: post.author,
+    coverImage: post.coverImage, excerpt: post.excerpt, content: post.content,
+    publishedAt: post.publishedAt, isPublished: post.isPublished
+  });
+}
+
+export async function deleteBlogPost(id: string): Promise<void> {
+  return remove('/api/blog-posts', id);
+}
