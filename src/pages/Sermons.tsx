@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Play, 
-  Download, 
-  Search, 
-  Filter, 
-  BookOpen, 
-  Share2, 
-  Calendar, 
-  Youtube, 
-  Plus, 
-  X, 
-  CheckCircle, 
+import {
+  Play,
+  Search,
+  Filter,
+  Share2,
+  Calendar,
+  Youtube,
+  Plus,
+  X,
+  ChevronDown,
+  CheckCircle,
   AlertCircle,
   ExternalLink,
   Video,
@@ -57,8 +56,10 @@ export function Sermons() {
   const [recommendedList, setRecommendedList] = useState<RecommendedVideo[]>([]);
 
   
-  // Custom modals UI actions
+  // Inline player state
   const [activePlayId, setActivePlayId] = useState<string | null>(null);
+  const [activePlayInfo, setActivePlayInfo] = useState<{ title: string; preacher: string; date: string; description?: string } | null>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   
   // Form elements for adding a YouTube video recommendation
@@ -251,6 +252,19 @@ export function Sermons() {
     }, 1800);
   };
 
+  const playVideo = (youtubeId: string, info: { title: string; preacher: string; date: string; description?: string }) => {
+    setActivePlayId(youtubeId);
+    setActivePlayInfo(info);
+    setTimeout(() => {
+      playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  };
+
+  const closePlayer = () => {
+    setActivePlayId(null);
+    setActivePlayInfo(null);
+  };
+
   // Live parsed YouTube preview id
   const tempParsedId = extractYoutubeId(fYoutubeUrl);
 
@@ -382,8 +396,8 @@ export function Sermons() {
 
         {/* Featured Church Sermon - Only displayed on Church tab when search is clear and data is loaded */}
         {activeTab === 'church' && !isLoading && !errorStatus && searchQuery === '' && selectedSeries === 'Tous' && selectedPreacher === 'Tous' && sermons[0] && (
-          <div 
-            onClick={() => setActivePlayId(sermons[0].youtubeId)}
+          <div
+            onClick={() => playVideo(sermons[0].youtubeId, { title: sermons[0].title, preacher: sermons[0].preacher, date: sermons[0].date, description: sermons[0].description })}
             className="bg-white rounded-3xl overflow-hidden shadow-xl mb-16 flex flex-col md:flex-row group border border-gray-100 cursor-pointer transition-transform hover:scale-[1.01]"
           >
             <div className="md:w-1/2 relative overflow-hidden h-64 md:h-96">
@@ -462,6 +476,74 @@ export function Sermons() {
         )}
 
         {/* ======================================================
+            INLINE PLAYER
+        ====================================================== */}
+        <AnimatePresence>
+          {activePlayId && (
+            <motion.div
+              ref={playerRef}
+              key="inline-player"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
+              className="mb-12 bg-[#12100f] rounded-3xl overflow-hidden border border-white/10 shadow-2xl"
+            >
+              {/* Player */}
+              <div className="relative w-full aspect-video bg-black">
+                <iframe
+                  className="w-full h-full border-0 absolute inset-0"
+                  src={`https://www.youtube.com/embed/${activePlayId}?autoplay=1&rel=0`}
+                  title="Lecteur Grâce TV"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                />
+              </div>
+
+              {/* Infos + actions */}
+              <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-gold text-[10px] font-bold uppercase tracking-widest mb-1">En lecture • Grâce TV</p>
+                  <h3 className="font-serif text-xl md:text-2xl font-bold text-white leading-tight mb-2 line-clamp-2">
+                    {activePlayInfo?.title}
+                  </h3>
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-white/50 font-medium">
+                    <span className="font-bold text-white/70">{activePlayInfo?.preacher}</span>
+                    {activePlayInfo?.date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" /> {activePlayInfo.date}
+                      </span>
+                    )}
+                  </div>
+                  {activePlayInfo?.description && (
+                    <p className="text-white/40 text-xs font-light mt-3 leading-relaxed line-clamp-2">
+                      {activePlayInfo.description}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => {
+                      navigator.share?.({ title: activePlayInfo?.title ?? '', url: `https://www.youtube.com/watch?v=${activePlayId}` })
+                        .catch(() => navigator.clipboard.writeText(`https://www.youtube.com/watch?v=${activePlayId}`));
+                    }}
+                    className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors"
+                  >
+                    <Share2 className="w-4 h-4" /> Partager
+                  </button>
+                  <button
+                    onClick={closePlayer}
+                    className="flex items-center gap-2 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/30 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors"
+                  >
+                    <ChevronDown className="w-4 h-4" /> Fermer
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ======================================================
             TAB 1: CHURCH AUDIO SERMONS
         ====================================================== */}
         {activeTab === 'church' && !isLoading && !errorStatus && (
@@ -477,11 +559,11 @@ export function Sermons() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
                 {filteredSermons.map((sermon) => (
-                  <motion.div 
+                  <motion.div
                     key={sermon.id}
-                    onClick={() => setActivePlayId(sermon.youtubeId)}
+                    onClick={() => playVideo(sermon.youtubeId, { title: sermon.title, preacher: sermon.preacher, date: sermon.date, description: sermon.description })}
                     whileHover={{ y: -8 }}
-                    className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all group flex flex-col cursor-pointer border border-gray-100"
+                    className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all group flex flex-col cursor-pointer border ${activePlayId === sermon.youtubeId ? 'border-gold ring-2 ring-gold/40' : 'border-gray-100'}`}
                   >
                     <div className="relative aspect-video overflow-hidden">
                       <img src={sermon.image} alt={sermon.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" referrerPolicy="no-referrer" />
@@ -493,6 +575,11 @@ export function Sermons() {
                       <div className="absolute bottom-2 right-2 bg-black/80 text-white text-[10px] font-bold px-2 py-0.5 rounded">
                         {sermon.duration}
                       </div>
+                      {activePlayId === sermon.youtubeId && (
+                        <div className="absolute top-2 left-2 bg-gold text-soft-black text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-soft-black animate-pulse" /> En lecture
+                        </div>
+                      )}
                     </div>
                     <div className="p-5 flex-1 flex flex-col justify-between">
                       <div>
@@ -541,7 +628,7 @@ export function Sermons() {
                     key={vid.id}
                     whileHover={{ y: -6 }}
                     className="bg-white rounded-3xl overflow-hidden shadow-sm hover:shadow-xl border border-gray-200 flex flex-col justify-between group cursor-pointer"
-                    onClick={() => setActivePlayId(vid.youtubeId)}
+                    onClick={() => playVideo(vid.youtubeId, { title: vid.title, preacher: vid.preacher, date: vid.date, description: vid.description })}
                   >
                     <div>
                       {/* Youtube Video Thumbnail Overlay */}
@@ -602,48 +689,6 @@ export function Sermons() {
         </div>
 
       </div>
-
-      {/* ======================================================
-          YOUTUBE VIDEO STREMER PLAYER MODAL
-      ====================================================== */}
-      <AnimatePresence>
-        {activePlayId && (
-          <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md"
-            onClick={() => setActivePlayId(null)}
-          >
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-black rounded-3xl border border-red-600/30 overflow-hidden max-w-4xl w-full shadow-2xl relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Close Button top corner */}
-              <button 
-                onClick={() => setActivePlayId(null)}
-                className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white rounded-full p-2 hover:scale-105 transition-all cursor-pointer z-50"
-              >
-                <X className="w-6 h-6" />
-              </button>
-
-              <div className="relative aspect-video w-full bg-[#111]">
-                <iframe 
-                  className="w-full h-full border-0 absolute inset-0"
-                  src={`https://www.youtube.com/embed/${activePlayId}?autoplay=1&rel=0`}
-                  title="YouTube Premium CEME Streaming"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
-                />
-              </div>
-
-              <div className="p-4 bg-soft-black text-white/50 text-xs text-center font-light relative">
-                Une vidéo Youtube externe recommandée par l'Église Évangélique de la Chapelle de l'Éternel.
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* ======================================================
           MODAL: ADD NEW YOUTUBE RECOMMENDATION FORM
