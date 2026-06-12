@@ -20,6 +20,7 @@ import {
   FileDown,
   ExternalLink,
   ShieldAlert,
+  Target,
   Heart,
   Phone,
   DollarSign,
@@ -45,9 +46,10 @@ import {
   getNewsletterSubscribers, deleteNewsletterSubscriber, NewsletterSubscriber,
   getAdmins, addAdmin, removeAdmin, AdminUser,
   getAuditLog, AuditEntry,
+  getDonationProjects, saveDonationProject, deleteDonationProject, DonationProject,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'admins' | 'audit';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'admins' | 'audit';
 
 export function Admin() {
   const { user, isAdmin, isSuperAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
@@ -67,6 +69,12 @@ export function Admin() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [donationProjects, setDonationProjects] = useState<DonationProject[]>([]);
+  const [projTitle, setProjTitle] = useState('');
+  const [projDesc, setProjDesc] = useState('');
+  const [projGoal, setProjGoal] = useState('');
+  const [projCurrency, setProjCurrency] = useState('FCFA');
+  const [projIsActive, setProjIsActive] = useState(true);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -214,6 +222,9 @@ export function Admin() {
       } else if (activeTab === 'newsletter') {
         const data = await getNewsletterSubscribers();
         setSubscribers(data);
+      } else if (activeTab === 'projects') {
+        const data = await getDonationProjects();
+        setDonationProjects(data);
       } else if (activeTab === 'admins') {
         const data = await getAdmins();
         setAdmins(data);
@@ -266,6 +277,7 @@ export function Admin() {
     setBlogTitle(''); setBlogCategory(blogCategories[0]?.name ?? ''); setBlogAuthor('Rev. Dr. Alphonse ESSOMBA');
     setBlogCoverImage(''); setBlogExcerpt(''); setBlogContent('');
     setBlogPublishedAt(new Date().toISOString().slice(0, 10)); setBlogIsPublished(true);
+    setProjTitle(''); setProjDesc(''); setProjGoal(''); setProjCurrency('FCFA'); setProjIsActive(true);
     setShowCatManager(false); setNewCatName('');
   };
 
@@ -324,6 +336,13 @@ export function Admin() {
       setBlogContent(bp.content);
       setBlogPublishedAt(bp.publishedAt.slice(0, 10));
       setBlogIsPublished(bp.isPublished);
+    } else if (activeTab === 'projects') {
+      const proj = item as DonationProject;
+      setProjTitle(proj.title);
+      setProjDesc(proj.description || '');
+      setProjGoal(String(proj.goalAmount));
+      setProjCurrency(proj.currency);
+      setProjIsActive(proj.isActive);
     }
   };
 
@@ -354,6 +373,8 @@ export function Admin() {
         await deleteBlogPost(deleteConfirmId);
       } else if (activeTab === 'newsletter') {
         await deleteNewsletterSubscriber(deleteConfirmId);
+      } else if (activeTab === 'projects') {
+        await deleteDonationProject(deleteConfirmId);
       }
       showStatus('Élément supprimé avec succès !', 'success');
       loadData();
@@ -462,6 +483,19 @@ export function Admin() {
           isPublished: blogIsPublished
         };
         await saveBlogPost(payload);
+
+      } else if (activeTab === 'projects') {
+        const projId = editingItem ? editingItem.id : 'proj_' + Date.now();
+        const payload: Omit<DonationProject, 'raisedAmount'> = {
+          id: projId,
+          title: projTitle,
+          description: projDesc || undefined,
+          goalAmount: Math.round(parseFloat(projGoal) || 0),
+          currency: projCurrency,
+          isActive: projIsActive,
+          createdAt: editingItem?.createdAt ?? new Date().toISOString(),
+        };
+        await saveDonationProject(payload);
       }
 
       showStatus('Élément sauvegardé avec succès !', 'success');
@@ -736,6 +770,20 @@ export function Admin() {
               <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{subscribers.length}</span>
             </button>
 
+            <button
+              onClick={() => setActiveTab('projects')}
+              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                activeTab === 'projects'
+                  ? 'bg-teal-700 text-white border-teal-600 shadow-md shadow-teal-900/30'
+                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <Target className="w-4.5 h-4.5" /> 🎯 Projets & Collectes
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{donationProjects.length}</span>
+            </button>
+
             <div className="border-t border-white/10 my-2 pt-2">
               <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-white/30 px-3 mb-2">
                 Sécurité & Contrôle
@@ -787,6 +835,7 @@ export function Admin() {
                   {activeTab === 'donations' && 'Reporting Financier & Dons'}
                   {activeTab === 'blog' && 'Gestion des Articles du Blog'}
                   {activeTab === 'newsletter' && 'Abonnés à la Newsletter'}
+                  {activeTab === 'projects' && 'Projets de Collecte de Fonds'}
                   {activeTab === 'audit' && 'Registre des Actions Administratives'}
                   {activeTab === 'admins' && 'Gestion des Administrateurs'}
                 </h3>
@@ -800,12 +849,13 @@ export function Admin() {
                   {activeTab === 'donations' && 'donations'}
                   {activeTab === 'blog' && 'blog_posts'}
                   {activeTab === 'newsletter' && 'newsletter_subscribers'}
+                  {activeTab === 'projects' && 'donation_projects'}
                   {activeTab === 'audit' && 'audit_log'}
                   {activeTab === 'admins' && 'admins'}
                 </p>
               </div>
 
-              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && (
+              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -819,6 +869,14 @@ export function Admin() {
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" /> Nouvel Article
+                </button>
+              )}
+              {activeTab === 'projects' && (
+                <button
+                  onClick={handleAddNew}
+                  className="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Nouveau Projet
                 </button>
               )}
             </div>
@@ -1244,9 +1302,12 @@ export function Admin() {
                                 <td className="py-4 pr-4">
                                   <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
                                     d.contribType === 'Dîme' ? 'bg-gold/15 text-yellow-300'
-                                    : d.contribType === 'Projets' ? 'bg-blue-500/15 text-blue-300'
+                                    : d.contribType === 'Projets' ? 'bg-teal-500/15 text-teal-300'
                                     : 'bg-emerald-500/15 text-emerald-300'
                                   }`}>{d.contribType}</span>
+                                  {d.projectTitle && (
+                                    <p className="text-[9px] text-teal-400/70 mt-0.5 font-medium">{d.projectTitle}</p>
+                                  )}
                                 </td>
                                 <td className="py-4 pr-4">
                                   <span className={`flex items-center gap-1 text-[10px] font-bold ${d.paymentMethod === 'OM' ? 'text-orange-400' : 'text-blue-400'}`}>
@@ -1320,7 +1381,47 @@ export function Admin() {
                   </div>
                 )}
 
-                {/* 10. Audit Log View */}
+                {/* 10. Projects View */}
+                {activeTab === 'projects' && (
+                  <div className="space-y-4">
+                    {donationProjects.length === 0 ? (
+                      <EmptyMessage />
+                    ) : (
+                      donationProjects.map((proj) => {
+                        const pct = proj.goalAmount > 0 ? Math.min(100, Math.round((proj.raisedAmount / proj.goalAmount) * 100)) : 0;
+                        return (
+                          <div key={proj.id} className="bg-white/5 border border-white/10 rounded-xl p-5">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-bold text-white text-sm">{proj.title}</h4>
+                                  <span className={`text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${proj.isActive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/40'}`}>
+                                    {proj.isActive ? 'Actif' : 'Inactif'}
+                                  </span>
+                                </div>
+                                {proj.description && <p className="text-xs text-white/50 mb-3">{proj.description}</p>}
+                                <div className="flex items-center justify-between text-xs mb-2">
+                                  <span className="text-white/60">Collecté : <strong className="text-emerald-400">{proj.raisedAmount.toLocaleString('fr-FR')} {proj.currency}</strong></span>
+                                  <span className="text-white/60">Objectif : <strong className="text-gold">{proj.goalAmount.toLocaleString('fr-FR')} {proj.currency}</strong></span>
+                                  <span className="font-bold text-gold text-sm">{pct}%</span>
+                                </div>
+                                <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
+                                  <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button onClick={() => handleEdit(proj)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                <button onClick={() => handleDelete(proj.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                )}
+
+                {/* 11. Audit Log View */}
                 {activeTab === 'audit' && (
                   <div className="overflow-x-auto">
                     {auditLog.length === 0 ? (
@@ -1904,6 +2005,38 @@ export function Admin() {
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Contenu complet de l'article</label>
                       <textarea rows={12} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white resize-y font-mono leading-relaxed" value={blogContent} onChange={e => setBlogContent(e.target.value)} placeholder="Rédigez ici le contenu complet de l'article. Vous pouvez utiliser des sauts de ligne pour structurer votre texte." />
                       <p className="text-[10px] text-white/30 mt-1">Utilisez des sauts de ligne pour les paragraphes. Le texte sera formaté automatiquement.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Projects Form */}
+                {activeTab === 'projects' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Nom du projet</label>
+                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projTitle} onChange={e => setProjTitle(e.target.value)} placeholder="Ex: Rénovation de la Salle d'Accueil" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description (optionnel)</label>
+                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={projDesc} onChange={e => setProjDesc(e.target.value)} placeholder="Décrivez brièvement l'objectif du projet..." />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Montant objectif</label>
+                        <input type="number" required min="1" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projGoal} onChange={e => setProjGoal(e.target.value)} placeholder="Ex: 500000" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Devise</label>
+                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projCurrency} onChange={e => setProjCurrency(e.target.value)}>
+                          <option value="FCFA">FCFA</option>
+                          <option value="EUR">EUR</option>
+                          <option value="USD">USD</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <input type="checkbox" id="chkProjActive" className="w-4 h-4 accent-gold cursor-pointer" checked={projIsActive} onChange={e => setProjIsActive(e.target.checked)} />
+                      <label htmlFor="chkProjActive" className="text-xs text-white/80 cursor-pointer select-none">Projet actif (visible sur la page Don)</label>
                     </div>
                   </div>
                 )}

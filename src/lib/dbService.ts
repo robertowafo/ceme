@@ -157,6 +157,8 @@ export interface Donation {
   contribType: string;
   paymentMethod: string;
   reference?: string;
+  projectId?: string;
+  projectTitle?: string;
   submittedAt: string;
 }
 
@@ -170,6 +172,33 @@ export interface DonationStats {
   monthly: { month: string; count: number; total: number }[];
 }
 
+// ─── donation_projects ─────────────────────────────────────────────────────────
+
+export interface DonationProject {
+  id: string;
+  title: string;
+  description?: string;
+  goalAmount: number;
+  currency: string;
+  isActive: boolean;
+  createdAt: string;
+  raisedAmount: number;
+}
+
+export async function getDonationProjects(): Promise<DonationProject[]> {
+  const res = await fetch('/api/donation-projects');
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function saveDonationProject(project: Omit<DonationProject, 'raisedAmount'>): Promise<void> {
+  return upsert('/api/donation-projects', project.id, project);
+}
+
+export async function deleteDonationProject(id: string): Promise<void> {
+  return remove('/api/donation-projects', id);
+}
+
 export async function submitDonation(data: {
   donorName?: string;
   phone?: string;
@@ -178,6 +207,7 @@ export async function submitDonation(data: {
   contribType: string;
   paymentMethod: string;
   reference?: string;
+  projectId?: string;
 }): Promise<void> {
   const res = await fetch('/api/donations', {
     method: 'POST',

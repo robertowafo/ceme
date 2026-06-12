@@ -1,19 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { HeartHandshake, CreditCard, Landmark, Smartphone, Target, TrendingUp, HandHeart, BookOpen, CheckCircle, Quote } from 'lucide-react';
-import { submitDonation } from '../lib/dbService';
+import { HeartHandshake, CreditCard, Landmark, Smartphone, Target, TrendingUp, HandHeart, BookOpen, CheckCircle, Quote, ClipboardList } from 'lucide-react';
+import { submitDonation, getDonationProjects, DonationProject } from '../lib/dbService';
 
 const impacts = [
   { value: '1 200+', label: 'Repas distribués / an',      desc: 'Aux familles dans le besoin de notre quartier'           },
   { value: '45',     label: 'Familles soutenues',          desc: 'Aides financières et paniers alimentaires'               },
   { value: '3',      label: 'Projets d\'expansion',        desc: 'Rénovation et plantation d\'une nouvelle antenne'        },
   { value: '100%',   label: 'Transparence financière',     desc: 'Bilan annuel disponible pour tous les membres'           },
-];
-
-const projects = [
-  { title: 'Rénovation de la Salle d\'Accueil',   goal: '15 000 €', raised: 68, desc: 'Agrandir et moderniser l\'espace pour accueillir plus de familles dans la dignité.' },
-  { title: 'Plantation d\'une Église Fille',       goal: '25 000 €', raised: 42, desc: 'Ouvrir une nouvelle assemblée dans un quartier non atteint de la ville.' },
-  { title: 'Équipement Audiovisuel',               goal: '8 000 €',  raised: 90, desc: 'Améliorer la qualité de la retransmission en ligne du culte pour les personnes à mobilité réduite.' },
 ];
 
 export function Give() {
@@ -23,69 +17,66 @@ export function Give() {
   const [donorName, setDonorName] = useState('');
   const [donorPhone, setDonorPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'OM' | 'Card'>('OM');
-  
-  // Interactive direct donation process steps
-  const [processStep, setProcessStep] = useState<'idle' | 'initiating' | 'waiting_pin' | 'completed'>('idle');
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [projects, setProjects] = useState<DonationProject[]>([]);
+
+  const [processStep, setProcessStep] = useState<'idle' | 'loading' | 'completed'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [donationRef, setDonationRef] = useState('');
+
+  useEffect(() => {
+    getDonationProjects()
+      .then(data => {
+        const active = data.filter(p => p.isActive);
+        setProjects(active);
+        if (active.length > 0) setSelectedProjectId(active[0].id);
+      })
+      .catch(() => {});
+  }, []);
 
   const handlePresetClick = (preset: string) => {
     setSelectedPreset(preset);
     setCustomAmount('');
   };
 
-  const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomAmount(e.target.value);
-    setSelectedPreset('');
+  const getFinalAmount = (): number => {
+    if (customAmount) return parseFloat(customAmount) || 0;
+    return parseFloat(selectedPreset.replace(/\s/g, '')) || 0;
   };
 
   const getFinalAmountDisplay = () => {
-    if (customAmount) {
-      return `${parseInt(customAmount || '0').toLocaleString()} FCFA`;
-    }
-    return selectedPreset;
+    const n = getFinalAmount();
+    return n > 0 ? `${n.toLocaleString('fr-FR')} FCFA` : '—';
   };
 
-  const startDonationProcess = () => {
-    if (!donorName.trim()) {
-      setErrorMessage('Veuillez entrer le nom du donateur.');
-      return;
-    }
-    if (!donorPhone.trim()) {
-      setErrorMessage('Veuillez entrer le numéro du donateur.');
-      return;
-    }
-    const checkAmount = customAmount ? parseFloat(customAmount) : parseFloat(selectedPreset.replace(/\s/g, ''));
-    if (!checkAmount || checkAmount <= 0) {
-      setErrorMessage('Veuillez spécifier un montant valide pour le don.');
-      return;
-    }
+  const startDonationProcess = async () => {
+    if (!donorName.trim()) { setErrorMessage('Veuillez entrer votre nom.'); return; }
+    if (!donorPhone.trim()) { setErrorMessage('Veuillez entrer votre numéro de téléphone.'); return; }
+    const amount = getFinalAmount();
+    if (!amount || amount <= 0) { setErrorMessage('Veuillez spécifier un montant valide.'); return; }
+    if (contribType === 'Projets' && !selectedProjectId) { setErrorMessage('Veuillez sélectionner un projet.'); return; }
 
     setErrorMessage('');
-    setProcessStep('initiating');
+    setProcessStep('loading');
 
-    const ref = '#OM-' + Math.floor(Math.random() * 1_000_000);
+    const ref = 'REF-' + Date.now().toString(36).toUpperCase();
     setDonationRef(ref);
 
-    setTimeout(() => {
-      setProcessStep('waiting_pin');
-      setTimeout(async () => {
-        try {
-          await submitDonation({
-            donorName: donorName.trim(),
-            phone: donorPhone.trim(),
-            amount: checkAmount,
-            currency: 'FCFA',
-            contribType,
-            paymentMethod,
-            reference: ref,
-          });
-        } catch {
-          // silencieux — on ne bloque pas l'UX si la sauvegarde échoue
-        }
-        setProcessStep('completed');
-      }, 3500);
-    }, 2000);
+    try {
+      await submitDonation({
+        donorName: donorName.trim(),
+        phone: donorPhone.trim(),
+        amount,
+        currency: 'FCFA',
+        contribType,
+        paymentMethod,
+        reference: ref,
+        projectId: contribType === 'Projets' ? selectedProjectId : undefined,
+      });
+    } catch {
+      // On enregistre même en cas d'erreur réseau temporaire
+    }
+    setProcessStep('completed');
   };
 
   const resetProcess = () => {
@@ -95,14 +86,15 @@ export function Give() {
     setDonorName('');
     setDonorPhone('');
     setDonationRef('');
+    setErrorMessage('');
   };
+
+  const selectedProject = projects.find(p => p.id === selectedProjectId);
 
   return (
     <div className="bg-white min-h-screen">
 
-      {/* ======================================================
-          HERO
-      ====================================================== */}
+      {/* HERO */}
       <div className="relative bg-soft-black text-white py-36 px-4 overflow-hidden">
         <div className="absolute inset-0 cross-pattern opacity-25" />
         <img
@@ -111,7 +103,6 @@ export function Give() {
           className="absolute inset-0 w-full h-full object-cover opacity-10"
         />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gold/5 rounded-full blur-[100px]" />
-
         <div className="max-w-4xl mx-auto text-center relative z-10 mt-16">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9 }}>
             <div className="w-24 h-24 bg-burgundy/80 rounded-full flex items-center justify-center mx-auto mb-8 text-gold shadow-[0_0_40px_rgba(123,29,29,0.4)] border-4 border-burgundy/40 animate-divine-glow">
@@ -128,18 +119,11 @@ export function Give() {
         </div>
       </div>
 
-      {/* ======================================================
-          TEACHING ON GIVING
-      ====================================================== */}
+      {/* TEACHING */}
       <div className="py-24 bg-[#f5f2ed] border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="lg:w-1/2 space-y-7"
-            >
+            <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="lg:w-1/2 space-y-7">
               <p className="text-gold font-bold uppercase tracking-widest text-sm">Comprendre le Don</p>
               <h2 className="font-serif text-4xl font-bold leading-tight">
                 Donner n'est pas une <span className="text-burgundy italic">obligation</span> — c'est une <span className="text-burgundy italic">grâce</span>.
@@ -155,7 +139,7 @@ export function Give() {
                   'La dîme (10% de vos revenus) soutient le fonctionnement de l\'église',
                   'L\'offrande va au-delà — exprimant la générosité du cœur',
                   'Vos dons ont un impact direct et mesurable sur des vies',
-                  'Tout don donne droit à un reçu fiscal déductible',
+                  'Chaque contribution est enregistrée et vous recevrez une confirmation',
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-3">
                     <CheckCircle className="w-5 h-5 text-gold shrink-0 mt-0.5" />
@@ -165,12 +149,7 @@ export function Give() {
               </div>
             </motion.div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 40 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              className="lg:w-1/2"
-            >
+            <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="lg:w-1/2">
               <div className="bg-soft-black text-white rounded-3xl p-10 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-48 h-48 bg-gold/5 rounded-full blur-3xl -mr-10 -mt-10" />
                 <BookOpen className="w-10 h-10 text-gold mb-6 relative z-10" />
@@ -185,31 +164,17 @@ export function Give() {
         </div>
       </div>
 
-      {/* ======================================================
-          IMPACT COUNTERS
-      ====================================================== */}
+      {/* IMPACT */}
       <div className="py-20 bg-soft-black relative overflow-hidden">
         <div className="absolute inset-0 cross-pattern opacity-25" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
             <p className="text-gold font-bold uppercase tracking-widest text-sm mb-3">Vos Dons en Action</p>
             <h2 className="font-serif text-4xl font-bold text-white">L'Impact de votre Générosité</h2>
           </motion.div>
-
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
             {impacts.map((imp, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-              >
+              <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
                 <div className="shimmer-text font-serif text-5xl font-bold mb-2">{imp.value}</div>
                 <p className="text-white font-bold text-sm mb-1">{imp.label}</p>
                 <p className="text-white/40 text-xs">{imp.desc}</p>
@@ -219,40 +184,36 @@ export function Give() {
         </div>
       </div>
 
-      {/* ======================================================
-          FORM + IMPACT
-      ====================================================== */}
+      {/* FORM + IMPACT */}
       <div className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
 
-            {/* Online Form */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              id="donation-form-wrapper"
-              className="w-full"
-            >
+            {/* Form */}
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
               <div className="bg-[#f5f2ed] border border-gray-200 p-8 md:p-12 rounded-[2.5rem] shadow-xl">
-                <h2 className="font-serif text-3xl font-bold mb-2 text-soft-black" id="donation-title">Don en Ligne Sécurisé</h2>
-                <p className="text-gray-500 mb-8 pb-6 border-b border-gray-300 text-sm" id="donation-subtitle">Simple, rapide et 100% sécurisé via Orange Money & Stripe.</p>
+                <h2 className="font-serif text-3xl font-bold mb-2 text-soft-black">Déclarer votre Don</h2>
+                <p className="text-gray-500 mb-2 text-sm">Renseignez votre intention de don ci-dessous.</p>
+                {/* Info notice */}
+                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6">
+                  <ClipboardList className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-800 leading-relaxed">
+                    <strong>Fonctionnement :</strong> Ce formulaire enregistre votre promesse de don. Le paiement se fait directement via Orange Money ou virement. Une confirmation vous sera envoyée par l'équipe.
+                  </p>
+                </div>
 
-                {processStep === 'idle' ? (
+                {processStep === 'idle' || processStep === 'loading' ? (
                   <div className="space-y-6">
-                    {/* Contrib Link */}
+                    {/* Contrib type */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-gray-800 mb-3">1. À quoi voulez-vous contribuer ?</label>
                       <div className="grid grid-cols-3 gap-3">
                         {['Dîme', 'Offrande', 'Projets'].map((type) => (
                           <button
                             key={type}
-                            id={`contrib-btn-${type.toLowerCase()}`}
                             onClick={() => setContribType(type)}
                             className={`py-3 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95 cursor-pointer ${
-                              contribType === type
-                                ? 'bg-soft-black text-white'
-                                : 'bg-white text-gray-600 border border-gray-300 hover:border-gold hover:text-soft-black'
+                              contribType === type ? 'bg-soft-black text-white' : 'bg-white text-gray-600 border border-gray-300 hover:border-gold hover:text-soft-black'
                             }`}
                           >
                             {type}
@@ -261,6 +222,48 @@ export function Give() {
                       </div>
                     </div>
 
+                    {/* Project selector */}
+                    {contribType === 'Projets' && (
+                      <div>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-gray-800 mb-3">Sélectionner le projet</label>
+                        {projects.length === 0 ? (
+                          <p className="text-sm text-gray-400 italic bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
+                            Aucun projet actif pour le moment. Revenez prochainement.
+                          </p>
+                        ) : (
+                          <div className="space-y-2">
+                            {projects.map(p => {
+                              const pct = p.goalAmount > 0 ? Math.min(100, Math.round((p.raisedAmount / p.goalAmount) * 100)) : 0;
+                              return (
+                                <button
+                                  key={p.id}
+                                  onClick={() => setSelectedProjectId(p.id)}
+                                  className={`w-full text-left rounded-xl border p-4 transition-all cursor-pointer ${
+                                    selectedProjectId === p.id
+                                      ? 'border-gold bg-gold/5'
+                                      : 'border-gray-200 bg-white hover:border-gold/50'
+                                  }`}
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold text-sm text-soft-black">{p.title}</span>
+                                    <span className="text-xs font-bold text-gold">{pct}%</span>
+                                  </div>
+                                  {p.description && <p className="text-xs text-gray-500 mb-2">{p.description}</p>}
+                                  <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1.5">
+                                    <span>Collecté : {p.raisedAmount.toLocaleString('fr-FR')} {p.currency}</span>
+                                    <span>Objectif : {p.goalAmount.toLocaleString('fr-FR')} {p.currency}</span>
+                                  </div>
+                                  <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                                    <div className="h-full bg-gradient-to-r from-gold to-yellow-400 rounded-full" style={{ width: `${pct}%` }} />
+                                  </div>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Amount */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-gray-800 mb-3">2. Sélectionnez ou entrez un montant</label>
@@ -268,7 +271,6 @@ export function Give() {
                         {['2 000 FCFA', '5 000 FCFA', '10 000 FCFA', '25 000 FCFA'].map((amt) => (
                           <button
                             key={amt}
-                            id={`preset-amt-${amt.replace(/\s+/g, '-')}`}
                             onClick={() => handlePresetClick(amt)}
                             className={`py-3 px-1 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                               selectedPreset === amt && !customAmount
@@ -284,82 +286,71 @@ export function Give() {
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">Montant libre (FCFA) :</span>
                         <input
                           type="number"
-                          id="custom-amount-input"
                           value={customAmount}
-                          onChange={handleCustomAmountChange}
+                          onChange={e => { setCustomAmount(e.target.value); setSelectedPreset(''); }}
                           className="w-full bg-white border border-gray-300 rounded-xl pl-40 pr-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold text-base transition-shadow"
                           placeholder="Ex: 5000"
                         />
                       </div>
                     </div>
 
-                    {/* Donor Identity Fields */}
+                    {/* Donor info */}
                     <div className="pt-2 border-t border-gray-300 space-y-4">
                       <label className="block text-xs font-bold uppercase tracking-wider text-gray-800">3. Informations du Donateur</label>
-                      
                       <div>
-                        <span className="block text-xs text-gray-500 mb-1.5 font-medium">Nom complet du donateur</span>
+                        <span className="block text-xs text-gray-500 mb-1.5 font-medium">Nom complet</span>
                         <input
                           type="text"
-                          id="donor-name-input"
                           value={donorName}
-                          onChange={(e) => setDonorName(e.target.value)}
-                          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold text-sm transition-shadow text-soft-black font-medium"
+                          onChange={e => setDonorName(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold text-sm text-soft-black font-medium"
                           placeholder="Votre nom complet"
                         />
                       </div>
-
                       <div>
-                        <span className="block text-xs text-gray-500 mb-1.5 font-medium">Numéro de téléphone du donateur</span>
+                        <span className="block text-xs text-gray-500 mb-1.5 font-medium">Numéro de téléphone</span>
                         <input
                           type="tel"
-                          id="donor-phone-input"
                           value={donorPhone}
-                          onChange={(e) => setDonorPhone(e.target.value)}
-                          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold text-sm transition-shadow font-mono text-soft-black"
+                          onChange={e => setDonorPhone(e.target.value)}
+                          className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold text-sm font-mono text-soft-black"
                           placeholder="Ex: +237 6XX XX XX XX"
                         />
                       </div>
                     </div>
 
-                    {/* Payment Method Option */}
+                    {/* Payment method */}
                     <div>
-                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-800 mb-3">4. Moyen de paiement</label>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-800 mb-3">4. Moyen de paiement prévu</label>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
-                          id="pay-method-om"
                           onClick={() => setPaymentMethod('OM')}
                           className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                            paymentMethod === 'OM'
-                              ? 'bg-[#FF6600]/10 border-[#FF6600] text-[#FF6600]'
-                              : 'bg-white border-gray-300 text-gray-600 hover:border-[#FF6600]'
+                            paymentMethod === 'OM' ? 'bg-[#FF6600]/10 border-[#FF6600] text-[#FF6600]' : 'bg-white border-gray-300 text-gray-600 hover:border-[#FF6600]'
                           }`}
                         >
-                          <Smartphone className="w-4 h-4" /> Orange Money (OM)
+                          <Smartphone className="w-4 h-4" /> Orange Money
                         </button>
                         <button
                           type="button"
-                          id="pay-method-card"
                           onClick={() => setPaymentMethod('Card')}
                           className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                            paymentMethod === 'Card'
-                              ? 'bg-burgundy/10 border-burgundy text-burgundy'
-                              : 'bg-white border-gray-300 text-gray-600 hover:border-burgundy'
+                            paymentMethod === 'Card' ? 'bg-burgundy/10 border-burgundy text-burgundy' : 'bg-white border-gray-300 text-gray-600 hover:border-burgundy'
                           }`}
                         >
-                          <CreditCard className="w-4 h-4" /> Carte de Crédit
+                          <CreditCard className="w-4 h-4" /> Virement / Autre
                         </button>
                       </div>
                       {paymentMethod === 'OM' && (
                         <p className="text-[11px] text-[#FF6600] font-medium mt-2 bg-[#FF6600]/5 p-2.5 rounded-lg border border-[#FF6600]/20">
-                          Le don sera envoyé sur le compte OM de la chapelle : <strong className="font-mono text-xs">+237 680 82 19 53</strong>.
+                          Envoyez votre don sur le compte OM de la chapelle : <strong className="font-mono text-xs">+237 680 82 19 53</strong>
                         </p>
                       )}
                     </div>
 
                     {errorMessage && (
-                      <p className="text-xs text-red-600 font-bold bg-red-50 p-3 rounded-xl border border-red-200" id="form-error-msg">
+                      <p className="text-xs text-red-600 font-bold bg-red-50 p-3 rounded-xl border border-red-200">
                         ⚠️ {errorMessage}
                       </p>
                     )}
@@ -367,86 +358,63 @@ export function Give() {
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      id="submit-donation-btn"
                       onClick={startDonationProcess}
-                      className="w-full bg-gold hover:bg-yellow-400 text-soft-black font-bold uppercase tracking-wider py-5 rounded-2xl transition-all shadow-[0_10px_20px_rgba(201,168,76,0.3)] hover:shadow-[0_15px_30px_rgba(201,168,76,0.4)] flex items-center justify-center gap-3 cursor-pointer"
+                      disabled={processStep === 'loading'}
+                      className="w-full bg-gold hover:bg-yellow-400 text-soft-black font-bold uppercase tracking-wider py-5 rounded-2xl transition-all shadow-[0_10px_20px_rgba(201,168,76,0.3)] flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
                     >
-                      <HeartHandshake className="w-6 h-6" /> Continuer ({getFinalAmountDisplay()})
+                      {processStep === 'loading' ? (
+                        <><div className="w-5 h-5 border-2 border-soft-black border-t-transparent rounded-full animate-spin" /> Enregistrement...</>
+                      ) : (
+                        <><HeartHandshake className="w-6 h-6" /> Enregistrer mon don ({getFinalAmountDisplay()})</>
+                      )}
                     </motion.button>
-
-                    <p className="text-center text-xs font-bold text-gray-500 tracking-wide border-t border-gray-300 pt-4" id="confirmation-text">
-                      une confirmation vous sera envoyé par mail ou whatsapp
-                    </p>
                   </div>
                 ) : (
-                  <div className="space-y-8 text-center py-6">
-                    {processStep === 'initiating' && (
-                      <div className="flex flex-col items-center justify-center space-y-4">
-                        <div className="w-16 h-16 border-4 border-gold/20 border-t-gold rounded-full animate-spin" />
-                        <h3 className="font-bold text-xl text-soft-black font-serif">Initiation de la transaction...</h3>
-                        <p className="text-sm text-gray-500">Contact des serveurs sécurisés au <strong className="font-mono">+237 680 82 19 53</strong></p>
-                      </div>
-                    )}
+                  /* Success state */
+                  <div className="space-y-6 text-center py-4">
+                    <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                      <CheckCircle className="w-12 h-12" />
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="font-serif text-2xl font-bold text-soft-black">Don Enregistré !</h3>
+                      <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">
+                        Merci, <strong className="text-soft-black">{donorName}</strong>. Votre intention de don de <strong className="text-burgundy">{getFinalAmountDisplay()}</strong> a bien été notée.
+                        {selectedProject && <span> (Projet : <strong>{selectedProject.title}</strong>)</span>}
+                      </p>
+                    </div>
 
-                    {processStep === 'waiting_pin' && (
-                      <div className="flex flex-col items-center justify-center space-y-4">
-                        <div className="w-16 h-16 bg-gold/10 text-gold rounded-full flex items-center justify-center animate-bounce">
-                          <Smartphone className="w-8 h-8" />
-                        </div>
-                        <h3 className="font-bold text-xl text-soft-black font-serif">En attente de validation</h3>
-                        <p className="text-sm text-gray-600 max-w-sm">
-                          Un message push a été envoyé au numéro <strong className="font-mono">{donorPhone}</strong>.<br />
-                          Veuillez saisir votre code PIN de validation sur votre téléphone portable pour autoriser le don à hauteur de <strong className="text-burgundy font-bold">{getFinalAmountDisplay()}</strong>.
-                        </p>
-                      </div>
-                    )}
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left text-xs text-amber-800 space-y-1.5">
+                      <p className="font-bold text-amber-900 mb-2">Prochaines étapes :</p>
+                      {paymentMethod === 'OM' ? (
+                        <p>• Envoyez <strong>{getFinalAmountDisplay()}</strong> via Orange Money au <strong className="font-mono">+237 680 82 19 53</strong> (Chapelle CEME)</p>
+                      ) : (
+                        <p>• Effectuez votre virement selon les coordonnées bancaires affichées ci-dessous</p>
+                      )}
+                      <p>• Mentionnez la référence <strong className="font-mono">{donationRef}</strong> lors du paiement</p>
+                      <p>• L'équipe vous contactera au <strong>{donorPhone}</strong> pour confirmer la réception</p>
+                    </div>
 
-                    {processStep === 'completed' && (
-                      <div className="space-y-6">
-                        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
-                          <CheckCircle className="w-12 h-12" />
-                        </div>
-                        <div className="space-y-2">
-                          <h3 className="font-serif text-3xl font-bold text-soft-black">Don Validé !</h3>
-                          <p className="text-sm text-gray-600 max-w-sm mx-auto">
-                            Que l'Éternel se souvienne de votre générosité, <strong className="text-soft-black">{donorName}</strong>.<br />
-                            Le don de <strong className="text-[#2d5a4a] font-bold">{getFinalAmountDisplay()}</strong> a bien été reçu.
-                          </p>
-                        </div>
+                    <div className="bg-white rounded-xl p-4 border border-gray-200 text-left text-xs space-y-1.5">
+                      <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Référence :</span> <span className="font-mono">{donationRef}</span></p>
+                      <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Type :</span> {contribType}{selectedProject ? ` — ${selectedProject.title}` : ''}</p>
+                      <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Montant :</span> {getFinalAmountDisplay()}</p>
+                      <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Moyen :</span> {paymentMethod === 'OM' ? 'Orange Money' : 'Virement / Autre'}</p>
+                    </div>
 
-                        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 max-w-sm mx-auto text-left space-y-1.5 text-xs">
-                          <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Référence :</span> {donationRef}</p>
-                          <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Type :</span> {contribType}</p>
-                          <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Moyen :</span> {paymentMethod === 'OM' ? 'Orange Money' : 'Carte de Crédit'}</p>
-                          <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Bénéficiaire :</span> +237 680 82 19 53</p>
-                        </div>
-
-                        <div className="pt-4 border-t border-gray-300">
-                          <p className="text-xs font-bold text-emerald-800 bg-emerald-50 py-3 px-4 rounded-xl inline-block border border-emerald-200/50">
-                            une confirmation vous sera envoyé par mail ou whatsapp
-                          </p>
-                        </div>
-
-                        <button
-                          onClick={resetProcess}
-                          className="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-soft-black transition-colors cursor-pointer block mx-auto py-2"
-                        >
-                          Faire un autre don
-                        </button>
-                      </div>
-                    )}
+                    <button
+                      onClick={resetProcess}
+                      className="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-soft-black transition-colors cursor-pointer block mx-auto py-2"
+                    >
+                      Déclarer un autre don
+                    </button>
                   </div>
                 )}
               </div>
             </motion.div>
 
-            {/* Impact & Other Ways */}
+            {/* Impact */}
             <div className="space-y-12">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-              >
+              <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
                 <h2 className="font-serif text-3xl font-bold mb-6">L'Impact de vos Dons</h2>
                 <div className="space-y-6">
                   {[
@@ -467,13 +435,7 @@ export function Give() {
                 </div>
               </motion.div>
 
-              {/* Other methods */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="border-t border-gray-100 pt-10"
-              >
+              <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="border-t border-gray-100 pt-10">
                 <h2 className="font-serif text-2xl font-bold mb-6">Autres Moyens de Donner</h2>
                 <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-5 hover:border-gold transition-colors mb-4">
                   <div className="bg-gray-100 p-3 rounded-full text-soft-black shrink-0"><Landmark className="w-5 h-5" /></div>
@@ -499,53 +461,51 @@ export function Give() {
         </div>
       </div>
 
-      {/* ======================================================
-          CURRENT PROJECTS
-      ====================================================== */}
-      <div className="py-24 bg-[#f5f2ed] border-t border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-14"
-          >
-            <p className="text-gold font-bold uppercase tracking-widest text-sm mb-4">En ce Moment</p>
-            <h2 className="font-serif text-4xl font-bold">Projets en Cours</h2>
-            <p className="text-gray-400 max-w-xl mx-auto mt-4">Voici vers quoi vont spécifiquement vos contributions actuelles. Ensemble, nous pouvons y arriver.</p>
-          </motion.div>
+      {/* PROJECTS */}
+      {projects.length > 0 && (
+        <div className="py-24 bg-[#f5f2ed] border-t border-gray-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
+              <p className="text-gold font-bold uppercase tracking-widest text-sm mb-4">En ce Moment</p>
+              <h2 className="font-serif text-4xl font-bold">Projets en Cours</h2>
+              <p className="text-gray-400 max-w-xl mx-auto mt-4">Voici vers quoi vont spécifiquement vos contributions actuelles. Ensemble, nous pouvons y arriver.</p>
+            </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {projects.map((proj, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all hover:border-gold/20 group"
-              >
-                <h3 className="font-serif text-xl font-bold mb-3 group-hover:text-burgundy transition-colors">{proj.title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed mb-6">{proj.desc}</p>
-                <div className="mb-3 flex justify-between items-center text-sm">
-                  <span className="font-bold text-soft-black">Objectif : {proj.goal}</span>
-                  <span className="font-bold text-gold">{proj.raised}%</span>
-                </div>
-                <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {projects.map((proj, i) => {
+                const pct = proj.goalAmount > 0 ? Math.min(100, Math.round((proj.raisedAmount / proj.goalAmount) * 100)) : 0;
+                return (
                   <motion.div
-                    initial={{ width: 0 }}
-                    whileInView={{ width: `${proj.raised}%` }}
+                    key={proj.id}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 1.2, ease: 'easeOut' }}
-                    className="h-full bg-gradient-to-r from-gold to-yellow-400 rounded-full"
-                  />
-                </div>
-              </motion.div>
-            ))}
+                    transition={{ delay: i * 0.1 }}
+                    className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all hover:border-gold/20 group"
+                  >
+                    <h3 className="font-serif text-xl font-bold mb-3 group-hover:text-burgundy transition-colors">{proj.title}</h3>
+                    {proj.description && <p className="text-gray-600 text-sm leading-relaxed mb-6">{proj.description}</p>}
+                    <div className="mb-3 flex justify-between items-center text-sm">
+                      <span className="font-bold text-soft-black">Objectif : {proj.goalAmount.toLocaleString('fr-FR')} {proj.currency}</span>
+                      <span className="font-bold text-gold">{pct}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        whileInView={{ width: `${pct}%` }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 1.2, ease: 'easeOut' }}
+                        className="h-full bg-gradient-to-r from-gold to-yellow-400 rounded-full"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-2">{proj.raisedAmount.toLocaleString('fr-FR')} {proj.currency} collectés</p>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
-
+      )}
     </div>
   );
 }

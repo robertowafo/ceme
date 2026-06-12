@@ -92,6 +92,19 @@ CREATE TABLE IF NOT EXISTS blog_posts (
   is_published INTEGER NOT NULL DEFAULT 1
 );
 
+CREATE TABLE IF NOT EXISTS donation_projects (
+  id          TEXT PRIMARY KEY,
+  title       TEXT NOT NULL,
+  description TEXT,
+  goal_amount INTEGER NOT NULL,
+  currency    TEXT NOT NULL DEFAULT 'FCFA',
+  is_active   INTEGER NOT NULL DEFAULT 1,
+  created_at  TEXT NOT NULL
+);
+
+-- Migration : ajouter project_id aux dons existants (ignorée si déjà présente)
+-- A exécuter séparément : ALTER TABLE donations ADD COLUMN project_id TEXT;
+
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   id            TEXT PRIMARY KEY,
   email         TEXT NOT NULL UNIQUE,

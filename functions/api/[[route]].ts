@@ -305,14 +305,53 @@ app.get('/documents/download/:id', async (c) => {
 
 // ─── donations ─────────────────────────────────────────────────────────────────
 
+// ─── donation_projects ─────────────────────────────────────────────────────────
+
+app.get('/donation-projects', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT p.id, p.title, p.description, p.goal_amount AS goalAmount, p.currency,
+            p.is_active AS isActive, p.created_at AS createdAt,
+            COALESCE((SELECT SUM(d.amount) FROM donations d WHERE d.project_id = p.id), 0) AS raisedAmount
+     FROM donation_projects p ORDER BY p.created_at DESC`
+  ).all<any>()
+  return c.json(results.map((r: any) => ({ ...r, isActive: r.isActive === 1 })))
+})
+
+app.put('/donation-projects/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const { title, description, goalAmount, currency, isActive } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM donation_projects WHERE id=?').bind(id).first()
+  await c.env.DB.prepare(
+    `INSERT INTO donation_projects (id, title, description, goal_amount, currency, is_active, created_at)
+     VALUES (?,?,?,?,?,?,?)
+     ON CONFLICT(id) DO UPDATE SET
+       title=excluded.title, description=excluded.description,
+       goal_amount=excluded.goal_amount, currency=excluded.currency, is_active=excluded.is_active`
+  ).bind(id, title, description ?? null, Math.round(Number(goalAmount)), currency || 'FCFA',
+         isActive === false ? 0 : 1, new Date().toISOString()).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Projets', id,
+    `${existing ? 'Modification' : 'Création'} projet : "${title}"`)
+  return c.json({ success: true })
+})
+
+app.delete('/donation-projects/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT title FROM donation_projects WHERE id=?').bind(id).first<{title:string}>()
+  await c.env.DB.prepare('DELETE FROM donation_projects WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Projets', id, `Suppression projet : "${row?.title ?? id}"`)
+  return c.json({ success: true })
+})
+
+// ─── donations ────────────────────────────────────────────────────────────────
+
 app.post('/donations', async (c) => {
-  const { donorName, phone, amount, currency, contribType, paymentMethod, reference } = await c.req.json()
+  const { donorName, phone, amount, currency, contribType, paymentMethod, reference, projectId } = await c.req.json()
   if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
     return c.json({ error: 'Montant invalide' }, 400)
   }
   const id = 'don_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
   await c.env.DB.prepare(
-    'INSERT INTO donations (id, donor_name, phone, amount, currency, contrib_type, payment_method, reference, submitted_at) VALUES (?,?,?,?,?,?,?,?,?)'
+    'INSERT INTO donations (id, donor_name, phone, amount, currency, contrib_type, payment_method, reference, project_id, submitted_at) VALUES (?,?,?,?,?,?,?,?,?,?)'
   ).bind(
     id,
     donorName?.trim() || null,
@@ -322,6 +361,7 @@ app.post('/donations', async (c) => {
     contribType || 'Offrande',
     paymentMethod || 'OM',
     reference || null,
+    projectId || null,
     new Date().toISOString()
   ).run()
   return c.json({ success: true, id })
@@ -359,10 +399,13 @@ app.get('/donations/stats', requireAdmin, async (c) => {
 
 app.get('/donations', requireAdmin, async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT id, donor_name AS donorName, phone, amount, currency,
-            contrib_type AS contribType, payment_method AS paymentMethod,
-            reference, submitted_at AS submittedAt
-     FROM donations ORDER BY submitted_at DESC`
+    `SELECT d.id, d.donor_name AS donorName, d.phone, d.amount, d.currency,
+            d.contrib_type AS contribType, d.payment_method AS paymentMethod,
+            d.reference, d.project_id AS projectId, d.submitted_at AS submittedAt,
+            p.title AS projectTitle
+     FROM donations d
+     LEFT JOIN donation_projects p ON p.id = d.project_id
+     ORDER BY d.submitted_at DESC`
   ).all()
   return c.json(results)
 })
