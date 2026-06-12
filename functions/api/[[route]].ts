@@ -573,6 +573,30 @@ app.get('/youtube/video-info', async (c) => {
   }
 })
 
+// ─── blog_categories ───────────────────────────────────────────────────────────
+
+app.get('/blog-categories', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT id, name FROM blog_categories ORDER BY name ASC'
+  ).all()
+  return c.json(results)
+})
+
+app.put('/blog-categories/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const { name } = await c.req.json()
+  await c.env.DB.prepare(
+    `INSERT INTO blog_categories (id, name) VALUES (?, ?)
+     ON CONFLICT(id) DO UPDATE SET name=excluded.name`
+  ).bind(id, name).run()
+  return c.json({ success: true })
+})
+
+app.delete('/blog-categories/:id', requireAdmin, async (c) => {
+  await c.env.DB.prepare('DELETE FROM blog_categories WHERE id=?').bind(c.req.param('id')).run()
+  return c.json({ success: true })
+})
+
 // ─── blog_posts ────────────────────────────────────────────────────────────────
 
 app.get('/blog-posts/all', requireAdmin, async (c) => {

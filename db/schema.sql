@@ -75,6 +75,11 @@ CREATE TABLE IF NOT EXISTS prayer_requests (
   submitted_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS blog_categories (
+  id   TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE
+);
+
 CREATE TABLE IF NOT EXISTS blog_posts (
   id           TEXT PRIMARY KEY,
   title        TEXT NOT NULL,

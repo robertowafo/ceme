@@ -2,18 +2,17 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, Calendar, User, Search, Tag, Mail, Loader2, BookOpen } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { getBlogPosts, BlogPost } from '../lib/dbService';
-
-const CATEGORIES = ['Dévotions Quotidiennes', 'Enseignements Profonds', 'Témoignages', "Nouvelles de l'Église", 'Ministère des Jeunes'];
+import { getBlogPosts, getBlogCategories, BlogPost, BlogCategory } from '../lib/dbService';
 
 export function Blog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [categories, setCategories] = useState<BlogCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    getBlogPosts()
-      .then(setPosts)
+    Promise.all([getBlogPosts(), getBlogCategories()])
+      .then(([p, c]) => { setPosts(p); setCategories(c); })
       .catch(console.error)
       .finally(() => setIsLoading(false));
   }, []);
@@ -155,28 +154,42 @@ export function Blog() {
             </div>
 
             {/* Categories */}
-            <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-              <h3 className="font-serif text-xl font-bold mb-4 border-b border-gray-100 pb-3">Catégories</h3>
-              <ul className="space-y-3">
-                {CATEGORIES.map((cat, idx) => {
-                  const count = posts.filter(p => p.category === cat).length;
-                  return (
-                    <li key={idx}>
-                      <button
-                        onClick={() => setSearchQuery(cat)}
-                        className="flex items-center justify-between w-full text-sm text-gray-600 hover:text-burgundy font-medium transition-colors group"
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-burgundy transition-colors"></span>
-                          {cat}
-                        </span>
-                        <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{count}</span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+            {categories.length > 0 && (
+              <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                <h3 className="font-serif text-xl font-bold mb-4 border-b border-gray-100 pb-3">Catégories</h3>
+                <ul className="space-y-3">
+                  <li>
+                    <button
+                      onClick={() => setSearchQuery('')}
+                      className="flex items-center justify-between w-full text-sm text-gray-600 hover:text-burgundy font-medium transition-colors group"
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover:bg-burgundy transition-colors"></span>
+                        Tous les articles
+                      </span>
+                      <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{posts.length}</span>
+                    </button>
+                  </li>
+                  {categories.map(cat => {
+                    const count = posts.filter(p => p.category === cat.name).length;
+                    return (
+                      <li key={cat.id}>
+                        <button
+                          onClick={() => setSearchQuery(cat.name)}
+                          className={`flex items-center justify-between w-full text-sm font-medium transition-colors group ${searchQuery === cat.name ? 'text-burgundy' : 'text-gray-600 hover:text-burgundy'}`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className={`w-1.5 h-1.5 rounded-full transition-colors ${searchQuery === cat.name ? 'bg-burgundy' : 'bg-gray-300 group-hover:bg-burgundy'}`}></span>
+                            {cat.name}
+                          </span>
+                          <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{count}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
 
             {/* Newsletter widget */}
             <div className="bg-soft-black text-white p-6 rounded-3xl relative overflow-hidden">

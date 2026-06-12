@@ -40,6 +40,7 @@ import {
   getAllPrayerRequests, deletePrayerRequest, PrayerRequest,
   getAllDonations, getDonationStats, deleteDonation, Donation, DonationStats,
   getAllBlogPosts, saveBlogPost, deleteBlogPost, BlogPost,
+  getBlogCategories, saveBlogCategory, deleteBlogCategory, BlogCategory,
 } from '../lib/dbService';
 
 type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog';
@@ -60,6 +61,10 @@ export function Admin() {
   const [donations, setDonations] = useState<Donation[]>([]);
   const [donationStats, setDonationStats] = useState<DonationStats | null>(null);
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
+  const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([]);
+  const [showCatManager, setShowCatManager] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [isSavingCat, setIsSavingCat] = useState(false);
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -194,8 +199,9 @@ export function Admin() {
         setDonations(data);
         setDonationStats(stats);
       } else if (activeTab === 'blog') {
-        const data = await getAllBlogPosts();
+        const [data, cats] = await Promise.all([getAllBlogPosts(), getBlogCategories()]);
         setBlogPosts(data);
+        setBlogCategories(cats);
       }
     } catch (err: any) {
       console.error('Failure loading data:', err);
@@ -239,9 +245,10 @@ export function Admin() {
     setEvtTitle(''); setEvtType('special'); setEvtDateStr(''); setEvtIsoDate(''); setEvtLocation(''); setEvtPreacher(''); setEvtDesc(''); setEvtBadge(''); setEvtBadgeColor('bg-gold text-soft-black font-extrabold'); setEvtImage(''); setEvtIsPopular(false);
     setTestAuthor(''); setTestSince(''); setTestText(''); setTestImg(''); setTestCategory('home');
     setDocTitle(''); setDocDesc(''); setDocUrl(''); setDocCategory('Sermon Notes'); setDocFileType('PDF');
-    setBlogTitle(''); setBlogCategory('Dévotions Quotidiennes'); setBlogAuthor('Rev. Dr. Alphonse ESSOMBA');
+    setBlogTitle(''); setBlogCategory(blogCategories[0]?.name ?? ''); setBlogAuthor('Rev. Dr. Alphonse ESSOMBA');
     setBlogCoverImage(''); setBlogExcerpt(''); setBlogContent('');
     setBlogPublishedAt(new Date().toISOString().slice(0, 10)); setBlogIsPublished(true);
+    setShowCatManager(false); setNewCatName('');
   };
 
   // Open Form for Editing
@@ -1262,7 +1269,7 @@ export function Admin() {
               className="bg-stone-900 border border-white/10 rounded-2xl max-w-2xl w-full p-6 sm:p-8 max-h-[90vh] overflow-y-auto relative shadow-2xl"
             >
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setShowCatManager(false); setNewCatName(''); }}
                 className="absolute top-6 right-6 p-1.5 rounded-lg bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -1516,16 +1523,93 @@ export function Admin() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie</label>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-xs font-bold text-white/60 uppercase tracking-wider">Catégorie</label>
+                          <button
+                            type="button"
+                            onClick={() => setShowCatManager(v => !v)}
+                            className="text-[10px] text-gold font-bold uppercase tracking-wider hover:text-white flex items-center gap-1 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" /> Gérer
+                          </button>
+                        </div>
                         <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogCategory} onChange={e => setBlogCategory(e.target.value)}>
-                          <option value="Dévotions Quotidiennes">Dévotions Quotidiennes</option>
-                          <option value="Enseignements Profonds">Enseignements Profonds</option>
-                          <option value="Témoignages">Témoignages</option>
-                          <option value="Nouvelles de l'Église">Nouvelles de l'Église</option>
-                          <option value="Ministère des Jeunes">Ministère des Jeunes</option>
-                          <option value="Encouragement">Encouragement</option>
-                          <option value="Événements">Événements</option>
+                          {blogCategories.length === 0 ? (
+                            <option value="">— Aucune catégorie —</option>
+                          ) : (
+                            blogCategories.map(cat => (
+                              <option key={cat.id} value={cat.name}>{cat.name}</option>
+                            ))
+                          )}
                         </select>
+
+                        {/* Category Manager Panel */}
+                        {showCatManager && (
+                          <div className="mt-3 bg-black/60 border border-white/10 rounded-xl p-4 space-y-3">
+                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Gérer les catégories</p>
+
+                            {/* Existing categories */}
+                            <div className="space-y-2 max-h-40 overflow-y-auto">
+                              {blogCategories.length === 0 ? (
+                                <p className="text-[10px] text-white/30 italic">Aucune catégorie. Ajoutez-en une ci-dessous.</p>
+                              ) : (
+                                blogCategories.map(cat => (
+                                  <div key={cat.id} className="flex items-center justify-between bg-white/5 rounded-lg px-3 py-2">
+                                    <span className="text-xs text-white/80 font-medium">{cat.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          await deleteBlogCategory(cat.id);
+                                          const updated = await getBlogCategories();
+                                          setBlogCategories(updated);
+                                          if (blogCategory === cat.name) setBlogCategory(updated[0]?.name ?? '');
+                                        } catch { showStatus('Erreur lors de la suppression.', 'error'); }
+                                      }}
+                                      className="p-1 rounded hover:bg-red-500/20 text-white/40 hover:text-red-400 transition-colors"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+
+                            {/* Add new category */}
+                            <div className="flex gap-2 pt-1 border-t border-white/10">
+                              <input
+                                type="text"
+                                value={newCatName}
+                                onChange={e => setNewCatName(e.target.value)}
+                                onKeyDown={async e => {
+                                  if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); }
+                                }}
+                                placeholder="Nouvelle catégorie..."
+                                className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                              />
+                              <button
+                                type="button"
+                                disabled={!newCatName.trim() || isSavingCat}
+                                onClick={async () => {
+                                  if (!newCatName.trim()) return;
+                                  setIsSavingCat(true);
+                                  try {
+                                    const id = 'cat_' + Date.now();
+                                    await saveBlogCategory({ id, name: newCatName.trim() });
+                                    const updated = await getBlogCategories();
+                                    setBlogCategories(updated);
+                                    setBlogCategory(newCatName.trim());
+                                    setNewCatName('');
+                                  } catch { showStatus('Erreur lors de la création.', 'error'); }
+                                  finally { setIsSavingCat(false); }
+                                }}
+                                className="bg-gold text-soft-black px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-40 hover:bg-gold/90 transition-colors"
+                              >
+                                {isSavingCat ? '...' : 'Ajouter'}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Auteur</label>

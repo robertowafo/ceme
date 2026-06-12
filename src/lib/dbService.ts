@@ -266,6 +266,27 @@ export async function deletePrayerRequest(id: string): Promise<void> {
   return remove('/api/prayer-requests', id);
 }
 
+// ─── blog_categories ───────────────────────────────────────────────────────────
+
+export interface BlogCategory {
+  id: string;
+  name: string;
+}
+
+export async function getBlogCategories(): Promise<BlogCategory[]> {
+  const res = await fetch('/api/blog-categories');
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function saveBlogCategory(cat: BlogCategory): Promise<void> {
+  return upsert('/api/blog-categories', cat.id, { name: cat.name });
+}
+
+export async function deleteBlogCategory(id: string): Promise<void> {
+  return remove('/api/blog-categories', id);
+}
+
 // ─── blog_posts ────────────────────────────────────────────────────────────────
 
 export interface BlogPost {
