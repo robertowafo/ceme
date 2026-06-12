@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Send, ShieldCheck, Clock, Users, FileText, BookOpen, Quote, Phone, Loader2 } from 'lucide-react';
 import { submitPrayerRequest, getPublicPrayerRequests, PrayerRequestPublic } from '../lib/dbService';
 
@@ -8,12 +8,6 @@ const promises = [
   { ref: 'Philippiens 4:6', text: '"Ne vous inquiétez de rien, mais faites connaître vos besoins à Dieu par des prières et supplications."', bg: 'bg-soft-black' },
   { ref: 'Jérémie 33:3',    text: '"Invoque-moi, et je te répondrai; je t\'annoncerai de grandes choses que tu ne connais pas."',          bg: 'bg-[#2d5a4a]' },
   { ref: '1 Jean 5:14',     text: '"Si nous lui demandons quelque chose selon sa volonté, il nous écoute."',                               bg: 'bg-[#3a2a1a]' },
-];
-
-const answered = [
-  { name: 'M. François',      cat: 'Provision',          text: 'Après 8 mois de chômage, l\'équipe a intercédé pour moi pendant 3 semaines. La semaine suivante, j\'ai reçu deux offres d\'emploi le même jour. Notre Dieu entend !' },
-  { name: 'Famille Dumont',   cat: 'Guérison',           text: 'Les médecins disaient que notre fils ne pourrait jamais marcher. Nous avons prié avec foi. Aujourd\'hui il court ! La prière déplace les montagnes.' },
-  { name: 'Sœur Miriam',      cat: 'Salut d\'un proche', text: 'Ma sœur était loin de Dieu depuis 15 ans. L\'église a intercédé avec nous. Il y a 3 mois elle a donné sa vie à Christ. Gloire à l\'Éternel !' },
 ];
 
 function timeAgo(dateStr: string): string {
@@ -29,25 +23,37 @@ function timeAgo(dateStr: string): string {
 }
 
 export function Prayer() {
-  // Form state
+  const [activeTab, setActiveTab] = useState<'prayer' | 'testimony'>('prayer');
+
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
-  const [type, setType] = useState<'prayer' | 'testimony'>('prayer');
   const [message, setMessage] = useState('');
   const [isConfidential, setIsConfidential] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [formStatus, setFormStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Prayer wall state
-  const [prayers, setPrayers] = useState<PrayerRequestPublic[]>([]);
+  const [allPublic, setAllPublic] = useState<PrayerRequestPublic[]>([]);
   const [isLoadingWall, setIsLoadingWall] = useState(true);
+
+  const wallPrayers = allPublic.filter(r => r.type === 'prayer');
+  const testimonies = allPublic.filter(r => r.type === 'testimony');
 
   useEffect(() => {
     getPublicPrayerRequests()
-      .then(data => setPrayers(data))
+      .then(data => setAllPublic(data))
       .catch(console.error)
       .finally(() => setIsLoadingWall(false));
   }, []);
+
+  const resetForm = () => {
+    setName(''); setPhone(''); setMessage(''); setIsConfidential(false);
+  };
+
+  const switchTab = (tab: 'prayer' | 'testimony') => {
+    setActiveTab(tab);
+    resetForm();
+    setFormStatus('idle');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,19 +61,19 @@ export function Prayer() {
     setIsSending(true);
     setFormStatus('idle');
     try {
+      const isPublic = activeTab === 'testimony' ? true : !isConfidential;
       await submitPrayerRequest({
         name: name.trim() || undefined,
         phone: phone.trim() || undefined,
         message: message.trim(),
-        type,
-        isPublic: !isConfidential
+        type: activeTab,
+        isPublic,
       });
       setFormStatus('success');
-      setName(''); setPhone(''); setMessage(''); setType('prayer'); setIsConfidential(false);
-      // Refresh wall
-      if (!isConfidential) {
+      resetForm();
+      if (isPublic) {
         const updated = await getPublicPrayerRequests();
-        setPrayers(updated);
+        setAllPublic(updated);
       }
     } catch {
       setFormStatus('error');
@@ -196,108 +202,221 @@ export function Prayer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-12 lg:gap-16">
 
-            {/* ── Formulaire ── */}
+            {/* ── Formulaire avec onglets ── */}
             <div className="lg:w-1/2">
-              <div className="bg-white p-8 lg:p-10 rounded-3xl shadow-xl border border-gray-100 relative overflow-hidden">
+              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-gold to-burgundy" />
-                <BookOpen className="w-8 h-8 text-gold mb-4" />
-                <h3 className="font-serif text-3xl font-bold mb-2">Soumettre une Requête</h3>
-                <p className="text-gray-400 mb-8 text-sm">Remplissez ce formulaire pour confier vos fardeaux ou partager vos victoires.</p>
 
-                {formStatus === 'success' && (
-                  <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-semibold text-center">
-                    🙏 Votre requête a été envoyée. L'équipe d'intercession priera pour vous !
-                  </div>
-                )}
-                {formStatus === 'error' && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-semibold text-center">
-                    Une erreur est survenue. Veuillez réessayer.
-                  </div>
-                )}
-
-                <form className="space-y-6" onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-                        Nom / Prénom <span className="text-gray-300 font-normal">(Optionnel)</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        placeholder="Ex: Jean DUPONT"
-                        className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold focus:bg-white w-full transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
-                        <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Numéro de Téléphone <span className="text-gray-300 font-normal">(Pour suivi)</span></span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={e => setPhone(e.target.value)}
-                        placeholder="Ex: +237 6XX XXX XXX"
-                        className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold focus:bg-white w-full transition-all"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Type de message</label>
-                    <div className="flex flex-wrap gap-4">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="type" className="accent-burgundy w-4 h-4" checked={type === 'prayer'} onChange={() => setType('prayer')} />
-                        <span className="text-sm font-medium">Requête de prière</span>
-                      </label>
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="type" className="accent-gold w-4 h-4" checked={type === 'testimony'} onChange={() => setType('testimony')} />
-                        <span className="text-sm font-medium">Témoignage (Action de grâce)</span>
-                      </label>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Votre Message</label>
-                    <textarea
-                      rows={5}
-                      required
-                      value={message}
-                      onChange={e => setMessage(e.target.value)}
-                      placeholder="Écrivez le détail de votre situation ici..."
-                      className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold focus:bg-white w-full resize-none transition-all"
-                    />
-                  </div>
-
-                  <div className="bg-[#f5f2ed] p-4 rounded-xl flex items-start gap-3 border border-gray-200">
-                    <input
-                      type="checkbox"
-                      id="public"
-                      checked={isConfidential}
-                      onChange={e => setIsConfidential(e.target.checked)}
-                      className="accent-burgundy w-5 h-5 shrink-0 mt-0.5"
-                    />
-                    <label htmlFor="public" className="text-sm text-gray-700 cursor-pointer">
-                      <strong className="block mb-1">Garder cette requête strictement confidentielle</strong>
-                      Si coché, votre message sera lu uniquement par les pasteurs.
-                    </label>
-                  </div>
-
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    type="submit"
-                    disabled={isSending}
-                    className="bg-soft-black text-white hover:bg-gold hover:text-soft-black w-full py-4 rounded-xl font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                {/* Onglets */}
+                <div className="flex border-b border-gray-100 mt-2">
+                  <button
+                    onClick={() => switchTab('prayer')}
+                    className={`flex-1 py-5 text-sm font-bold uppercase tracking-widest transition-colors relative ${
+                      activeTab === 'prayer'
+                        ? 'text-soft-black'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
                   >
-                    {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-                    {isSending ? 'Envoi en cours...' : 'Envoyer au Seigneur'}
-                  </motion.button>
-                </form>
+                    Prières
+                    {activeTab === 'prayer' && (
+                      <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 w-full h-0.5 bg-soft-black" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => switchTab('testimony')}
+                    className={`flex-1 py-5 text-sm font-bold uppercase tracking-widest transition-colors relative ${
+                      activeTab === 'testimony'
+                        ? 'text-gold'
+                        : 'text-gray-400 hover:text-gray-600'
+                    }`}
+                  >
+                    Témoignages
+                    {activeTab === 'testimony' && (
+                      <motion.div layoutId="tab-indicator" className="absolute bottom-0 left-0 w-full h-0.5 bg-gold" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="p-8 lg:p-10">
+                  <AnimatePresence mode="wait">
+                    {activeTab === 'prayer' ? (
+                      <motion.div
+                        key="prayer-form"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <BookOpen className="w-8 h-8 text-soft-black mb-4" />
+                        <h3 className="font-serif text-3xl font-bold mb-2">Soumettre une Prière</h3>
+                        <p className="text-gray-400 mb-8 text-sm">Confiez votre fardeau à l'équipe d'intercession. Vous n'êtes pas seul.</p>
+
+                        {formStatus === 'success' && (
+                          <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-700 text-sm font-semibold text-center">
+                            🙏 Votre requête a été envoyée. L'équipe d'intercession priera pour vous !
+                          </div>
+                        )}
+                        {formStatus === 'error' && (
+                          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-semibold text-center">
+                            Une erreur est survenue. Veuillez réessayer.
+                          </div>
+                        )}
+
+                        <form className="space-y-6" onSubmit={handleSubmit}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                                Nom / Prénom <span className="text-gray-300 font-normal">(Optionnel)</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                placeholder="Ex: Jean DUPONT"
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-soft-black focus:bg-white w-full transition-all"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Téléphone <span className="text-gray-300 font-normal">(Pour suivi)</span></span>
+                              </label>
+                              <input
+                                type="tel"
+                                value={phone}
+                                onChange={e => setPhone(e.target.value)}
+                                placeholder="Ex: +237 6XX XXX XXX"
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-soft-black focus:bg-white w-full transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Votre Requête</label>
+                            <textarea
+                              rows={5}
+                              required
+                              value={message}
+                              onChange={e => setMessage(e.target.value)}
+                              placeholder="Décrivez votre situation, votre besoin de prière..."
+                              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-soft-black focus:bg-white w-full resize-none transition-all"
+                            />
+                          </div>
+
+                          <div className="bg-[#f5f2ed] p-4 rounded-xl flex items-start gap-3 border border-gray-200">
+                            <input
+                              type="checkbox"
+                              id="confidential"
+                              checked={isConfidential}
+                              onChange={e => setIsConfidential(e.target.checked)}
+                              className="accent-burgundy w-5 h-5 shrink-0 mt-0.5"
+                            />
+                            <label htmlFor="confidential" className="text-sm text-gray-700 cursor-pointer">
+                              <strong className="block mb-1">Garder cette requête strictement confidentielle</strong>
+                              Si coché, votre message sera lu uniquement par les pasteurs.
+                            </label>
+                          </div>
+
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            type="submit"
+                            disabled={isSending}
+                            className="bg-soft-black text-white hover:bg-gold hover:text-soft-black w-full py-4 rounded-xl font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                            {isSending ? 'Envoi en cours...' : 'Envoyer au Seigneur'}
+                          </motion.button>
+                        </form>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="testimony-form"
+                        initial={{ opacity: 0, x: 10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 10 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Heart className="w-8 h-8 text-gold mb-4 fill-gold/20" />
+                        <h3 className="font-serif text-3xl font-bold mb-2">Partager un Témoignage</h3>
+                        <p className="text-gray-400 mb-8 text-sm">Dieu vous a exaucé ? Partagez votre victoire pour encourager vos frères et sœurs.</p>
+
+                        {formStatus === 'success' && (
+                          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm font-semibold text-center">
+                            🙌 Votre témoignage a été partagé. Gloire à Dieu !
+                          </div>
+                        )}
+                        {formStatus === 'error' && (
+                          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm font-semibold text-center">
+                            Une erreur est survenue. Veuillez réessayer.
+                          </div>
+                        )}
+
+                        <form className="space-y-6" onSubmit={handleSubmit}>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                                Nom / Prénom <span className="text-gray-300 font-normal">(Optionnel)</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
+                                placeholder="Ex: Jean DUPONT"
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold focus:bg-white w-full transition-all"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
+                                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Téléphone <span className="text-gray-300 font-normal">(Optionnel)</span></span>
+                              </label>
+                              <input
+                                type="tel"
+                                value={phone}
+                                onChange={e => setPhone(e.target.value)}
+                                placeholder="Ex: +237 6XX XXX XXX"
+                                className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold focus:bg-white w-full transition-all"
+                              />
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Votre Témoignage</label>
+                            <textarea
+                              rows={6}
+                              required
+                              value={message}
+                              onChange={e => setMessage(e.target.value)}
+                              placeholder="Racontez comment Dieu a répondu à votre prière, votre guérison, votre délivrance..."
+                              className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold focus:bg-white w-full resize-none transition-all"
+                            />
+                          </div>
+
+                          <div className="bg-amber-50 p-4 rounded-xl flex items-start gap-3 border border-amber-100">
+                            <Heart className="w-5 h-5 text-gold shrink-0 mt-0.5 fill-gold/30" />
+                            <p className="text-sm text-amber-800">
+                              Votre témoignage sera affiché publiquement dans la section <strong>"Dieu Répond"</strong> pour édifier la communauté.
+                            </p>
+                          </div>
+
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            type="submit"
+                            disabled={isSending}
+                            className="bg-gold text-soft-black hover:bg-amber-500 w-full py-4 rounded-xl font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-colors shadow-lg disabled:opacity-60 disabled:cursor-not-allowed"
+                          >
+                            {isSending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Heart className="w-5 h-5" />}
+                            {isSending ? 'Envoi en cours...' : 'Partager mon Témoignage'}
+                          </motion.button>
+                        </form>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
 
-            {/* ── Mur d'Intercession ── */}
+            {/* ── Mur d'Intercession (prières uniquement) ── */}
             <div className="lg:w-1/2 flex flex-col">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="font-serif text-3xl font-bold flex items-center gap-3">
@@ -305,7 +424,7 @@ export function Prayer() {
                   Mur d'Intercession
                 </h2>
                 <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-burgundy shadow-sm border border-gray-100">
-                  {prayers.length} Requête{prayers.length !== 1 ? 's' : ''} Publique{prayers.length !== 1 ? 's' : ''}
+                  {wallPrayers.length} Requête{wallPrayers.length !== 1 ? 's' : ''} Publique{wallPrayers.length !== 1 ? 's' : ''}
                 </span>
               </div>
 
@@ -315,40 +434,28 @@ export function Prayer() {
                     <Loader2 className="w-8 h-8 animate-spin text-gold" />
                     <p className="text-sm">Chargement des requêtes...</p>
                   </div>
-                ) : prayers.length === 0 ? (
+                ) : wallPrayers.length === 0 ? (
                   <div className="py-16 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-2xl">
                     <Heart className="w-10 h-10 text-gray-300 mx-auto mb-3" />
                     <p className="text-sm font-semibold">Aucune requête publique pour le moment.</p>
                     <p className="text-xs mt-1 text-gray-300">Soyez le premier à soumettre votre prière.</p>
                   </div>
                 ) : (
-                  prayers.map((req, i) => (
+                  wallPrayers.map((req, i) => (
                     <motion.div
                       key={req.id}
                       initial={{ opacity: 0, x: 20 }}
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: i * 0.05 }}
-                      className="p-6 bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow rounded-2xl relative group"
+                      className="p-6 bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow rounded-2xl"
                     >
-                      {req.type === 'testimony' && (
-                        <div className="absolute -top-3 left-6 bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded shadow-sm">
-                          Témoignage
-                        </div>
-                      )}
                       <div className="absolute top-6 right-6">
-                        {req.type === 'prayer' ? (
-                          <div className="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200">
-                            <Heart className="w-3.5 h-3.5" /> Intercession
-                          </div>
-                        ) : (
-                          <div className="text-gold flex items-center gap-1">
-                            <Heart className="w-4 h-4 fill-gold" />
-                            <span className="text-xs font-bold">Gloire à Dieu</span>
-                          </div>
-                        )}
+                        <div className="text-gray-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-gray-200">
+                          <Heart className="w-3.5 h-3.5" /> Intercession
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3 mb-4 mt-2">
+                      <div className="flex items-center gap-3 mb-4">
                         <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-serif font-bold text-xl">
                           {(req.name || 'A').charAt(0).toUpperCase()}
                         </div>
@@ -374,7 +481,7 @@ export function Prayer() {
         </div>
       </div>
 
-      {/* ====================================================== ANSWERED PRAYERS */}
+      {/* ====================================================== ANSWERED PRAYERS (témoignages dynamiques) */}
       <div className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
@@ -382,17 +489,43 @@ export function Prayer() {
             <h2 className="font-serif text-4xl font-bold">Dieu Répond</h2>
             <p className="text-gray-400 max-w-xl mx-auto mt-4">Des prières simples, une foi sincère — et l'Éternel qui répond avec abondance.</p>
           </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {answered.map((t, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
-                className="bg-[#f5f2ed] rounded-3xl p-8 border border-transparent hover:border-gold/20 transition-colors group">
-                <span className="inline-block bg-gold/10 text-gold text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full mb-6 border border-gold/20">{t.cat}</span>
-                <Quote className="w-7 h-7 text-gold/30 mb-4" />
-                <p className="text-gray-700 leading-relaxed italic text-sm mb-6">"{t.text}"</p>
-                <p className="font-bold text-soft-black text-sm border-t border-gray-200 pt-4">{t.name}</p>
-              </motion.div>
-            ))}
-          </div>
+
+          {isLoadingWall ? (
+            <div className="py-16 flex justify-center">
+              <Loader2 className="w-8 h-8 animate-spin text-gold" />
+            </div>
+          ) : testimonies.length === 0 ? (
+            <div className="py-16 text-center text-gray-400 border-2 border-dashed border-gray-200 rounded-3xl max-w-md mx-auto">
+              <Quote className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+              <p className="text-sm font-semibold">Aucun témoignage partagé pour le moment.</p>
+              <p className="text-xs mt-1 text-gray-300">Soyez le premier à témoigner de la bonté de Dieu.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {testimonies.map((t, i) => (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  className="bg-[#f5f2ed] rounded-3xl p-8 border border-transparent hover:border-gold/20 transition-colors group"
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <span className="inline-block bg-gold/10 text-gold text-xs font-bold uppercase tracking-widest px-3 py-1 rounded-full border border-gold/20">
+                      Témoignage
+                    </span>
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400">{timeAgo(t.submittedAt)}</span>
+                  </div>
+                  <Quote className="w-7 h-7 text-gold/30 mb-4" />
+                  <p className="text-gray-700 leading-relaxed italic text-sm mb-6">"{t.message}"</p>
+                  <p className="font-bold text-soft-black text-sm border-t border-gray-200 pt-4">
+                    {t.name || 'Anonyme'}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
