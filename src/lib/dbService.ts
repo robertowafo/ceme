@@ -364,3 +364,58 @@ export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]
 export async function deleteNewsletterSubscriber(id: string): Promise<void> {
   return remove('/api/newsletter', id);
 }
+
+// ─── admins ────────────────────────────────────────────────────────────────────
+
+export interface AdminUser {
+  email: string;
+  addedBy: string;
+  addedAt: string;
+}
+
+export async function getAdmins(): Promise<AdminUser[]> {
+  const res = await fetch('/api/admins', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function addAdmin(email: string): Promise<void> {
+  const res = await apiFetch('/api/admins', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function removeAdmin(email: string): Promise<void> {
+  const res = await apiFetch(`/api/admins/${encodeURIComponent(email)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+// ─── audit_log ─────────────────────────────────────────────────────────────────
+
+export interface AuditEntry {
+  id: string;
+  adminEmail: string;
+  action: string;
+  section: string;
+  itemId?: string;
+  description: string;
+  performedAt: string;
+}
+
+export async function getAuditLog(): Promise<AuditEntry[]> {
+  const res = await fetch('/api/audit-log', {
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}

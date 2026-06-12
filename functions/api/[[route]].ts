@@ -24,6 +24,7 @@ interface JwtPayload {
   name: string
   picture: string
   isAdmin: boolean
+  isSuperAdmin: boolean
 }
 
 type HonoApp = { Bindings: Bindings; Variables: Variables }
@@ -61,6 +62,29 @@ const requireAdmin = async (c: Context<HonoApp>, next: Next) => {
   await next()
 }
 
+const requireSuperAdmin = async (c: Context<HonoApp>, next: Next) => {
+  const auth = c.req.header('Authorization')
+  if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Non authentifié' }, 401)
+  const payload = await verifySession(auth.slice(7), c.env.JWT_SECRET)
+  if (!payload?.isSuperAdmin) return c.json({ error: 'Accès réservé au super-administrateur' }, 403)
+  c.set('user', payload)
+  await next()
+}
+
+async function audit(
+  db: D1Database,
+  email: string,
+  action: 'Création' | 'Modification' | 'Suppression' | 'Upload',
+  section: string,
+  itemId: string | null,
+  description: string
+): Promise<void> {
+  const id = 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+  await db.prepare(
+    'INSERT INTO audit_log (id, admin_email, action, section, item_id, description, performed_at) VALUES (?,?,?,?,?,?,?)'
+  ).bind(id, email, action, section, itemId ?? null, description, new Date().toISOString()).run()
+}
+
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 
 app.post('/auth/google', async (c) => {
@@ -73,12 +97,16 @@ app.post('/auth/google', async (c) => {
     if (!googleRes.ok) return c.json({ error: 'Token Google invalide' }, 401)
     const info = await googleRes.json() as any
     if (!info.email_verified) return c.json({ error: 'Adresse email Google non vérifiée' }, 403)
-    const isAdmin = info.email === c.env.ADMIN_EMAIL
+    const isSuperAdmin = info.email === c.env.ADMIN_EMAIL
+    const isAdminFromDB = !isSuperAdmin
+      ? !!(await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(info.email).first())
+      : false
+    const isAdmin = isSuperAdmin || isAdminFromDB
     const token = await signSession(
-      { sub: info.sub, email: info.email, name: info.name, picture: info.picture, isAdmin },
+      { sub: info.sub, email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin },
       c.env.JWT_SECRET
     )
-    return c.json({ token, user: { email: info.email, name: info.name, picture: info.picture, isAdmin } })
+    return c.json({ token, user: { email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin } })
   } catch {
     return c.json({ error: "Erreur d'authentification" }, 500)
   }
@@ -89,7 +117,7 @@ app.get('/auth/me', async (c) => {
   if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Non authentifié' }, 401)
   const payload = await verifySession(auth.slice(7), c.env.JWT_SECRET)
   if (!payload) return c.json({ error: 'Session expirée' }, 401)
-  return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: payload.isAdmin } })
+  return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: payload.isAdmin, isSuperAdmin: payload.isSuperAdmin } })
 })
 
 // ─── recommended_links ─────────────────────────────────────────────────────────
@@ -104,16 +132,21 @@ app.get('/recommended-links', async (c) => {
 app.put('/recommended-links/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const { title, youtubeId, description, category } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM recommended_links WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO recommended_links (id, title, youtube_id, description, category) VALUES (?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET title=excluded.title, youtube_id=excluded.youtube_id,
        description=excluded.description, category=excluded.category`
   ).bind(id, title, youtubeId, description ?? null, category).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Vidéos YouTube', id, `${existing ? 'Modification' : 'Ajout'} de la vidéo : "${title}"`)
   return c.json({ success: true })
 })
 
 app.delete('/recommended-links/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM recommended_links WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT title FROM recommended_links WHERE id=?').bind(id).first<{title:string}>()
+  await c.env.DB.prepare('DELETE FROM recommended_links WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Vidéos YouTube', id, `Suppression de la vidéo : "${row?.title ?? id}"`)
   return c.json({ success: true })
 })
 
@@ -129,16 +162,21 @@ app.get('/gallery-photos', async (c) => {
 app.put('/gallery-photos/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const { category, title, location, url, desc } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM gallery_photos WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO gallery_photos (id, category, title, location, url, note) VALUES (?,?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET category=excluded.category, title=excluded.title,
        location=excluded.location, url=excluded.url, note=excluded.note`
   ).bind(id, category, title, location ?? null, url, desc ?? null).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Galerie Photos', id, `${existing ? 'Modification' : 'Ajout'} photo : "${title}"`)
   return c.json({ success: true })
 })
 
 app.delete('/gallery-photos/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM gallery_photos WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT title FROM gallery_photos WHERE id=?').bind(id).first<{title:string}>()
+  await c.env.DB.prepare('DELETE FROM gallery_photos WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Galerie Photos', id, `Suppression photo : "${row?.title ?? id}"`)
   return c.json({ success: true })
 })
 
@@ -157,6 +195,7 @@ app.get('/church-events', async (c) => {
 app.put('/church-events/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const { title, type, dateStr, isoDate, location, preacher, desc, badge, badgeColor, image, isPopular } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM church_events WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO church_events (id, title, type, date_str, iso_date, location, preacher, note, badge, badge_color, image, is_popular)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
@@ -164,11 +203,15 @@ app.put('/church-events/:id', requireAdmin, async (c) => {
        iso_date=excluded.iso_date, location=excluded.location, preacher=excluded.preacher, note=excluded.note,
        badge=excluded.badge, badge_color=excluded.badge_color, image=excluded.image, is_popular=excluded.is_popular`
   ).bind(id, title, type, dateStr, isoDate, location, preacher ?? null, desc, badge, badgeColor ?? null, image, isPopular ? 1 : 0).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Événements', id, `${existing ? 'Modification' : 'Ajout'} événement : "${title}" (${dateStr})`)
   return c.json({ success: true })
 })
 
 app.delete('/church-events/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM church_events WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT title FROM church_events WHERE id=?').bind(id).first<{title:string}>()
+  await c.env.DB.prepare('DELETE FROM church_events WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Événements', id, `Suppression événement : "${row?.title ?? id}"`)
   return c.json({ success: true })
 })
 
@@ -184,16 +227,21 @@ app.get('/testimonials', async (c) => {
 app.put('/testimonials/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const { author, since, text, img, category } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM testimonials WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO testimonials (id, author, since, text, img, category) VALUES (?,?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET author=excluded.author, since=excluded.since, text=excluded.text,
        img=excluded.img, category=excluded.category`
   ).bind(id, author, since, text, img ?? null, category).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Témoignages', id, `${existing ? 'Modification' : 'Ajout'} témoignage de : "${author}"`)
   return c.json({ success: true })
 })
 
 app.delete('/testimonials/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM testimonials WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT author FROM testimonials WHERE id=?').bind(id).first<{author:string}>()
+  await c.env.DB.prepare('DELETE FROM testimonials WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Témoignages', id, `Suppression témoignage de : "${row?.author ?? id}"`)
   return c.json({ success: true })
 })
 
@@ -209,16 +257,21 @@ app.get('/study-documents', async (c) => {
 app.put('/study-documents/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const { title, description, url, category, fileType } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM study_documents WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO study_documents (id, title, description, url, category, file_type) VALUES (?,?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET title=excluded.title, description=excluded.description, url=excluded.url,
        category=excluded.category, file_type=excluded.file_type`
   ).bind(id, title, description ?? null, url, category ?? null, fileType).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Documents', id, `${existing ? 'Modification' : 'Ajout'} document : "${title}" (${fileType})`)
   return c.json({ success: true })
 })
 
 app.delete('/study-documents/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM study_documents WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT title FROM study_documents WHERE id=?').bind(id).first<{title:string}>()
+  await c.env.DB.prepare('DELETE FROM study_documents WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Documents', id, `Suppression document : "${row?.title ?? id}"`)
   return c.json({ success: true })
 })
 
@@ -315,7 +368,10 @@ app.get('/donations', requireAdmin, async (c) => {
 })
 
 app.delete('/donations/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM donations WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT donor_name, amount, currency FROM donations WHERE id=?').bind(id).first<{donor_name:string|null,amount:number,currency:string}>()
+  await c.env.DB.prepare('DELETE FROM donations WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Dons', id, `Suppression don de ${row?.donor_name ?? 'Anonyme'} : ${row?.amount ?? '?'} ${row?.currency ?? 'FCFA'}`)
   return c.json({ success: true })
 })
 
@@ -356,7 +412,10 @@ app.get('/prayer-requests', requireAdmin, async (c) => {
 })
 
 app.delete('/prayer-requests/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM prayer_requests WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT name, type FROM prayer_requests WHERE id=?').bind(id).first<{name:string|null,type:string}>()
+  await c.env.DB.prepare('DELETE FROM prayer_requests WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Requêtes de Prière', id, `Suppression ${row?.type === 'testimony' ? 'témoignage' : 'prière'} de : "${row?.name ?? 'Anonyme'}"`)
   return c.json({ success: true })
 })
 
@@ -375,7 +434,9 @@ app.post('/upload', requireAdmin, async (c) => {
     httpMetadata: { contentType: file.type || 'application/octet-stream' }
   })
 
-  return c.json({ url: `${c.env.BUCKET_URL}/${key}` })
+  const url = `${c.env.BUCKET_URL}/${key}`
+  await audit(c.env.DB, c.get('user').email, 'Upload', 'Fichiers', key, `Upload fichier : "${file.name}" (${(file.size / 1024).toFixed(1)} Ko)`)
+  return c.json({ url })
 })
 
 // ─── YouTube ───────────────────────────────────────────────────────────────────
@@ -585,15 +646,20 @@ app.get('/blog-categories', async (c) => {
 app.put('/blog-categories/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const { name } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM blog_categories WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO blog_categories (id, name) VALUES (?, ?)
      ON CONFLICT(id) DO UPDATE SET name=excluded.name`
   ).bind(id, name).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Catégories Blog', id, `${existing ? 'Modification' : 'Création'} catégorie : "${name}"`)
   return c.json({ success: true })
 })
 
 app.delete('/blog-categories/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM blog_categories WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT name FROM blog_categories WHERE id=?').bind(id).first<{name:string}>()
+  await c.env.DB.prepare('DELETE FROM blog_categories WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Catégories Blog', id, `Suppression catégorie : "${row?.name ?? id}"`)
   return c.json({ success: true })
 })
 
@@ -624,6 +690,7 @@ app.get('/blog-posts', async (c) => {
 app.put('/blog-posts/:id', requireAdmin, async (c) => {
   const id = c.req.param('id')
   const data = await c.req.json() as any
+  const existing = await c.env.DB.prepare('SELECT id FROM blog_posts WHERE id=?').bind(id).first()
   await c.env.DB.prepare(`
     INSERT INTO blog_posts (id, title, category, author, cover_image, excerpt, content, published_at, is_published)
     VALUES (?,?,?,?,?,?,?,?,?)
@@ -633,11 +700,15 @@ app.put('/blog-posts/:id', requireAdmin, async (c) => {
       published_at=excluded.published_at, is_published=excluded.is_published
   `).bind(id, data.title, data.category, data.author, data.coverImage ?? null,
            data.excerpt ?? null, data.content, data.publishedAt, data.isPublished ? 1 : 0).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Articles Blog', id, `${existing ? 'Modification' : 'Création'} article : "${data.title}"`)
   return c.json({ success: true })
 })
 
 app.delete('/blog-posts/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM blog_posts WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT title FROM blog_posts WHERE id=?').bind(id).first<{title:string}>()
+  await c.env.DB.prepare('DELETE FROM blog_posts WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Articles Blog', id, `Suppression article : "${row?.title ?? id}"`)
   return c.json({ success: true })
 })
 
@@ -668,8 +739,57 @@ app.get('/newsletter', requireAdmin, async (c) => {
 })
 
 app.delete('/newsletter/:id', requireAdmin, async (c) => {
-  await c.env.DB.prepare('DELETE FROM newsletter_subscribers WHERE id=?').bind(c.req.param('id')).run()
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT email FROM newsletter_subscribers WHERE id=?').bind(id).first<{email:string}>()
+  await c.env.DB.prepare('DELETE FROM newsletter_subscribers WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Newsletter', id, `Désinscription email : "${row?.email ?? id}"`)
   return c.json({ success: true })
+})
+
+// ─── admins ────────────────────────────────────────────────────────────────────
+
+app.get('/admins', requireSuperAdmin, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    'SELECT email, added_by AS addedBy, added_at AS addedAt FROM admins ORDER BY added_at DESC'
+  ).all()
+  return c.json(results)
+})
+
+app.post('/admins', requireSuperAdmin, async (c) => {
+  const { email } = await c.req.json()
+  if (!email?.trim() || !email.includes('@')) return c.json({ error: 'Email invalide' }, 400)
+  const normalized = email.trim().toLowerCase()
+  if (normalized === c.env.ADMIN_EMAIL.toLowerCase()) return c.json({ error: 'Cet email est déjà le super-administrateur' }, 409)
+  try {
+    await c.env.DB.prepare(
+      'INSERT INTO admins (email, added_by, added_at) VALUES (?,?,?)'
+    ).bind(normalized, c.get('user').email, new Date().toISOString()).run()
+  } catch (e: any) {
+    if (e?.message?.includes('UNIQUE') || e?.message?.includes('unique')) {
+      return c.json({ error: 'Cet email est déjà administrateur' }, 409)
+    }
+    throw e
+  }
+  await audit(c.env.DB, c.get('user').email, 'Création', 'Administrateurs', normalized, `Ajout administrateur : "${normalized}"`)
+  return c.json({ success: true })
+})
+
+app.delete('/admins/:email', requireSuperAdmin, async (c) => {
+  const email = decodeURIComponent(c.req.param('email'))
+  await c.env.DB.prepare('DELETE FROM admins WHERE email=?').bind(email).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Administrateurs', email, `Révocation administrateur : "${email}"`)
+  return c.json({ success: true })
+})
+
+// ─── audit_log ─────────────────────────────────────────────────────────────────
+
+app.get('/audit-log', requireAdmin, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, admin_email AS adminEmail, action, section, item_id AS itemId,
+            description, performed_at AS performedAt
+     FROM audit_log ORDER BY performed_at DESC LIMIT 500`
+  ).all()
+  return c.json(results)
 })
 
 export const onRequest = handle(app)

@@ -43,12 +43,14 @@ import {
   getAllBlogPosts, saveBlogPost, deleteBlogPost, BlogPost,
   getBlogCategories, saveBlogCategory, deleteBlogCategory, BlogCategory,
   getNewsletterSubscribers, deleteNewsletterSubscriber, NewsletterSubscriber,
+  getAdmins, addAdmin, removeAdmin, AdminUser,
+  getAuditLog, AuditEntry,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'admins' | 'audit';
 
 export function Admin() {
-  const { user, isAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('links');
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -65,6 +67,10 @@ export function Admin() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [blogCategories, setBlogCategories] = useState<BlogCategory[]>([]);
   const [subscribers, setSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [isAddingAdmin, setIsAddingAdmin] = useState(false);
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [isSavingCat, setIsSavingCat] = useState(false);
@@ -208,6 +214,12 @@ export function Admin() {
       } else if (activeTab === 'newsletter') {
         const data = await getNewsletterSubscribers();
         setSubscribers(data);
+      } else if (activeTab === 'admins') {
+        const data = await getAdmins();
+        setAdmins(data);
+      } else if (activeTab === 'audit') {
+        const data = await getAuditLog();
+        setAuditLog(data);
       }
     } catch (err: any) {
       console.error('Failure loading data:', err);
@@ -723,6 +735,42 @@ export function Admin() {
               </span>
               <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{subscribers.length}</span>
             </button>
+
+            <div className="border-t border-white/10 my-2 pt-2">
+              <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-white/30 px-3 mb-2">
+                Sécurité & Contrôle
+              </p>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                activeTab === 'audit'
+                  ? 'bg-violet-700 text-white border-violet-600 shadow-md shadow-violet-900/30'
+                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <FileText className="w-4.5 h-4.5" /> 📋 Registre des Actions
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{auditLog.length}</span>
+            </button>
+
+            {isSuperAdmin && (
+              <button
+                onClick={() => setActiveTab('admins')}
+                className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                  activeTab === 'admins'
+                    ? 'bg-red-800 text-white border-red-700 shadow-md shadow-red-900/30'
+                    : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <UserIcon className="w-4.5 h-4.5" /> 👑 Gestion Admins
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{admins.length}</span>
+              </button>
+            )}
           </div>
 
           {/* Workspace Right Workspace Content */}
@@ -739,6 +787,8 @@ export function Admin() {
                   {activeTab === 'donations' && 'Reporting Financier & Dons'}
                   {activeTab === 'blog' && 'Gestion des Articles du Blog'}
                   {activeTab === 'newsletter' && 'Abonnés à la Newsletter'}
+                  {activeTab === 'audit' && 'Registre des Actions Administratives'}
+                  {activeTab === 'admins' && 'Gestion des Administrateurs'}
                 </h3>
                 <p className="text-white/40 text-[11px] font-mono">
                   Table PostgreSQL: {activeTab === 'links' && 'recommended_links'}
@@ -750,10 +800,12 @@ export function Admin() {
                   {activeTab === 'donations' && 'donations'}
                   {activeTab === 'blog' && 'blog_posts'}
                   {activeTab === 'newsletter' && 'newsletter_subscribers'}
+                  {activeTab === 'audit' && 'audit_log'}
+                  {activeTab === 'admins' && 'admins'}
                 </p>
               </div>
 
-              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && (
+              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1264,6 +1316,147 @@ export function Admin() {
                           </tbody>
                         </table>
                       </>
+                    )}
+                  </div>
+                )}
+
+                {/* 10. Audit Log View */}
+                {activeTab === 'audit' && (
+                  <div className="overflow-x-auto">
+                    {auditLog.length === 0 ? (
+                      <EmptyMessage />
+                    ) : (
+                      <>
+                        <p className="text-xs text-white/40 mb-4">
+                          {auditLog.length} action{auditLog.length > 1 ? 's' : ''} enregistrée{auditLog.length > 1 ? 's' : ''}. Le registre est en lecture seule.
+                        </p>
+                        <table className="w-full text-left text-xs border-collapse">
+                          <thead>
+                            <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
+                              <th className="pb-3 pr-4">Administrateur</th>
+                              <th className="pb-3 pr-4">Action</th>
+                              <th className="pb-3 pr-4">Section</th>
+                              <th className="pb-3 pr-4">Description</th>
+                              <th className="pb-3 pr-4">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {auditLog.map((entry) => (
+                              <tr key={entry.id} className="border-b border-white/5 hover:bg-white/[0.02] align-top">
+                                <td className="py-4 pr-4 font-mono text-sky-400 whitespace-nowrap text-[10px]">{entry.adminEmail}</td>
+                                <td className="py-4 pr-4">
+                                  <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider whitespace-nowrap ${
+                                    entry.action === 'Création' ? 'bg-emerald-500/10 text-emerald-400'
+                                    : entry.action === 'Modification' ? 'bg-gold/10 text-yellow-400'
+                                    : entry.action === 'Suppression' ? 'bg-red-500/10 text-red-400'
+                                    : 'bg-blue-500/10 text-blue-400'
+                                  }`}>
+                                    {entry.action === 'Création' ? '+ ' : entry.action === 'Suppression' ? '× ' : entry.action === 'Upload' ? '↑ ' : '~ '}
+                                    {entry.action}
+                                  </span>
+                                </td>
+                                <td className="py-4 pr-4">
+                                  <span className="bg-white/5 px-2 py-0.5 rounded text-[10px] font-bold text-white/70">{entry.section}</span>
+                                </td>
+                                <td className="py-4 pr-4 text-white/60 max-w-xs">
+                                  <p className="line-clamp-2">{entry.description}</p>
+                                </td>
+                                <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                  {new Date(entry.performedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* 11. Admins Management View (Super Admin Only) */}
+                {activeTab === 'admins' && isSuperAdmin && (
+                  <div className="space-y-6">
+                    {/* Add admin form */}
+                    <div className="bg-black/30 border border-white/10 rounded-xl p-5">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-4">Ajouter un administrateur</h4>
+                      <div className="flex gap-3">
+                        <input
+                          type="email"
+                          value={newAdminEmail}
+                          onChange={e => setNewAdminEmail(e.target.value)}
+                          placeholder="adresse@email.com"
+                          className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                        />
+                        <button
+                          disabled={!newAdminEmail.trim() || isAddingAdmin}
+                          onClick={async () => {
+                            if (!newAdminEmail.trim()) return;
+                            setIsAddingAdmin(true);
+                            try {
+                              await addAdmin(newAdminEmail.trim());
+                              setNewAdminEmail('');
+                              const updated = await getAdmins();
+                              setAdmins(updated);
+                              showStatus('Administrateur ajouté avec succès.', 'success');
+                            } catch (err: any) {
+                              showStatus(err?.message || 'Erreur lors de l\'ajout.', 'error');
+                            } finally {
+                              setIsAddingAdmin(false);
+                            }
+                          }}
+                          className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold disabled:opacity-40 transition-colors flex items-center gap-1.5"
+                        >
+                          <Plus className="w-4 h-4" /> {isAddingAdmin ? 'Ajout...' : 'Ajouter'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-white/30 mt-2">L'utilisateur devra se connecter avec ce compte Google pour accéder au dashboard.</p>
+                    </div>
+
+                    {/* Admins list */}
+                    {admins.length === 0 ? (
+                      <div className="py-10 text-center border-2 border-dashed border-white/10 rounded-xl">
+                        <p className="text-xs text-white/40">Aucun administrateur secondaire. Ajoutez-en un ci-dessus.</p>
+                      </div>
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
+                            <th className="pb-3 pr-4">Email</th>
+                            <th className="pb-3 pr-4">Ajouté par</th>
+                            <th className="pb-3 pr-4">Date d'ajout</th>
+                            <th className="pb-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {admins.map((admin) => (
+                            <tr key={admin.email} className="border-b border-white/5 hover:bg-white/[0.02]">
+                              <td className="py-4 pr-4 font-mono text-sky-400">{admin.email}</td>
+                              <td className="py-4 pr-4 text-white/50 font-mono text-[10px]">{admin.addedBy}</td>
+                              <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                {new Date(admin.addedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                              </td>
+                              <td className="py-4 text-right">
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm(`Révoquer l'accès de ${admin.email} ?`)) return;
+                                    try {
+                                      await removeAdmin(admin.email);
+                                      setAdmins(prev => prev.filter(a => a.email !== admin.email));
+                                      showStatus('Administrateur supprimé.', 'success');
+                                    } catch (err: any) {
+                                      showStatus(err?.message || 'Erreur lors de la suppression.', 'error');
+                                    }
+                                  }}
+                                  className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"
+                                  title="Révoquer l'accès"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     )}
                   </div>
                 )}

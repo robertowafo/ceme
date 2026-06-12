@@ -97,3 +97,19 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   email         TEXT NOT NULL UNIQUE,
   subscribed_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS admins (
+  email    TEXT PRIMARY KEY,
+  added_by TEXT NOT NULL,
+  added_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+  id           TEXT PRIMARY KEY,
+  admin_email  TEXT NOT NULL,
+  action       TEXT NOT NULL,
+  section      TEXT NOT NULL,
+  item_id      TEXT,
+  description  TEXT NOT NULL,
+  performed_at TEXT NOT NULL
+);
