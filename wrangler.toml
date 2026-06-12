@@ -12,7 +12,7 @@ binding = "BUCKET"
 bucket_name = "ceme-uploads"
 
 [vars]
-BUCKET_URL = "https://pub-REMPLACER.r2.dev"
+BUCKET_URL = "https://pub-c37922ba74c24a92800f56cb50638443.r2.dev"
 
 # Secrets à configurer via le dashboard Cloudflare ou :
 #   wrangler secret put JWT_SECRET
