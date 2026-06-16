@@ -613,7 +613,7 @@ export function About() {
                 name: 'Maman Marie Charlotte ESSOMBA',
                 role: 'Dirigeante & Psalmiste',
                 bio: 'Co-fondatrice du ministère et directrice inspirée du Puissant Chœur de l’Éternel. Elle supervise également les projets HÉROÏNES pour l’émancipation spirituelle et l’épanouissement des femmes chrétiennes.',
-                img: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400',
+                img: '/uploads/mama marie.jpeg',
                 featured: false,
               },
             ].map((pastor, i) => (
