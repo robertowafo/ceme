@@ -120,11 +120,13 @@ function ScrollAnimateGalleryCard({
       onClick={() => onSelect(img)}
     >
       <div className="relative aspect-[4/3] bg-soft-black overflow-hidden pointer-events-none">
-        <img 
-          src={img.url} 
-          alt={img.title} 
+        <img
+          src={img.url}
+          alt={img.title}
           className="w-full h-full object-cover opacity-90 group-hover:scale-105 group-hover:opacity-100 transition-all duration-500"
           referrerPolicy="no-referrer"
+          loading="lazy"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center">
           <div className="w-12 h-12 rounded-full bg-gold/90 backdrop-blur-xs flex items-center justify-center text-soft-black shadow-lg transform scale-75 group-hover:scale-100 transition-transform">

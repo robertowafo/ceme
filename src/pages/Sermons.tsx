@@ -275,7 +275,7 @@ export function Sermons() {
             className="bg-white rounded-3xl overflow-hidden shadow-xl mb-16 flex flex-col md:flex-row group border border-gray-100 cursor-pointer transition-transform hover:scale-[1.01]"
           >
             <div className="md:w-1/2 relative overflow-hidden h-64 md:h-96">
-              <img src={sermons[0].image} alt={sermons[0].title} className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700"/>
+              <img src={sermons[0].image} alt={sermons[0].title} className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-700" loading="eager" decoding="async" fetchPriority="high"/>
               <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
                 <div className="w-20 h-20 bg-gold/95 backdrop-blur-sm rounded-full flex items-center justify-center text-soft-black shadow-2xl transform group-hover:scale-110 transition-transform">
                   <Play className="w-8 h-8 ml-2" fill="currentColor"/>
@@ -440,7 +440,7 @@ export function Sermons() {
                     className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all group flex flex-col cursor-pointer border ${activePlayId === sermon.youtubeId ? 'border-gold ring-2 ring-gold/40' : 'border-gray-100'}`}
                   >
                     <div className="relative aspect-video overflow-hidden">
-                      <img src={sermon.image} alt={sermon.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" referrerPolicy="no-referrer" />
+                      <img src={sermon.image} alt={sermon.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                         <div className="w-12 h-12 bg-gold rounded-full flex items-center justify-center text-soft-black shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300">
                           <Play className="w-5 h-5 ml-1" fill="currentColor"/>
@@ -497,10 +497,12 @@ export function Sermons() {
                     <div>
                       {/* Youtube Video Thumbnail Overlay */}
                       <div className="relative aspect-video w-full bg-soft-black overflow-hidden group">
-                        <img 
-                          src={`https://img.youtube.com/vi/${vid.youtubeId}/0.jpg`} 
-                          alt={vid.title} 
+                        <img
+                          src={`https://img.youtube.com/vi/${vid.youtubeId}/mqdefault.jpg`}
+                          alt={vid.title}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                          decoding="async"
                         />
                         <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
                           <div className="w-14 h-14 rounded-full bg-red-600 group-hover:bg-red-700 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">

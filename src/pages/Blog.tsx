@@ -125,7 +125,7 @@ export function Blog() {
                             <article className="bg-white group cursor-pointer border border-gray-100 rounded-3xl overflow-hidden hover:shadow-xl hover:border-gold transition-all duration-300 flex flex-col h-full">
                               <div className="h-56 overflow-hidden relative">
                                 {post.coverImage ? (
-                                  <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer"/>
+                                  <img src={post.coverImage} alt={post.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" referrerPolicy="no-referrer" loading="lazy" decoding="async"/>
                                 ) : (
                                   <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
                                     <BookOpen className="w-12 h-12 text-gray-300" />

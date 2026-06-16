@@ -840,7 +840,7 @@ export function Home() {
                   className="group bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all border border-gray-100 cursor-pointer"
                 >
                   <div className="relative aspect-video overflow-hidden">
-                    <img src={s.image} alt={s.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" referrerPolicy="no-referrer" />
+                    <img src={s.image} alt={s.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" referrerPolicy="no-referrer" loading="lazy" decoding="async" />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <div className="w-16 h-16 bg-gold rounded-full flex items-center justify-center">
                         <Play className="w-7 h-7 text-soft-black ml-1" fill="currentColor" />

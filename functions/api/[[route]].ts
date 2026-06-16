@@ -582,16 +582,25 @@ app.get('/youtube/live', async (c) => {
 app.get('/youtube/playlists', async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY
   if (!apiKey) return c.json([])
+  const cache = caches.default
+  const cacheKey = new Request('https://internal-cache.dev/yt-playlists')
+  const cached = await cache.match(cacheKey)
+  if (cached) return cached
   try {
     const { channelId } = await resolveChannelId(apiKey)
     const data = await fetchJson(
       `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=50&key=${apiKey}`
     )
-    return c.json((data.items || []).map((item: any) => ({
+    const result = (data.items || []).map((item: any) => ({
       id: item.id, title: item.snippet.title, description: item.snippet.description,
       thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || '',
       videoCount: item.contentDetails?.itemCount || 0
-    })))
+    }))
+    const response = new Response(JSON.stringify(result), {
+      headers: { 'Cache-Control': `max-age=${CACHE_TTL}`, 'Content-Type': 'application/json' }
+    })
+    await cache.put(cacheKey, response.clone())
+    return response
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
   }
@@ -600,6 +609,10 @@ app.get('/youtube/playlists', async (c) => {
 app.get('/youtube/sermons', async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY
   if (!apiKey) return c.json([])
+  const cache = caches.default
+  const cacheKey = new Request('https://internal-cache.dev/yt-sermons')
+  const cached = await cache.match(cacheKey)
+  if (cached) return cached
   try {
     const { uploadsPlaylistId, channelId } = await resolveChannelId(apiKey)
     const [uploadsData, playlistsData] = await Promise.all([
@@ -608,16 +621,19 @@ app.get('/youtube/sermons', async (c) => {
     ])
     const listPlaylists = playlistsData.items || []
     const videoToPlaylistMap: Record<string, string> = {}
-    for (const pl of listPlaylists.slice(0, 8)) {
-      try {
-        const plItems = await fetchJson(
-          `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${pl.id}&maxResults=50&key=${apiKey}`
-        )
-        for (const item of plItems.items || []) {
-          const vidId = item.contentDetails?.videoId
-          if (vidId) videoToPlaylistMap[vidId] = pl.snippet.title
-        }
-      } catch {}
+    const playlistItemResults = await Promise.all(
+      listPlaylists.slice(0, 8).map((pl: any) =>
+        fetchJson(`https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${pl.id}&maxResults=50&key=${apiKey}`)
+          .then(plItems => ({ pl, plItems }))
+          .catch(() => null)
+      )
+    )
+    for (const entry of playlistItemResults) {
+      if (!entry) continue
+      for (const item of entry.plItems.items || []) {
+        const vidId = item.contentDetails?.videoId
+        if (vidId) videoToPlaylistMap[vidId] = entry.pl.snippet.title
+      }
     }
     const sermons = (uploadsData.items || []).map((item: any, index: number) => {
       const vidId = item.snippet.resourceId?.videoId || item.id
@@ -630,12 +646,16 @@ app.get('/youtube/sermons', async (c) => {
         date: formatDateStr(item.snippet.publishedAt),
         preacher: parsePreacher(title),
         duration: '45-60 min',
-        image: item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || `https://img.youtube.com/vi/${vidId}/0.jpg`,
+        image: item.snippet.thumbnails?.high?.url || `https://img.youtube.com/vi/${vidId}/hqdefault.jpg`,
         description: item.snippet.description || '',
         youtubeId: vidId
       }
     })
-    return c.json(sermons)
+    const response = new Response(JSON.stringify(sermons), {
+      headers: { 'Cache-Control': `max-age=${CACHE_TTL}`, 'Content-Type': 'application/json' }
+    })
+    await cache.put(cacheKey, response.clone())
+    return response
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
   }
