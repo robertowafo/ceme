@@ -141,29 +141,31 @@ export function Live() {
           {/* Main Video Area */}
           <div className="w-full flex flex-col">
             
-            {/* Stream Selector Subnav / Tabs */}
-            <div className="flex border-b border-white/10 mb-8 max-w-md bg-stone-900 border border-white/5 p-1 rounded-xl">
-              <button
-                onClick={() => setStreamMode('live')}
-                className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center transition-all ${
-                  streamMode === 'live'
-                    ? 'bg-gold text-soft-black font-black shadow-md'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                🔴 Culte en Direct
-              </button>
-              <button
-                onClick={() => setStreamMode('h24')}
-                className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center transition-all ${
-                  streamMode === 'h24'
-                    ? 'bg-gold text-soft-black font-black shadow-md'
-                    : 'text-white/60 hover:text-white'
-                }`}
-              >
-                📺 Web TV Grâce H24 (VMix)
-              </button>
-            </div>
+            {/* Stream Selector Subnav / Tabs — H24 VMix masqué tant qu'il n'est pas opérationnel */}
+            {false && (
+              <div className="flex border-b border-white/10 mb-8 max-w-md bg-stone-900 border border-white/5 p-1 rounded-xl">
+                <button
+                  onClick={() => setStreamMode('live')}
+                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center transition-all ${
+                    streamMode === 'live'
+                      ? 'bg-gold text-soft-black font-black shadow-md'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  🔴 Culte en Direct
+                </button>
+                <button
+                  onClick={() => setStreamMode('h24')}
+                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center transition-all ${
+                    streamMode === 'h24'
+                      ? 'bg-gold text-soft-black font-black shadow-md'
+                      : 'text-white/60 hover:text-white'
+                  }`}
+                >
+                  📺 Web TV Grâce H24 (VMix)
+                </button>
+              </div>
+            )}
 
             {streamMode === 'live' ? (
               <>
