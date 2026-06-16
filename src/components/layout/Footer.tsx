@@ -8,9 +8,19 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
           {/* Brand */}
           <div className="space-y-6">
-            <Link to="/" className="inline-block">
-              <h2 className="font-serif text-white font-bold text-2xl mb-1">CEME</h2>
-              <p className="text-sm tracking-[0.2em] text-gold uppercase">Mon Étendard</p>
+            <Link to="/" className="inline-flex items-center space-x-3">
+              <img
+                src="/uploads/logo ceme.png"
+                alt="CEME Logo"
+                className="w-12 h-12 object-contain"
+                referrerPolicy="no-referrer"
+                loading="lazy"
+                decoding="async"
+              />
+              <div>
+                <h2 className="font-serif text-white font-bold text-2xl mb-1">CEME</h2>
+                <p className="text-sm tracking-[0.2em] text-gold uppercase">Mon Étendard</p>
+              </div>
             </Link>
             <p className="text-sm leading-relaxed">
               Une communauté passionnée par la présence de Dieu, dédiée à faire des disciples et à impacter notre génération avec l'amour de Christ.
