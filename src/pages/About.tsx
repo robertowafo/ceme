@@ -400,7 +400,7 @@ export function About() {
             className="text-center mb-16"
           >
             <p className="text-gold font-bold uppercase tracking-widest text-sm mb-4">Notre Double Appel</p>
-            <h2 className="font-serif text-4xl font-bold">Un Cœur pour <span className="text-gold italic">Tous</span></h2>
+            <h2 className="font-serif text-4xl font-bold text-white">Un Cœur pour <span className="text-gold italic">Tous</span></h2>
             <p className="text-white/50 max-w-2xl mx-auto mt-4 font-light">
               Nous n'avons pas choisi entre évangélisation et discipolat. Nous croyons aux deux, avec la même ardeur.
             </p>
@@ -628,7 +628,7 @@ export function About() {
                 <div className={`w-56 h-56 rounded-full overflow-hidden mx-auto mb-6 border-4 transition-all duration-500 ${pastor.featured ? 'border-gold/40 group-hover:border-gold animate-divine-glow' : 'border-white/10 group-hover:border-gold shadow-xl'}`}>
                   <img src={pastor.img} alt={pastor.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" referrerPolicy="no-referrer" />
                 </div>
-                <h4 className="font-bold text-3xl font-serif mb-2">{pastor.name}</h4>
+                <h4 className="font-bold text-3xl font-serif mb-2 text-white">{pastor.name}</h4>
                 <p className={`font-bold text-sm uppercase tracking-widest px-4 py-1.5 rounded-full inline-block mb-4 ${pastor.featured ? 'text-gold bg-gold/10' : 'text-gray-400 bg-white/5 border border-white/10'}`}>
                   {pastor.role}
                 </p>
