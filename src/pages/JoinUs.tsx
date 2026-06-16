@@ -48,9 +48,10 @@ export function JoinUs() {
       <div className="relative bg-soft-black text-white py-36 px-4 overflow-hidden">
         <div className="absolute inset-0 cross-pattern opacity-25" />
         <img
-          src="https://images.unsplash.com/photo-1510590337019-5ef8d3d32116?auto=format&fit=crop&q=80&w=2000"
+          src="/uploads/externe.JPG"
           alt="Bienvenue"
           className="absolute inset-0 w-full h-full object-cover opacity-10"
+          referrerPolicy="no-referrer"
         />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gold/5 rounded-full blur-[100px]" />
 
