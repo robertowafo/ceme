@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 @import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800&display=swap');
 @import "tailwindcss";
 
@@ -20,12 +20,28 @@
 }
 
 @theme {
+  /* ===== Identité historique CEME (conservée — utilisée par l'admin et les pages église) ===== */
   --color-gold: #C9A84C;
   --color-burgundy: #7B1D1D;
   --color-soft-black: #1A1A1A;
 
+  /* ===== Identité de marque Grâce TV (nouvelle) =====
+     Génère les utilitaires Tailwind: bg-grace-blue, text-grace-orange, border-grace-sky, bg-gray-soft…
+     Disponibles aussi en CSS pur via var(--color-grace-blue), etc. */
+  --color-grace-blue: #1E3A8A;    /* Primaire — bleu royal du wordmark */
+  --color-grace-blue-deep: #0F1E54;/* Variante profonde pour dégradés hero */
+  --color-grace-orange: #F37020;  /* Accent — orange du cercle */
+  --color-grace-orange-dark: #D85A12; /* Hover bouton orange */
+  --color-grace-sky: #5DADE2;     /* Secondaire — bleu du "TV" */
+  --color-gray-soft: #F8FAFC;     /* Fond sections alternées */
+  --color-text-dark: #0F172A;
+
   --font-serif: "CabinetGrotesk-Extrabold", "Cabinet Grotesk", "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Polices Grâce TV — titres Poppins, corps Inter (font-display / font-body) */
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", "Roboto", ui-sans-serif, system-ui, sans-serif;
 }
 
 @layer base {
