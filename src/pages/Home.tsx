@@ -161,7 +161,7 @@ export function Home() {
               className="flex flex-col sm:flex-row items-center justify-center gap-4"
             >
               <Link
-                to="/join"
+                to="/eglise/nous-rejoindre"
                 className="bg-gold hover:bg-yellow-400 text-soft-black px-8 py-4 rounded-full font-bold uppercase tracking-wider transition-all w-full sm:w-auto text-center shadow-[0_0_30px_rgba(201,168,76,0.35)] hover:shadow-[0_0_50px_rgba(201,168,76,0.6)]"
               >
                 Nous Rejoindre ce Dimanche
@@ -195,7 +195,7 @@ export function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:-mt-14 -mt-6 relative z-20">
             {/* CARD 1: SERMONS */}
-            <Link to="/sermons" className="block h-full">
+            <Link to="/eglise/sermons" className="block h-full">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -239,7 +239,7 @@ export function Home() {
             </Link>
 
             {/* CARD 2: AGENDA */}
-            <Link to="/schedule" className="block h-full">
+            <Link to="/eglise/cultes" className="block h-full">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -281,7 +281,7 @@ export function Home() {
             </Link>
 
             {/* CARD 3: PRIÈRE */}
-            <Link to="/prayer" className="block h-full">
+            <Link to="/eglise/priere" className="block h-full">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -323,7 +323,7 @@ export function Home() {
             </Link>
 
             {/* CARD 4: VENIR - EXQUISITE HAND DRAWN PARCHMENT MAP STYLE */}
-            <Link to="/join" className="block h-full">
+            <Link to="/eglise/nous-rejoindre" className="block h-full">
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -506,7 +506,7 @@ export function Home() {
                 </div>
               ))}
             </div>
-            <Link to="/about" className="inline-flex items-center gap-2 text-burgundy font-bold uppercase tracking-wider hover:text-gold transition-colors">
+            <Link to="/eglise/a-propos" className="inline-flex items-center gap-2 text-burgundy font-bold uppercase tracking-wider hover:text-gold transition-colors">
               Découvrir notre vision <ChevronRight className="w-5 h-5" />
             </Link>
           </motion.div>
@@ -577,13 +577,13 @@ export function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                to="/join"
+                to="/eglise/nous-rejoindre"
                 className="bg-burgundy hover:bg-red-800 text-white px-10 py-5 rounded-full font-bold uppercase tracking-wider transition-all shadow-lg hover:shadow-[0_0_30px_rgba(123,29,29,0.4)] text-center"
               >
                 Je veux donner ma vie à Christ
               </Link>
               <Link
-                to="/prayer"
+                to="/eglise/priere"
                 className="bg-white border-2 border-gray-200 hover:border-gold text-soft-black px-10 py-5 rounded-full font-bold uppercase tracking-wider transition-all text-center"
               >
                 Parler à quelqu'un en prière
@@ -652,7 +652,7 @@ export function Home() {
             className="text-center mt-14"
           >
             <Link
-              to="/blog"
+              to="/eglise/blog"
               className="inline-flex items-center gap-2 border border-white/20 hover:border-gold text-white/70 hover:text-gold px-8 py-4 rounded-full font-bold uppercase tracking-wider transition-all text-sm"
             >
               Lire plus de témoignages <ArrowRight className="w-4 h-4" />
@@ -753,7 +753,7 @@ export function Home() {
 
           <div className="text-center mt-12">
             <Link
-              to="/join"
+              to="/eglise/nous-rejoindre"
               className="inline-flex items-center gap-3 bg-soft-black text-white hover:bg-gold hover:text-soft-black px-8 py-4 rounded-full font-bold uppercase tracking-wider transition-all shadow-md"
             >
               <MapPin className="w-5 h-5" /> Comment Venir
@@ -782,7 +782,7 @@ export function Home() {
             <p className="text-gold font-bold uppercase tracking-widest text-lg">— Jérémie 29:11</p>
             <div className="mt-12">
               <Link
-                to="/sermons"
+                to="/eglise/sermons"
                 className="inline-flex items-center gap-2 border border-white/30 hover:border-gold hover:text-gold text-white px-8 py-4 rounded-full font-bold uppercase tracking-wider transition-all"
               >
                 Écouter les derniers messages <ArrowRight className="w-5 h-5" />
@@ -802,7 +802,7 @@ export function Home() {
               <p className="text-gold font-bold uppercase tracking-widest text-sm mb-2">Nourrir votre foi</p>
               <h2 className="font-serif text-4xl font-bold text-soft-black">Derniers Messages</h2>
             </motion.div>
-            <Link to="/sermons" className="text-burgundy font-bold uppercase tracking-wider text-sm flex items-center gap-2 hover:text-gold transition-colors mt-4 md:mt-0">
+            <Link to="/eglise/sermons" className="text-burgundy font-bold uppercase tracking-wider text-sm flex items-center gap-2 hover:text-gold transition-colors mt-4 md:mt-0">
               Tous les sermons <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -930,7 +930,7 @@ export function Home() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                to="/join"
+                to="/eglise/nous-rejoindre"
                 className="bg-gold hover:bg-yellow-400 text-soft-black px-10 py-5 rounded-full font-bold uppercase tracking-wider transition-all shadow-[0_0_30px_rgba(201,168,76,0.3)] hover:shadow-[0_0_50px_rgba(201,168,76,0.5)] text-center"
               >
                 Nous rejoindre ce dimanche

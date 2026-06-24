@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Send, ShieldCheck, Clock, Users, FileText, BookOpen, Quote, Phone, Loader2 } from 'lucide-react';
-import { submitPrayerRequest, getPublicPrayerRequests, PrayerRequestPublic } from '../lib/dbService';
+import { submitPrayerRequest, getPublicPrayerRequests, PrayerRequestPublic } from '../../lib/dbService';
 
 const promises = [
   { ref: 'Matthieu 7:7',    text: '"Demandez, et l\'on vous donnera; cherchez, et vous trouverez; frappez, et l\'on vous ouvrira."',     bg: 'bg-burgundy' },

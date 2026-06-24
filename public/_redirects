@@ -1,0 +1,22 @@
+# ====================================================================
+# Redirections 301 — anciennes URLs CEME (église-first) vers la
+# nouvelle architecture Grâce TV-first. Préservent le jus SEO.
+# Évaluées de haut en bas, premier match gagnant.
+# ====================================================================
+
+/sermons        /eglise/sermons         301
+/schedule       /eglise/cultes          301
+/agenda         /eglise/cultes          301
+/prayer         /eglise/priere          301
+/join           /eglise/nous-rejoindre  301
+/about          /eglise/a-propos        301
+/blog           /eglise/blog            301
+/blog/*         /eglise/blog/:splat     301
+/give           /faire-un-don           301
+
+# ====================================================================
+# Fallback SPA — DOIT rester en dernier.
+# Les assets statiques et les Functions /api/* gardent la priorité ;
+# cette règle ne s'applique qu'aux routes non résolues (deep links).
+# ====================================================================
+/*              /index.html             200

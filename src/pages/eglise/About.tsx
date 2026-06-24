@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { Target, Shield, Flame, BookOpen, Heart, Users, Compass, ChevronRight, CheckCircle, Star, Book, Quote, Camera, ZoomIn, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { TestimonialCross } from '../components/TestimonialCross';
-import { getGalleryPhotos, getStudyDocuments } from '../lib/dbService';
+import { TestimonialCross } from '../../components/TestimonialCross';
+import { getGalleryPhotos, getStudyDocuments } from '../../lib/dbService';
 
 
 const timeline = [
@@ -875,7 +875,7 @@ export function About() {
               Vous avez été créé pour appartenir à une communauté. Venez découvrir la chaleur de notre famille ce dimanche à 10h00.
             </p>
             <Link
-              to="/join"
+              to="/eglise/nous-rejoindre"
               className="bg-soft-black hover:bg-gold hover:text-soft-black text-white px-10 py-5 rounded-full font-bold uppercase tracking-wider transition-all inline-flex items-center gap-2 shadow-lg"
             >
               Voir comment venir <ChevronRight className="w-5 h-5" />

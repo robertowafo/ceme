@@ -324,10 +324,10 @@ export function Live() {
                   </p>
                 </div>
                 <div className="flex flex-col space-y-3 shrink-0 w-full md:w-auto">
-                  <Link to="/give" className="bg-burgundy hover:bg-red-800 text-white px-6 py-3 md:py-2.5 rounded-xl text-center text-sm font-bold uppercase tracking-wider transition-colors shadow-lg">
+                  <Link to="/faire-un-don" className="bg-burgundy hover:bg-red-800 text-white px-6 py-3 md:py-2.5 rounded-xl text-center text-sm font-bold uppercase tracking-wider transition-colors shadow-lg">
                     Faire une offrande
                   </Link>
-                  <Link to="/prayer" className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 md:py-2.5 rounded-xl text-center text-sm font-bold uppercase tracking-wider transition-colors">
+                  <Link to="/eglise/priere" className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 md:py-2.5 rounded-xl text-center text-sm font-bold uppercase tracking-wider transition-colors">
                     Demander la prière
                   </Link>
                 </div>
@@ -340,7 +340,7 @@ export function Live() {
                 <button className="flex items-center space-x-2 hover:text-gold transition-colors">
                   <Share2 className="w-5 h-5" /> <span>Partager le lien</span>
                 </button>
-                <Link to="/sermons" className="flex items-center space-x-2 hover:text-gold transition-colors text-white/80">
+                <Link to="/eglise/sermons" className="flex items-center space-x-2 hover:text-gold transition-colors text-white/80">
                   <Play className="w-4 h-4 text-gold" /> <span>Voir tous les replays</span>
                 </Link>
               </div>

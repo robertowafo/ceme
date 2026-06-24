@@ -22,7 +22,7 @@ import {
   Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { getChurchEvents } from '../lib/dbService';
+import { getChurchEvents } from '../../lib/dbService';
 
 
 interface SpecialEvent {
@@ -307,7 +307,7 @@ export function Schedule() {
 
 
   return (
-    <div className="pt-24 pb-20 bg-[#FBF9F6] min-h-screen">
+    <div className="pt-10 pb-20 bg-[#FBF9F6] min-h-screen">
       {/* Visual top notification banner */}
       <AnimatePresence>
         {activeAlert && (

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowRight, Calendar, User, Search, Tag, Mail, Loader2, BookOpen, Check } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { getBlogPosts, BlogPost, subscribeNewsletter } from '../lib/dbService';
+import { getBlogPosts, BlogPost, subscribeNewsletter } from '../../lib/dbService';
 
 export function Blog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -51,7 +51,7 @@ export function Blog() {
   const rest = filtered.slice(1);
 
   return (
-    <div className="pt-24 pb-20 bg-[#f5f2ed] min-h-screen">
+    <div className="pt-10 pb-20 bg-[#f5f2ed] min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="text-center mb-16 pt-10">

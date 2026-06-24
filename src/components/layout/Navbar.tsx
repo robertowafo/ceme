@@ -5,14 +5,14 @@ import { motion, AnimatePresence } from 'motion/react';
 
 const navLinks = [
   { path: '/live', label: 'Direct', icon: Tv },
-  { path: '/sermons', label: 'Sermons', icon: BookOpen },
-  { path: '/schedule', label: 'Agenda', icon: Calendar },
-  { path: '/prayer', label: 'Prière', icon: Heart },
-  { path: '/join', label: 'Nous rejoindre', icon: MapPin },
-  { path: '/about', label: 'À propos', icon: Users },
-  { path: '/blog', label: 'Blog', icon: BookOpen },
+  { path: '/eglise/sermons', label: 'Sermons', icon: BookOpen },
+  { path: '/eglise/cultes', label: 'Agenda', icon: Calendar },
+  { path: '/eglise/priere', label: 'Prière', icon: Heart },
+  { path: '/eglise/nous-rejoindre', label: 'Nous rejoindre', icon: MapPin },
+  { path: '/eglise/a-propos', label: 'À propos', icon: Users },
+  { path: '/eglise/blog', label: 'Blog', icon: BookOpen },
   { path: '/contact', label: 'Contact', icon: Mail },
-  { path: '/give', label: 'Donner', icon: HandHeart },
+  { path: '/faire-un-don', label: 'Donner', icon: HandHeart },
 ];
 
 export function Navbar() {
@@ -81,7 +81,7 @@ export function Navbar() {
           </nav>
           
           <div className="hidden xl:flex items-center space-x-4">
-            <Link to="/give" className="text-white hover:text-gold text-sm font-medium uppercase transition-colors">
+            <Link to="/faire-un-don" className="text-white hover:text-gold text-sm font-medium uppercase transition-colors">
               Donner
             </Link>
             <Link

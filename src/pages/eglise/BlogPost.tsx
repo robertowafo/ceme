@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, BookOpen, Loader2, Tag } from 'lucide-react';
 import { motion } from 'motion/react';
-import { getBlogPost, BlogPost } from '../lib/dbService';
+import { getBlogPost, BlogPost } from '../../lib/dbService';
 
 export function BlogPost() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +34,7 @@ export function BlogPost() {
         <BookOpen className="w-16 h-16 text-gray-300 mb-6" />
         <h1 className="font-serif text-3xl font-bold mb-3">Article introuvable</h1>
         <p className="text-gray-500 mb-8">Cet article n'existe pas ou a été retiré.</p>
-        <Link to="/blog" className="inline-flex items-center gap-2 bg-soft-black text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-gold hover:text-soft-black transition-colors">
+        <Link to="/eglise/blog" className="inline-flex items-center gap-2 bg-soft-black text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:bg-gold hover:text-soft-black transition-colors">
           <ArrowLeft className="w-4 h-4" /> Retour au Blog
         </Link>
       </div>
@@ -58,7 +58,7 @@ export function BlogPost() {
 
         <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 pt-32 pb-16">
           <Link
-            to="/blog"
+            to="/eglise/blog"
             className="inline-flex items-center gap-2 text-white/60 hover:text-gold text-xs font-bold uppercase tracking-wider mb-8 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" /> Retour au Blog
@@ -119,7 +119,7 @@ export function BlogPost() {
         {/* Footer nav */}
         <div className="mt-12 flex items-center justify-between">
           <Link
-            to="/blog"
+            to="/eglise/blog"
             className="inline-flex items-center gap-2 bg-white border border-gray-200 text-soft-black px-6 py-3 rounded-xl font-bold uppercase tracking-wider text-sm hover:border-gold hover:text-gold transition-colors shadow-sm"
           >
             <ArrowLeft className="w-4 h-4" /> Tous les articles

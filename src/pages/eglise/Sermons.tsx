@@ -15,7 +15,7 @@ import {
   Tv,
   Radio
 } from 'lucide-react';
-import { getRecommendedLinks, RecommendedLink } from '../lib/dbService';
+import { getRecommendedLinks, RecommendedLink } from '../../lib/dbService';
 
 
 interface RecommendedVideo {
@@ -158,7 +158,7 @@ export function Sermons() {
   };
 
   return (
-    <div className="pt-24 pb-20 bg-[#f5f2ed] min-h-screen">
+    <div className="pt-10 pb-20 bg-[#f5f2ed] min-h-screen">
       {/* Grâce TV Hero Header */}
       <div className="bg-[#12100f] text-white py-24 mb-12 relative overflow-hidden border-b border-gold/15">
         {/* Subtle, deep background lighting and glows far behind high-contrast text */}

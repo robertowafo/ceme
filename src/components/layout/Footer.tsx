@@ -42,11 +42,11 @@ export function Footer() {
           <div>
             <h3 className="font-serif text-white text-lg mb-6 border-b border-white/10 pb-2">Liens Rapides</h3>
             <ul className="space-y-3">
-              <li><Link to="/about" className="hover:text-gold transition-colors block">À Propos de Nous</Link></li>
+              <li><Link to="/eglise/a-propos" className="hover:text-gold transition-colors block">À Propos de Nous</Link></li>
               <li><Link to="/live" className="hover:text-gold transition-colors block">Culte en Direct</Link></li>
-              <li><Link to="/sermons" className="hover:text-gold transition-colors block">Messages & Vidéos</Link></li>
-              <li><Link to="/schedule" className="hover:text-gold transition-colors block">Notre Agenda</Link></li>
-              <li><Link to="/give" className="hover:text-gold transition-colors block">Faire un Don</Link></li>
+              <li><Link to="/eglise/sermons" className="hover:text-gold transition-colors block">Messages & Vidéos</Link></li>
+              <li><Link to="/eglise/cultes" className="hover:text-gold transition-colors block">Notre Agenda</Link></li>
+              <li><Link to="/faire-un-don" className="hover:text-gold transition-colors block">Faire un Don</Link></li>
             </ul>
           </div>
 
