@@ -3,7 +3,7 @@ import { Facebook, Youtube, Instagram, MapPin, Mail, Phone } from 'lucide-react'
 
 export function Footer() {
   return (
-    <footer className="bg-grace-blue-deep text-white/75">
+    <footer className="bg-grace-dark text-white/75">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           {/* Col 1 — Marque + légales */}
@@ -22,7 +22,7 @@ export function Footer() {
 
           {/* Col 2 — Grâce TV */}
           <div>
-            <h3 className="font-display text-white text-sm font-bold uppercase tracking-wider mb-5">Grâce TV</h3>
+            <h3 className="font-body text-white text-sm font-bold uppercase tracking-wider mb-5">Grâce TV</h3>
             <ul className="space-y-3 font-body text-sm">
               <li><Link to="/live" className="hover:text-grace-orange transition-colors">Regarder en direct</Link></li>
               <li><Link to="/emissions" className="hover:text-grace-orange transition-colors">Nos émissions</Link></li>
@@ -34,7 +34,7 @@ export function Footer() {
 
           {/* Col 3 — Église CEME */}
           <div>
-            <h3 className="font-display text-white text-sm font-bold uppercase tracking-wider mb-5">Église CEME</h3>
+            <h3 className="font-body text-white text-sm font-bold uppercase tracking-wider mb-5">Église CEME</h3>
             <ul className="space-y-3 font-body text-sm">
               <li><Link to="/eglise" className="hover:text-grace-orange transition-colors">Notre église</Link></li>
               <li><Link to="/eglise/cultes" className="hover:text-grace-orange transition-colors">Agenda des cultes</Link></li>
@@ -46,7 +46,7 @@ export function Footer() {
 
           {/* Col 4 — Contact + réseaux */}
           <div>
-            <h3 className="font-display text-white text-sm font-bold uppercase tracking-wider mb-5">Contact</h3>
+            <h3 className="font-body text-white text-sm font-bold uppercase tracking-wider mb-5">Contact</h3>
             <ul className="space-y-3 font-body text-sm">
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-grace-sky shrink-0 mt-0.5" />

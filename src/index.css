@@ -25,22 +25,26 @@
   --color-burgundy: #7B1D1D;
   --color-soft-black: #1A1A1A;
 
-  /* ===== Identité de marque Grâce TV (nouvelle) =====
-     Génère les utilitaires Tailwind: bg-grace-blue, text-grace-orange, border-grace-sky, bg-gray-soft…
+  /* ===== Identité de marque Grâce TV (cobalt / ciel / orange / or) =====
+     Génère les utilitaires Tailwind: bg-grace-blue, text-grace-orange, border-grace-sky…
      Disponibles aussi en CSS pur via var(--color-grace-blue), etc. */
-  --color-grace-blue: #1E3A8A;    /* Primaire — bleu royal du wordmark */
-  --color-grace-blue-deep: #0F1E54;/* Variante profonde pour dégradés hero */
-  --color-grace-orange: #F37020;  /* Accent — orange du cercle */
-  --color-grace-orange-dark: #D85A12; /* Hover bouton orange */
-  --color-grace-sky: #5DADE2;     /* Secondaire — bleu du "TV" */
-  --color-gray-soft: #F8FAFC;     /* Fond sections alternées */
-  --color-text-dark: #0F172A;
+  --color-grace-blue: #1565C0;       /* Cobalt — primaire dominant */
+  --color-grace-blue-deep: #0D2B6E;  /* Cobalt sombre — section live/player */
+  --color-grace-indigo: #1A237E;     /* Indigo profond — bande nom, dégradés */
+  --color-grace-sky: #42A5F5;        /* Bleu ciel lumineux — hero, sections claires */
+  --color-grace-sky-light: #90CAF9;  /* Ciel clair — haut du dégradé hero */
+  --color-grace-orange: #FF6D00;     /* Orange vif — accents, hover, CTA */
+  --color-grace-orange-dark: #E65100;/* Hover bouton orange */
+  --color-grace-gold: #FFD700;       /* Or — éléments spirituels, séparateurs */
+  --color-grace-dark: #1A1A2E;       /* Noir doux — footer, sections sombres */
+  --color-gray-soft: #F5F5F7;        /* Fond sections alternées */
+  --color-text-dark: #1A1A2E;
 
   --font-serif: "CabinetGrotesk-Extrabold", "Cabinet Grotesk", "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
-  /* Polices Grâce TV — titres Poppins, corps Inter (font-display / font-body) */
-  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  /* Polices Grâce TV — grands titres en Playfair (serif élégant), tout le reste en Inter */
+  --font-display: "Playfair Display", ui-serif, Georgia, "Times New Roman", serif;
   --font-body: "Inter", "Roboto", ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -160,4 +164,74 @@
 .section-divider {
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(201, 168, 76, 0.35), transparent);
+}
+
+/* ============================================================
+   GRÂCE TV — style inspiré Aeline (ciel lumineux + animations)
+   ============================================================ */
+
+/* Ciel lumineux du hero (clair en haut -> cobalt en bas) */
+.gracetv-sky {
+  background:
+    radial-gradient(120% 80% at 50% -10%, #BBDEFB 0%, #64B5F6 35%, #2196F3 60%, #1565C0 100%);
+}
+
+/* Rayons de lumière divine (radial pulsant depuis le haut-centre) */
+@keyframes divine-rays {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50%      { opacity: 0.7;  transform: scale(1.08); }
+}
+.animate-divine-rays {
+  background: radial-gradient(closest-side at 50% 0%,
+    rgba(255, 255, 255, 0.85) 0%,
+    rgba(255, 215, 0, 0.28) 35%,
+    rgba(255, 255, 255, 0) 70%);
+  animation: divine-rays 6s ease-in-out infinite;
+}
+
+/* Nuage flou */
+.gracetv-cloud {
+  background: radial-gradient(closest-side, rgba(255,255,255,0.9), rgba(255,255,255,0));
+  filter: blur(8px);
+}
+
+/* Marquee partenaires (défilement infini) */
+@keyframes marquee-x {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee-x 28s linear infinite;
+}
+.marquee-pause:hover .animate-marquee {
+  animation-play-state: paused;
+}
+
+/* Pulse badge EN DIRECT */
+@keyframes live-pulse {
+  0%, 100% { transform: scale(1);   box-shadow: 0 0 0 0 rgba(255,109,0,0.55); }
+  50%      { transform: scale(1.06); box-shadow: 0 0 0 8px rgba(255,109,0,0); }
+}
+.animate-live-pulse {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+
+/* Flottement doux des cartes 3D du hero */
+@keyframes card-float {
+  0%, 100% { transform: translateY(0) rotateY(var(--ry, 0deg)); }
+  50%      { transform: translateY(-12px) rotateY(var(--ry, 0deg)); }
+}
+.animate-card-float {
+  animation: card-float 5s ease-in-out infinite;
+}
+
+/* Ciel étoilé (section live) */
+.gracetv-stars {
+  background-image:
+    radial-gradient(1.5px 1.5px at 20% 30%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1.5px 1.5px at 70% 20%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 85% 60%, rgba(255,215,0,0.6), transparent),
+    radial-gradient(1.5px 1.5px at 60% 85%, rgba(255,255,255,0.5), transparent);
+  background-repeat: no-repeat;
 }

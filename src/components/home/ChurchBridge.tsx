@@ -1,43 +1,54 @@
 import { Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { Church, ArrowRight } from 'lucide-react';
 
 export function ChurchBridge() {
   return (
-    <section className="bg-gray-soft py-16 sm:py-24">
+    <section className="bg-white py-16 sm:py-24">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 grid md:grid-cols-2 gap-10 items-center">
-        <div className="relative rounded-3xl overflow-hidden aspect-[4/3] shadow-xl order-last md:order-first">
+        <motion.div
+          initial={{ opacity: 0, x: -30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6 }}
+          className="relative rounded-3xl overflow-hidden aspect-[4/3] shadow-xl order-last md:order-first"
+        >
           <img
             src="/uploads/externe.JPG"
             alt="La Chapelle de l'Éternel Mon Étendard à Yaoundé"
             className="w-full h-full object-cover"
             loading="lazy"
           />
-          <div className="absolute inset-0 ring-1 ring-inset ring-text-dark/10 rounded-3xl" />
-        </div>
+        </motion.div>
 
-        <div>
-          <span className="inline-flex items-center gap-2 font-display text-xs font-bold uppercase tracking-widest text-grace-blue">
-            <Church className="w-4 h-4 text-grace-sky" /> Notre église porteuse
+        <motion.div
+          initial={{ opacity: 0, x: 30 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6 }}
+        >
+          <span className="inline-flex items-center gap-2 font-body text-xs font-bold uppercase tracking-[0.2em] text-grace-orange">
+            <Church className="w-4 h-4 text-grace-blue" /> · Notre église porteuse
           </span>
-          <h2 className="font-display text-3xl sm:text-4xl font-bold text-text-dark mt-3 mb-5">
-            La Chapelle de l'Éternel Mon Étendard
+          <h2 className="font-display text-3xl sm:text-4xl font-bold text-grace-dark mt-3 mb-5 leading-tight">
+            La Chapelle de l'Éternel<br />Mon Étendard
           </h2>
-          <p className="font-body text-text-dark/75 leading-relaxed mb-4">
+          <p className="font-body text-grace-dark/70 leading-relaxed mb-4">
             Grâce TV est née de la <strong>Chapelle de l'Éternel Mon Étendard</strong> (CEME),
             église évangélique de Yaoundé. C'est cet ancrage spirituel qui nourrit chaque
             programme diffusé sur la chaîne.
           </p>
-          <p className="font-body text-text-dark/75 leading-relaxed mb-7">
+          <p className="font-body text-grace-dark/70 leading-relaxed mb-7">
             Cultes, sermons, soirées de prière et vie communautaire : découvrez l'église
             qui porte la chaîne.
           </p>
           <Link
             to="/eglise"
-            className="inline-flex items-center gap-2 bg-text-dark hover:bg-grace-blue text-white px-7 py-3.5 rounded-full font-display font-semibold text-sm uppercase tracking-wider transition-colors"
+            className="inline-flex items-center gap-2 bg-grace-dark hover:bg-grace-blue text-white px-8 py-4 rounded-full font-body font-semibold text-sm uppercase tracking-wider transition-all hover:scale-105"
           >
             Découvrir l'église CEME <ArrowRight className="w-4 h-4" />
           </Link>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
