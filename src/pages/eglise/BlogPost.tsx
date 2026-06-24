@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, BookOpen, Loader2, Tag } from 'lucide-react';
 import { motion } from 'motion/react';
-import { getBlogPost, BlogPost } from '../../lib/dbService';
+import { getBlogPost, type BlogPost as BlogPostType } from '../../lib/dbService';
 
 export function BlogPost() {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<BlogPost | null>(null);
+  const [post, setPost] = useState<BlogPostType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
 
