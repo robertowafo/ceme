@@ -40,11 +40,13 @@ export function Navbar() {
       >
         <div className="px-4 sm:px-6 py-2.5 flex justify-between items-center">
           <Link to="/" className="flex items-center group shrink-0" aria-label="Accueil Grâce TV">
-            <img
-              src={solid ? '/logo-gracetv.png' : '/logo-gracetv-white.png'}
-              alt="Logo Grâce TV"
-              className={`object-contain transition-all duration-500 ${solid ? 'h-10' : 'h-10 sm:h-12'}`}
-            />
+            <span className={`inline-flex items-center rounded-xl transition-all duration-500 ${solid ? '' : 'bg-white px-3 py-1.5 shadow-lg'}`}>
+              <img
+                src="/logo-gracetv.png"
+                alt="Logo Grâce TV"
+                className="object-contain h-9 sm:h-10"
+              />
+            </span>
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1">

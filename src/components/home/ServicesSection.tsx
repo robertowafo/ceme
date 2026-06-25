@@ -35,10 +35,12 @@ export function ServicesSection() {
   }, []);
 
   return (
-    <section ref={root} className="bg-grace-blue text-white py-20 sm:py-28">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={root} className="relative text-white py-20 sm:py-28 overflow-hidden">
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/uploads/fonds-bleu.jpg')" }} />
+      <div className="absolute inset-0 bg-grace-blue-deep/55" />
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Programmes</span>
-        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold max-w-2xl leading-tight mb-14">
+        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold max-w-2xl leading-tight mb-14 text-white">
           Découvrez nos émissions <span className="text-grace-orange italic">emblématiques.</span>
         </h2>
 
@@ -58,7 +60,7 @@ export function ServicesSection() {
                 </svg>
               </div>
               <div className="relative z-10">
-                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold group-hover:text-soft-black transition-colors">{s.title}</h3>
+                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-white group-hover:text-soft-black transition-colors">{s.title}</h3>
                 <p className="font-sans text-sm text-white/55 group-hover:text-soft-black/70 transition-colors mt-2">{s.sub}</p>
               </div>
             </div>

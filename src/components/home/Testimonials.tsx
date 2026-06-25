@@ -25,7 +25,7 @@ export function Testimonials() {
     <section className="bg-grace-blue-deep text-white py-20 sm:py-28">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Ce que Dieu a fait</span>
-        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold mb-12">
+        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold mb-12 text-white">
           Des vies <span className="text-grace-orange italic">transformées</span>
         </h2>
 

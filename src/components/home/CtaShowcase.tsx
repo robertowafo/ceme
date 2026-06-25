@@ -57,7 +57,7 @@ export function CtaShowcase() {
       <div className="cta-center relative z-10 max-w-2xl mx-auto px-4 sm:px-6 text-center text-white">
         <span className="inline-block text-grace-orange text-2xl mb-4">✦</span>
         <p className="text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-5">CEME Church</p>
-        <h2 className="font-serif text-4xl sm:text-6xl font-extrabold leading-tight mb-6">
+        <h2 className="font-serif text-4xl sm:text-6xl font-extrabold leading-tight mb-6 text-white">
           Prêt pour la <span className="text-grace-orange italic">Grâce</span> ?
         </h2>
         <p className="font-sans text-white/70 text-lg mb-9">Laissons-la entrer dans ta vie.</p>

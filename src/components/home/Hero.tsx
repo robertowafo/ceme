@@ -57,7 +57,7 @@ export function Hero() {
           L'Éternel est ma bannière — Exode 17:15
         </span>
 
-        <h1 className="hero-heading font-serif font-extrabold leading-[0.98] text-5xl sm:text-7xl lg:text-8xl max-w-4xl" style={{ opacity: 0 }}>
+        <h1 className="hero-heading font-serif font-extrabold leading-[0.98] text-5xl sm:text-7xl lg:text-8xl max-w-4xl text-white" style={{ opacity: 0 }}>
           La Bonne Nouvelle,<br />
           <span className="text-grace-orange italic">partout, partout…</span>
         </h1>

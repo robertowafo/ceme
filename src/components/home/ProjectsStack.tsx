@@ -32,7 +32,7 @@ export function ProjectsStack() {
     <section ref={root} className="bg-grace-blue-deep text-white py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Archives</span>
-        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold max-w-3xl leading-tight">
+        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold max-w-3xl leading-tight text-white">
           Nos grandes émissions et <span className="text-grace-orange italic">moments de transformation.</span>
         </h2>
       </div>
@@ -48,7 +48,7 @@ export function ProjectsStack() {
               <div className="p-8 sm:p-10 flex flex-col justify-center">
                 <span className="text-grace-orange text-[11px] font-semibold uppercase tracking-[0.2em]">{p.tag}</span>
                 <span className="font-sans text-white/50 text-sm mt-3">{p.sub}</span>
-                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold mt-1 mb-4">{p.title}</h3>
+                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold mt-1 mb-4 text-white">{p.title}</h3>
                 <p className="font-sans text-white/65 leading-relaxed">{p.desc}</p>
               </div>
             </div>

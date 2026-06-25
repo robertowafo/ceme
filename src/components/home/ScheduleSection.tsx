@@ -50,7 +50,7 @@ export function ScheduleSection() {
                 c.highlight ? 'bg-grace-blue-deep text-white border-grace-orange/40' : 'bg-white text-soft-black border-soft-black/10'
               }`}
             >
-              <h3 className="font-serif text-2xl font-extrabold">{c.title}</h3>
+              <h3 className={`font-serif text-2xl font-extrabold ${c.highlight ? 'text-white' : 'text-soft-black'}`}>{c.title}</h3>
               <p className={`font-sans text-sm mt-1 ${c.highlight ? 'text-white/60' : 'text-soft-black/55'}`}>{c.subtitle}</p>
 
               <div className="flex items-baseline gap-3 mt-6 mb-2">

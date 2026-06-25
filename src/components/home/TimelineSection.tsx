@@ -29,10 +29,12 @@ export function TimelineSection() {
   }, []);
 
   return (
-    <section ref={root} className="bg-grace-blue text-white py-20 sm:py-28">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={root} className="relative text-white py-20 sm:py-28 overflow-hidden">
+      <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/uploads/fonds-bleu.jpg')" }} />
+      <div className="absolute inset-0 bg-grace-blue-deep/55" />
+      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Notre parcours</span>
-        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold leading-tight mb-16">
+        <h2 className="font-serif text-3xl sm:text-5xl font-extrabold leading-tight mb-16 text-white">
           L'excellence, fruit d'une <span className="text-grace-orange italic">obéissance constante.</span>
         </h2>
 
@@ -47,7 +49,7 @@ export function TimelineSection() {
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-5">
                   <span className="font-serif text-grace-orange text-2xl font-extrabold shrink-0 w-32">{m.year}</span>
                   <div>
-                    <h3 className="font-serif text-xl font-extrabold">{m.label}</h3>
+                    <h3 className="font-serif text-xl font-extrabold text-white">{m.label}</h3>
                     <p className="font-sans text-white/60 text-sm leading-relaxed mt-1">{m.detail}</p>
                   </div>
                 </div>
