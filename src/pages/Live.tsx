@@ -101,9 +101,9 @@ export function Live() {
     <div className="min-h-screen bg-soft-black text-white pt-24 pb-20">
       
       {/* Grâce TV Live Banner Header */}
-      <div className="border-b border-gold/15 bg-[#12100f] py-12 relative overflow-hidden mb-12">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-950/40 via-transparent to-transparent opacity-80 pointer-events-none" />
-        <div className="absolute -top-[20%] left-1/4 w-[50%] h-[50%] rounded-full bg-gold/5 blur-[120px] pointer-events-none" />
+      <div className="border-b border-grace-orange/15 bg-[#12100f] py-12 relative overflow-hidden mb-12">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-grace-orange/15 via-transparent to-transparent opacity-80 pointer-events-none" />
+        <div className="absolute -top-[20%] left-1/4 w-[50%] h-[50%] rounded-full bg-grace-orange/5 blur-[120px] pointer-events-none" />
 
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-8 lg:px-12 flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
           <div className="text-center md:text-left">
@@ -117,7 +117,7 @@ export function Live() {
               </span>
             </div>
             <h1 className="font-serif text-3xl md:text-5xl font-black leading-tight drop-shadow-[0_4px_12px_rgba(0,0,0,0.95)]">
-              <span className="text-white">La Bonne Nouvelle</span> <span className="text-gold font-serif block sm:inline mt-1 sm:mt-0">partout-partout</span>
+              <span className="text-white">La Bonne Nouvelle</span> <span className="text-grace-orange font-serif block sm:inline mt-1 sm:mt-0">partout-partout</span>
             </h1>
             <p className="text-white max-w-xl text-xs md:text-sm font-normal mt-3 leading-relaxed drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
               Votre canal céleste en temps réel. Rejoignez notre communauté mondiale pour des cultes d'adoration, des ministères de délivrance profonde et des enseignements doctrinaux d'excellence.
@@ -126,10 +126,10 @@ export function Live() {
           <div className="flex items-center gap-4 py-3.5 px-5 rounded-2xl bg-[#1c1917]/95 border border-white/10 backdrop-blur-md shrink-0 shadow-2xl relative z-20">
             <div className="text-right">
               <p className="text-[10px] text-white/60 uppercase font-black tracking-widest">COMMUNION SACRÉE</p>
-              <p className="text-sm font-bold text-gold">Chaque Dimanche à 10H00</p>
+              <p className="text-sm font-bold text-grace-orange">Chaque Dimanche à 10H00</p>
             </div>
-            <div className="p-2.5 bg-gold/10 rounded-xl border border-gold/20 flex items-center justify-center">
-              <Radio className="w-5 h-5 text-gold animate-pulse" />
+            <div className="p-2.5 bg-grace-orange/10 rounded-xl border border-grace-orange/20 flex items-center justify-center">
+              <Radio className="w-5 h-5 text-grace-orange animate-pulse" />
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@ export function Live() {
                   onClick={() => setStreamMode('live')}
                   className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center transition-all ${
                     streamMode === 'live'
-                      ? 'bg-gold text-soft-black font-black shadow-md'
+                      ? 'bg-grace-orange text-soft-black font-black shadow-md'
                       : 'text-white/60 hover:text-white'
                   }`}
                 >
@@ -158,7 +158,7 @@ export function Live() {
                   onClick={() => setStreamMode('h24')}
                   className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider text-center transition-all ${
                     streamMode === 'h24'
-                      ? 'bg-gold text-soft-black font-black shadow-md'
+                      ? 'bg-grace-orange text-soft-black font-black shadow-md'
                       : 'text-white/60 hover:text-white'
                   }`}
                 >
@@ -176,7 +176,7 @@ export function Live() {
                       {liveData.isLive ? 'Signal Direct Actif' : 'Dernières Diffusions Directes'}
                     </h2>
                   </div>
-                  <span className={`text-soft-black text-center text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg inline-block w-max ${liveData.isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-gold'}`}>
+                  <span className={`text-soft-black text-center text-xs font-bold uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg inline-block w-max ${liveData.isLive ? 'bg-red-600 text-white animate-pulse' : 'bg-grace-orange'}`}>
                     {liveData.isLive ? 'Direct en Cours' : 'Diffusé Récemment'}
                   </span>
                 </div>
@@ -184,7 +184,7 @@ export function Live() {
                 <div className="relative w-full aspect-video min-h-[320px] sm:min-h-[460px] lg:min-h-[580px] bg-black rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-white/10 group">
                   {isLoading ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950">
-                      <div className="w-12 h-12 border-4 border-gold border-t-transparent rounded-full animate-spin mb-4" />
+                      <div className="w-12 h-12 border-4 border-grace-orange border-t-transparent rounded-full animate-spin mb-4" />
                       <p className="text-sm text-gray-400">Recherche du flux de diffusion en direct...</p>
                     </div>
                   ) : liveData.videoId ? (
@@ -200,7 +200,7 @@ export function Live() {
                       <img src="https://images.unsplash.com/photo-1549488344-c1899121a973?auto=format&fit=crop&q=80&w=1200" alt="Stream Preview" className="w-full h-full object-cover opacity-65 group-hover:scale-102 transition-transform duration-700"/>
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
                       <div className="text-center z-10 px-4 flex flex-col items-center">
-                        <WifiOff className="w-10 h-10 text-gold mb-3 animate-bounce" />
+                        <WifiOff className="w-10 h-10 text-grace-orange mb-3 animate-bounce" />
                         <p className="text-2xl font-serif mb-3 font-bold">La diffusion est actuellement hors ligne</p>
                         <p className="text-white/60 text-sm max-w-md">Aucun direct n'a été détecté pour le moment. Suivez-nous sur YouTube pour ne manquer aucune notification !</p>
                       </div>
@@ -258,14 +258,14 @@ export function Live() {
                   className="absolute top-6 right-6 p-2 rounded-lg bg-white/5 border border-white/10 text-white/70 hover:text-white hover:bg-white/15 transition-all text-xs flex items-center gap-1.5"
                   title="Configurer le flux H24 VMix"
                 >
-                  <Settings className="w-4 h-4 text-gold" />
-                  <span className="hidden sm:inline text-gold font-bold uppercase tracking-wider text-[10px]">⚙ Configurer le flux</span>
+                  <Settings className="w-4 h-4 text-grace-orange" />
+                  <span className="hidden sm:inline text-grace-orange font-bold uppercase tracking-wider text-[10px]">⚙ Configurer le flux</span>
                 </button>
               )}
 
               {isEditingUrl && streamMode === 'h24' && (
-                <div className="mb-6 p-5 rounded-2xl bg-[#12100f] border border-gold/20 animate-fade-in">
-                  <div className="flex items-center gap-2 text-gold mb-2">
+                <div className="mb-6 p-5 rounded-2xl bg-[#12100f] border border-grace-orange/20 animate-fade-in">
+                  <div className="flex items-center gap-2 text-grace-orange mb-2">
                     <Link2 className="w-4.5 h-4.5" />
                     <h4 className="text-[11px] font-bold uppercase tracking-wider">Configurer le lien de retransmission H24 VMix</h4>
                   </div>
@@ -275,7 +275,7 @@ export function Live() {
                   <div className="flex flex-col sm:flex-row gap-3">
                     <input
                       type="text"
-                      className="flex-1 bg-black/50 border border-white/20 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                      className="flex-1 bg-black/50 border border-white/20 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-grace-orange"
                       placeholder="Ex: https://www.youtube.com/watch?v=... ou widget d'intégration"
                       value={tempUrl}
                       onChange={(e) => setTempUrl(e.target.value)}
@@ -283,7 +283,7 @@ export function Live() {
                     <div className="flex gap-2">
                       <button
                         onClick={handleSaveH24Url}
-                        className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        className="bg-grace-orange hover:bg-grace-orange/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
                       >
                         <Check className="w-3.5 h-3.5" /> Enregistrer
                       </button>
@@ -324,7 +324,7 @@ export function Live() {
                   </p>
                 </div>
                 <div className="flex flex-col space-y-3 shrink-0 w-full md:w-auto">
-                  <Link to="/faire-un-don" className="bg-burgundy hover:bg-red-800 text-white px-6 py-3 md:py-2.5 rounded-xl text-center text-sm font-bold uppercase tracking-wider transition-colors shadow-lg">
+                  <Link to="/faire-un-don" className="bg-grace-blue hover:bg-grace-blue-deep text-white px-6 py-3 md:py-2.5 rounded-xl text-center text-sm font-bold uppercase tracking-wider transition-colors shadow-lg">
                     Faire une offrande
                   </Link>
                   <Link to="/eglise/priere" className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-6 py-3 md:py-2.5 rounded-xl text-center text-sm font-bold uppercase tracking-wider transition-colors">
@@ -334,14 +334,14 @@ export function Live() {
               </div>
               
               <div className="flex flex-wrap items-center gap-6 pt-6 mt-6 border-t border-white/10 text-sm font-semibold uppercase tracking-wider text-white/80">
-                <button className="flex items-center space-x-2 hover:text-gold transition-colors">
+                <button className="flex items-center space-x-2 hover:text-grace-orange transition-colors">
                   <Heart className="w-5 h-5" /> <span>J'aime ({streamMode === 'live' ? (liveData.isLive ? 'Direct' : 'Replay') : 'H24'})</span>
                 </button>
-                <button className="flex items-center space-x-2 hover:text-gold transition-colors">
+                <button className="flex items-center space-x-2 hover:text-grace-orange transition-colors">
                   <Share2 className="w-5 h-5" /> <span>Partager le lien</span>
                 </button>
-                <Link to="/eglise/sermons" className="flex items-center space-x-2 hover:text-gold transition-colors text-white/80">
-                  <Play className="w-4 h-4 text-gold" /> <span>Voir tous les replays</span>
+                <Link to="/eglise/sermons" className="flex items-center space-x-2 hover:text-grace-orange transition-colors text-white/80">
+                  <Play className="w-4 h-4 text-grace-orange" /> <span>Voir tous les replays</span>
                 </Link>
               </div>
             </div>
@@ -349,7 +349,7 @@ export function Live() {
             {/* Upcoming Streams — dates calculées dynamiquement */}
             <div className="mt-12">
               <h3 className="font-serif text-2xl font-bold mb-6 flex items-center gap-3 text-white">
-                <CalendarClock className="w-6 h-6 text-gold" />
+                <CalendarClock className="w-6 h-6 text-grace-orange" />
                 Prochains Directs
               </h3>
               {(() => {
@@ -361,7 +361,7 @@ export function Live() {
                     label: 'Soirée de Prière',
                     time: '19:00',
                     desc: 'Intercession et délivrance prophétique',
-                    accent: 'bg-burgundy text-white',
+                    accent: 'bg-grace-blue text-white',
                   },
                   {
                     date: nextSunday,

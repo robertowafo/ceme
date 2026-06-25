@@ -102,16 +102,16 @@ export function Give() {
           alt="Don"
           className="absolute inset-0 w-full h-full object-cover opacity-10"
         />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gold/5 rounded-full blur-[100px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-grace-orange/5 rounded-full blur-[100px]" />
         <div className="max-w-4xl mx-auto text-center relative z-10 mt-16">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9 }}>
-            <div className="w-24 h-24 bg-burgundy/80 rounded-full flex items-center justify-center mx-auto mb-8 text-gold shadow-[0_0_40px_rgba(123,29,29,0.4)] border-4 border-burgundy/40 animate-divine-glow">
+            <div className="w-24 h-24 bg-grace-blue/80 rounded-full flex items-center justify-center mx-auto mb-8 text-grace-orange shadow-[0_0_40px_rgba(123,29,29,0.4)] border-4 border-grace-blue/40 animate-divine-glow">
               <HeartHandshake className="w-12 h-12" />
             </div>
             <h1 className="font-serif text-5xl md:text-7xl font-bold mb-8 text-white leading-tight">
-              Soutenir <span className="text-gold italic">l'Œuvre</span>
+              Soutenir <span className="text-grace-orange italic">l'Œuvre</span>
             </h1>
-            <blockquote className="text-xl md:text-2xl text-gold font-light italic leading-relaxed max-w-2xl mx-auto">
+            <blockquote className="text-xl md:text-2xl text-grace-orange font-light italic leading-relaxed max-w-2xl mx-auto">
               "Que chacun donne comme il l'a résolu en son cœur, sans tristesse ni contrainte; car Dieu aime celui qui donne avec joie."
             </blockquote>
             <p className="font-bold text-sm uppercase tracking-widest mt-4 text-white/40">— 2 Corinthiens 9:7</p>
@@ -120,13 +120,13 @@ export function Give() {
       </div>
 
       {/* TEACHING */}
-      <div className="py-24 bg-[#f5f2ed] border-b border-gray-200">
+      <div className="py-24 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row gap-16 items-center">
             <motion.div initial={{ opacity: 0, x: -40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="lg:w-1/2 space-y-7">
-              <p className="text-gold font-bold uppercase tracking-widest text-sm">Comprendre le Don</p>
+              <p className="text-grace-orange font-bold uppercase tracking-widest text-sm">Comprendre le Don</p>
               <h2 className="font-serif text-4xl font-bold leading-tight">
-                Donner n'est pas une <span className="text-burgundy italic">obligation</span> — c'est une <span className="text-burgundy italic">grâce</span>.
+                Donner n'est pas une <span className="text-grace-blue italic">obligation</span> — c'est une <span className="text-grace-blue italic">grâce</span>.
               </h2>
               <p className="text-gray-700 leading-relaxed">
                 Dans les Écritures, la dîme et l'offrande ne sont pas un impôt religieux. Ils sont l'expression concrète de notre confiance envers Dieu — une déclaration de foi que l'Éternel est notre source et notre pourvoyeur.
@@ -142,7 +142,7 @@ export function Give() {
                   'Chaque contribution est enregistrée et vous recevrez une confirmation',
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-3">
-                    <CheckCircle className="w-5 h-5 text-gold shrink-0 mt-0.5" />
+                    <CheckCircle className="w-5 h-5 text-grace-orange shrink-0 mt-0.5" />
                     <p className="text-gray-700 text-sm">{item}</p>
                   </div>
                 ))}
@@ -151,13 +151,13 @@ export function Give() {
 
             <motion.div initial={{ opacity: 0, x: 40 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className="lg:w-1/2">
               <div className="bg-soft-black text-white rounded-3xl p-10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-gold/5 rounded-full blur-3xl -mr-10 -mt-10" />
-                <BookOpen className="w-10 h-10 text-gold mb-6 relative z-10" />
-                <Quote className="w-8 h-8 text-gold/20 mb-4" />
+                <div className="absolute top-0 right-0 w-48 h-48 bg-grace-orange/5 rounded-full blur-3xl -mr-10 -mt-10" />
+                <BookOpen className="w-10 h-10 text-grace-orange mb-6 relative z-10" />
+                <Quote className="w-8 h-8 text-grace-orange/20 mb-4" />
                 <p className="font-serif text-2xl font-light italic leading-relaxed text-white/85 mb-6 relative z-10">
                   "Donnez, et il vous sera donné; on versera dans votre sein une bonne mesure, serrée, secouée et débordante. Car on vous mesurera avec la mesure dont vous vous serez servis."
                 </p>
-                <p className="text-gold font-bold uppercase tracking-widest text-sm relative z-10">— Luc 6:38</p>
+                <p className="text-grace-orange font-bold uppercase tracking-widest text-sm relative z-10">— Luc 6:38</p>
               </div>
             </motion.div>
           </div>
@@ -169,7 +169,7 @@ export function Give() {
         <div className="absolute inset-0 cross-pattern opacity-25" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-            <p className="text-gold font-bold uppercase tracking-widest text-sm mb-3">Vos Dons en Action</p>
+            <p className="text-grace-orange font-bold uppercase tracking-widest text-sm mb-3">Vos Dons en Action</p>
             <h2 className="font-serif text-4xl font-bold text-white">L'Impact de votre Générosité</h2>
           </motion.div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
@@ -191,7 +191,7 @@ export function Give() {
 
             {/* Form */}
             <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <div className="bg-[#f5f2ed] border border-gray-200 p-8 md:p-12 rounded-[2.5rem] shadow-xl">
+              <div className="bg-white border border-gray-200 p-8 md:p-12 rounded-[2.5rem] shadow-xl">
                 <h2 className="font-serif text-3xl font-bold mb-2 text-soft-black">Déclarer votre Don</h2>
                 <p className="text-gray-500 mb-2 text-sm">Renseignez votre intention de don ci-dessous.</p>
                 {/* Info notice */}
@@ -213,7 +213,7 @@ export function Give() {
                             key={type}
                             onClick={() => setContribType(type)}
                             className={`py-3 rounded-xl font-bold text-sm shadow-sm transition-all active:scale-95 cursor-pointer ${
-                              contribType === type ? 'bg-soft-black text-white' : 'bg-white text-gray-600 border border-gray-300 hover:border-gold hover:text-soft-black'
+                              contribType === type ? 'bg-soft-black text-white' : 'bg-white text-gray-600 border border-gray-300 hover:border-grace-orange hover:text-soft-black'
                             }`}
                           >
                             {type}
@@ -240,13 +240,13 @@ export function Give() {
                                   onClick={() => setSelectedProjectId(p.id)}
                                   className={`w-full text-left rounded-xl border p-4 transition-all cursor-pointer ${
                                     selectedProjectId === p.id
-                                      ? 'border-gold bg-gold/5'
-                                      : 'border-gray-200 bg-white hover:border-gold/50'
+                                      ? 'border-grace-orange bg-grace-orange/5'
+                                      : 'border-gray-200 bg-white hover:border-grace-orange/50'
                                   }`}
                                 >
                                   <div className="flex items-center justify-between mb-1">
                                     <span className="font-bold text-sm text-soft-black">{p.title}</span>
-                                    <span className="text-xs font-bold text-gold">{pct}%</span>
+                                    <span className="text-xs font-bold text-grace-orange">{pct}%</span>
                                   </div>
                                   {p.description && <p className="text-xs text-gray-500 mb-2">{p.description}</p>}
                                   <div className="flex items-center justify-between text-[10px] text-gray-400 mb-1.5">
@@ -274,8 +274,8 @@ export function Give() {
                             onClick={() => handlePresetClick(amt)}
                             className={`py-3 px-1 rounded-xl font-bold text-xs transition-all cursor-pointer ${
                               selectedPreset === amt && !customAmount
-                                ? 'bg-burgundy text-white shadow-md'
-                                : 'bg-white text-gray-600 border border-gray-300 hover:border-gold hover:text-soft-black'
+                                ? 'bg-grace-blue text-white shadow-md'
+                                : 'bg-white text-gray-600 border border-gray-300 hover:border-grace-orange hover:text-soft-black'
                             }`}
                           >
                             {amt}
@@ -336,7 +336,7 @@ export function Give() {
                           type="button"
                           onClick={() => setPaymentMethod('Card')}
                           className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all cursor-pointer ${
-                            paymentMethod === 'Card' ? 'bg-burgundy/10 border-burgundy text-burgundy' : 'bg-white border-gray-300 text-gray-600 hover:border-burgundy'
+                            paymentMethod === 'Card' ? 'bg-grace-blue/10 border-grace-blue text-grace-blue' : 'bg-white border-gray-300 text-gray-600 hover:border-grace-blue'
                           }`}
                         >
                           <CreditCard className="w-4 h-4" /> Virement / Autre
@@ -360,7 +360,7 @@ export function Give() {
                       whileTap={{ scale: 0.98 }}
                       onClick={startDonationProcess}
                       disabled={processStep === 'loading'}
-                      className="w-full bg-gold hover:bg-yellow-400 text-soft-black font-bold uppercase tracking-wider py-5 rounded-2xl transition-all shadow-[0_10px_20px_rgba(201,168,76,0.3)] flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
+                      className="w-full bg-grace-orange hover:bg-yellow-400 text-soft-black font-bold uppercase tracking-wider py-5 rounded-2xl transition-all shadow-[0_10px_20px_rgba(201,168,76,0.3)] flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60"
                     >
                       {processStep === 'loading' ? (
                         <><div className="w-5 h-5 border-2 border-soft-black border-t-transparent rounded-full animate-spin" /> Enregistrement...</>
@@ -378,7 +378,7 @@ export function Give() {
                     <div className="space-y-2">
                       <h3 className="font-serif text-2xl font-bold text-soft-black">Don Enregistré !</h3>
                       <p className="text-sm text-gray-600 max-w-sm mx-auto leading-relaxed">
-                        Merci, <strong className="text-soft-black">{donorName}</strong>. Votre intention de don de <strong className="text-burgundy">{getFinalAmountDisplay()}</strong> a bien été notée.
+                        Merci, <strong className="text-soft-black">{donorName}</strong>. Votre intention de don de <strong className="text-grace-blue">{getFinalAmountDisplay()}</strong> a bien été notée.
                         {selectedProject && <span> (Projet : <strong>{selectedProject.title}</strong>)</span>}
                       </p>
                     </div>
@@ -423,8 +423,8 @@ export function Give() {
                     { icon: TrendingUp, title: 'Projets d\'Expansion',       desc: 'Rénovation de nos salles d\'accueil et lancement de nouvelles églises partenaires dans la région.' },
                   ].map((item, i) => (
                     <div key={i} className="flex items-start gap-4">
-                      <div className="w-12 h-12 bg-burgundy/10 rounded-full flex items-center justify-center shrink-0">
-                        <item.icon className="w-6 h-6 text-burgundy" />
+                      <div className="w-12 h-12 bg-grace-blue/10 rounded-full flex items-center justify-center shrink-0">
+                        <item.icon className="w-6 h-6 text-grace-blue" />
                       </div>
                       <div>
                         <h4 className="font-bold text-lg mb-1">{item.title}</h4>
@@ -437,18 +437,18 @@ export function Give() {
 
               <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="border-t border-gray-100 pt-10">
                 <h2 className="font-serif text-2xl font-bold mb-6">Autres Moyens de Donner</h2>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-5 hover:border-gold transition-colors mb-4">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-start gap-5 hover:border-grace-orange transition-colors mb-4">
                   <div className="bg-gray-100 p-3 rounded-full text-soft-black shrink-0"><Landmark className="w-5 h-5" /></div>
                   <div className="flex-1">
                     <h3 className="font-bold mb-1">Virement Bancaire</h3>
-                    <div className="bg-[#f5f2ed] p-4 rounded-xl text-sm font-mono text-gray-700 mt-3 border border-gray-200">
+                    <div className="bg-white p-4 rounded-xl text-sm font-mono text-gray-700 mt-3 border border-gray-200">
                       <p className="mb-2"><span className="font-bold text-soft-black uppercase tracking-wider text-[10px]">Titulaire</span><br />Chapelle E.M.E</p>
                       <p><span className="font-bold text-soft-black uppercase tracking-wider text-[10px]">IBAN</span><br />FR76 1234 5678 9012 3456 7890 123</p>
                     </div>
                   </div>
                 </div>
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 hover:border-gold transition-colors cursor-pointer group">
-                  <div className="bg-gray-100 p-3 rounded-full text-soft-black group-hover:bg-gold group-hover:text-white transition-colors shrink-0"><Smartphone className="w-5 h-5" /></div>
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-5 hover:border-grace-orange transition-colors cursor-pointer group">
+                  <div className="bg-gray-100 p-3 rounded-full text-soft-black group-hover:bg-grace-orange group-hover:text-white transition-colors shrink-0"><Smartphone className="w-5 h-5" /></div>
                   <div>
                     <h3 className="font-bold mb-1">Mobile Money</h3>
                     <p className="text-[#FF6600] font-bold text-sm">Orange Money : +237 680 82 19 53</p>
@@ -463,10 +463,10 @@ export function Give() {
 
       {/* PROJECTS */}
       {projects.length > 0 && (
-        <div className="py-24 bg-[#f5f2ed] border-t border-gray-200">
+        <div className="py-24 bg-white border-t border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
-              <p className="text-gold font-bold uppercase tracking-widest text-sm mb-4">En ce Moment</p>
+              <p className="text-grace-orange font-bold uppercase tracking-widest text-sm mb-4">En ce Moment</p>
               <h2 className="font-serif text-4xl font-bold">Projets en Cours</h2>
               <p className="text-gray-400 max-w-xl mx-auto mt-4">Voici vers quoi vont spécifiquement vos contributions actuelles. Ensemble, nous pouvons y arriver.</p>
             </motion.div>
@@ -481,13 +481,13 @@ export function Give() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: i * 0.1 }}
-                    className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all hover:border-gold/20 group"
+                    className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-xl transition-all hover:border-grace-orange/20 group"
                   >
-                    <h3 className="font-serif text-xl font-bold mb-3 group-hover:text-burgundy transition-colors">{proj.title}</h3>
+                    <h3 className="font-serif text-xl font-bold mb-3 group-hover:text-grace-blue transition-colors">{proj.title}</h3>
                     {proj.description && <p className="text-gray-600 text-sm leading-relaxed mb-6">{proj.description}</p>}
                     <div className="mb-3 flex justify-between items-center text-sm">
                       <span className="font-bold text-soft-black">Objectif : {proj.goalAmount.toLocaleString('fr-FR')} {proj.currency}</span>
-                      <span className="font-bold text-gold">{pct}%</span>
+                      <span className="font-bold text-grace-orange">{pct}%</span>
                     </div>
                     <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                       <motion.div
