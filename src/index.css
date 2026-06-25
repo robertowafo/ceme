@@ -20,10 +20,11 @@
 }
 
 @theme {
-  /* ===== Identité historique CEME (conservée — utilisée par l'admin et les pages église) ===== */
+  /* ===== Identité prestige CEME / Grâce TV (or · noir · bordeaux · crème) ===== */
   --color-gold: #C9A84C;
   --color-burgundy: #7B1D1D;
   --color-soft-black: #1A1A1A;
+  --color-cream: #F5F0E8;
 
   /* ===== Identité de marque Grâce TV (cobalt / ciel / orange / or) =====
      Génère les utilitaires Tailwind: bg-grace-blue, text-grace-orange, border-grace-sky…
@@ -223,6 +224,16 @@
 }
 .animate-card-float {
   animation: card-float 5s ease-in-out infinite;
+}
+
+/* Tracé SVG au survol (icônes émissions) */
+@keyframes draw-stroke { to { stroke-dashoffset: 0; } }
+.draw-icon path {
+  stroke-dasharray: var(--len, 140);
+  stroke-dashoffset: var(--len, 140);
+}
+.group:hover .draw-icon path {
+  animation: draw-stroke 1.2s ease forwards;
 }
 
 /* Ciel étoilé (section live) */

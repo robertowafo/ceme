@@ -1,29 +1,29 @@
+import { Preloader } from '../components/home/Preloader';
 import { Hero } from '../components/home/Hero';
-import { PartnersMarquee } from '../components/home/PartnersMarquee';
-import { StatsBento } from '../components/home/StatsBento';
-import { AboutPreview } from '../components/home/AboutPreview';
-import { ShowsGrid } from '../components/home/ShowsGrid';
-import { LiveSection } from '../components/home/LiveSection';
-import { ValuesBento } from '../components/home/ValuesBento';
-import { WatchOptions } from '../components/home/WatchOptions';
+import { AboutSection } from '../components/home/AboutSection';
+import { ServicesSection } from '../components/home/ServicesSection';
+import { ProcessSection } from '../components/home/ProcessSection';
+import { ProjectsStack } from '../components/home/ProjectsStack';
+import { ScheduleSection } from '../components/home/ScheduleSection';
+import { TimelineSection } from '../components/home/TimelineSection';
 import { Testimonials } from '../components/home/Testimonials';
-import { ChurchBridge } from '../components/home/ChurchBridge';
-import { DonateBanner } from '../components/home/DonateBanner';
+import { FaqSection } from '../components/home/FaqSection';
+import { CtaShowcase } from '../components/home/CtaShowcase';
 
 export function Home() {
   return (
     <>
+      <Preloader />
       <Hero />
-      <PartnersMarquee />
-      <StatsBento />
-      <AboutPreview />
-      <ShowsGrid />
-      <LiveSection />
-      <ValuesBento />
-      <WatchOptions />
+      <AboutSection />
+      <ServicesSection />
+      <ProcessSection />
+      <ProjectsStack />
+      <ScheduleSection />
+      <TimelineSection />
       <Testimonials />
-      <ChurchBridge />
-      <DonateBanner />
+      <FaqSection />
+      <CtaShowcase />
     </>
   );
 }
