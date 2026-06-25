@@ -4,7 +4,7 @@ export function Partenaires() {
   return (
     <PagePlaceholder
       title="Nos partenaires"
-      subtitle="Grâce TV collabore avec CREOLINK et plusieurs câblodistributeurs pour porter la Bonne Nouvelle partout au Cameroun et au-delà."
+      subtitle="Grâce TV diffuse partout (web, YouTube, satellite, câble) et partage les enseignements de pasteurs et ministères partenaires, pour porter la Bonne Nouvelle bien au-delà du Cameroun."
     />
   );
 }

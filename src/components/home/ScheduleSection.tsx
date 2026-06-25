@@ -11,7 +11,7 @@ const cards = [
     cta: 'Venir ce dimanche', to: '/eglise/cultes',
   },
   {
-    title: 'Soirée de Prière', subtitle: "Une nuit d'intercession et de délivrance.",
+    title: 'Prières Intercession', subtitle: "Une soirée d'intercession et de délivrance.",
     day: 'Vendredi', time: '19h00', badge: 'En direct · Grâce TV', highlight: true,
     features: ['Intercession prophétique', 'Prières de délivrance', 'Adoration profonde', 'Enseignement biblique', 'Diffusée sur Grâce TV'],
     cta: "Voir l'agenda complet", to: '/eglise/cultes',

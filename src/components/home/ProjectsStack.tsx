@@ -2,14 +2,14 @@ import { useEffect, useRef } from 'react';
 import { gsap } from '../../lib/gsap';
 
 const projects = [
-  { tag: 'Enseignement', sub: 'Parole de Grâce', title: 'École des Affaires du Royaume', img: '/uploads/fonde en.jpeg',
+  { tag: 'Rassemblement', sub: 'Événement phare', title: "Sommet d'Élévation", img: '/uploads/impact jeunesse.png',
+    desc: "Un grand rassemblement d'élévation spirituelle, de délivrance et d'enseignement pour faire passer chaque vie à un niveau supérieur." },
+  { tag: 'Enseignement', sub: 'Business & leadership', title: 'École des Affaires du Royaume', img: '/uploads/fonde en.jpeg',
     desc: "Libérer la sagesse entrepreneuriale divine et former des croyants qui impactent le monde des affaires avec intégrité." },
-  { tag: 'Jeunesse', sub: 'Impact Jeunesse', title: 'Star University', img: '/uploads/impact jeunesse.png',
-    desc: "Académie d'excellence, de leadership et d'approfondissement doctrinal pour les 15-25 ans." },
-  { tag: 'Famille', sub: 'Restauration', title: 'Foyer Béni', img: '/uploads/mama marie.jpeg',
-    desc: "Un accompagnement des couples et des familles, transformés par la grâce de Dieu." },
-  { tag: 'Intercession', sub: 'Nuit de Prières', title: 'Vigile Prophétique', img: '/uploads/priere.jpeg',
-    desc: "Des nuits de prières intenses où l'Éternel intervient dans les situations impossibles." },
+  { tag: 'Quotidien', sub: 'Édification matinale', title: 'Manne Matinale', img: '/uploads/sermons.jpeg',
+    desc: "Le rendez-vous quotidien pour commencer la journée nourri de la Parole de Dieu, où que vous soyez." },
+  { tag: 'Intercession', sub: 'Combat spirituel', title: 'Prières Intercession', img: '/uploads/priere.jpeg',
+    desc: "Des temps d'intercession intenses où l'Éternel intervient dans les situations impossibles." },
 ];
 
 export function ProjectsStack() {

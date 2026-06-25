@@ -1,22 +1,14 @@
 import { useEffect, useRef } from 'react';
+import { Church, Sunrise, Sparkles, Briefcase, HandHeart, Quote } from 'lucide-react';
 import { gsap } from '../../lib/gsap';
 
-const services = [
-  {
-    num: 'I.', title: 'Parole de Grâce', sub: 'Enseignements · Sermons',
-    // croix
-    icon: <path d="M28 6 V50 M14 22 H42" />,
-  },
-  {
-    num: 'II.', title: 'École des Affaires', sub: 'Business · Leadership · Finance',
-    // étoile
-    icon: <path d="M28 6 L34 22 L51 22 L37 33 L42 50 L28 39 L14 50 L19 33 L5 22 L22 22 Z" />,
-  },
-  {
-    num: 'III.', title: 'Impact Jeunesse', sub: '15-25 ans · Formation · Mission',
-    // flamme
-    icon: <path d="M28 6 C32 18 44 22 38 38 C36 46 30 50 28 50 C26 50 18 46 18 36 C18 28 26 24 28 6 Z" />,
-  },
+const programs = [
+  { icon: Church, title: 'Culte du Dimanche', sub: 'Célébration · Adoration · Parole' },
+  { icon: Sunrise, title: 'Manne Matinale', sub: 'Édification quotidienne dans la Parole' },
+  { icon: Sparkles, title: "Sommet d'Élévation", sub: "Grand rassemblement d'élévation spirituelle" },
+  { icon: Briefcase, title: 'École des Affaires du Royaume', sub: 'Leadership · Entreprise · Principes bibliques' },
+  { icon: HandHeart, title: 'Prières Intercession', sub: 'Intercession et combat spirituel' },
+  { icon: Quote, title: 'Témoignage pour la Gloire de Dieu', sub: 'Des vies transformées qui rendent gloire' },
 ];
 
 export function ServicesSection() {
@@ -26,9 +18,9 @@ export function ServicesSection() {
     const el = root.current;
     if (!el) return;
     const ctx = gsap.context(() => {
-      gsap.from('.service-card', {
-        y: 60, opacity: 0, duration: 0.8, stagger: 0.15, ease: 'power3.out',
-        scrollTrigger: { trigger: '.services-grid', start: 'top 80%' },
+      gsap.from('.program-card', {
+        y: 50, opacity: 0, duration: 0.7, stagger: 0.1, ease: 'power3.out',
+        scrollTrigger: { trigger: '.programs-grid', start: 'top 82%' },
       });
     }, el);
     return () => ctx.revert();
@@ -44,24 +36,19 @@ export function ServicesSection() {
           Découvrez nos émissions <span className="text-grace-orange italic">emblématiques.</span>
         </h2>
 
-        <div className="services-grid grid md:grid-cols-3 gap-px bg-white/10 rounded-3xl overflow-hidden">
-          {services.map((s) => (
+        <div className="programs-grid grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {programs.map((p) => (
             <div
-              key={s.title}
-              className="service-card group relative bg-grace-blue p-8 sm:p-10 min-h-[300px] flex flex-col justify-between overflow-hidden transition-colors"
+              key={p.title}
+              className="program-card group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-7 min-h-[200px] flex flex-col justify-between hover:-translate-y-1.5 transition-transform duration-300"
             >
-              {/* Fond or qui glisse au hover */}
-              <span className="absolute inset-0 bg-grace-orange scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 ease-out" />
-              <div className="relative z-10 flex items-start justify-between">
-                <span className="font-serif text-grace-orange group-hover:text-soft-black text-2xl font-extrabold transition-colors">{s.num}</span>
-                <svg className="draw-icon w-12 h-12" viewBox="0 0 56 56" fill="none"
-                  stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <g className="text-grace-orange group-hover:text-soft-black transition-colors">{s.icon}</g>
-                </svg>
+              <span className="absolute left-0 top-0 bottom-0 w-1 bg-grace-orange scale-y-0 group-hover:scale-y-100 origin-top transition-transform duration-300" />
+              <div className="w-12 h-12 rounded-xl bg-grace-orange/15 flex items-center justify-center">
+                <p.icon className="w-6 h-6 text-grace-orange" />
               </div>
-              <div className="relative z-10">
-                <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-white group-hover:text-soft-black transition-colors">{s.title}</h3>
-                <p className="font-sans text-sm text-white/55 group-hover:text-soft-black/70 transition-colors mt-2">{s.sub}</p>
+              <div>
+                <h3 className="font-serif text-xl font-extrabold text-white leading-tight">{p.title}</h3>
+                <p className="font-sans text-sm text-white/55 mt-2">{p.sub}</p>
               </div>
             </div>
           ))}

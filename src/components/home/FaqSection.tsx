@@ -3,7 +3,7 @@ import { Plus, Minus } from 'lucide-react';
 
 const faqs = [
   { q: 'L’église est-elle ouverte à tous ?', a: "Oui, absolument. Peu importe votre passé, vos doutes ou vos blessures — vous êtes les bienvenus. Nous accueillons chacun avec amour, sans condition." },
-  { q: 'Comment accéder à Grâce TV en direct ?', a: "Grâce TV diffuse en continu sur YouTube, sur ce site et sur le câble à Yaoundé et Douala. Les cultes du dimanche y sont retransmis." },
+  { q: 'Comment accéder à Grâce TV en direct ?', a: "Grâce TV diffuse partout, en continu : sur YouTube, sur ce site, par satellite et sur le câble (Yaoundé, Douala et au-delà). La chaîne partage aussi les enseignements de pasteurs et ministères partenaires." },
   { q: 'Où se trouve l’église CEME ?', a: "Nous sommes à Emombo Auberge, BP 6065 Yaoundé (Région du Centre, Cameroun). Accessibles en taxi ou en moto, arrêt Emombo Auberge." },
   { q: 'Y a-t-il un programme pour les jeunes ?', a: "Oui ! Impact Jeunesse accueille les 15-25 ans avec des rencontres dynamiques, des formations et des temps de mission." },
   { q: 'Comment faire une demande de prière ?', a: "Vous pouvez soumettre votre requête directement depuis notre page « Demandes de prière ». Notre équipe d’intercesseurs prie pour chaque demande reçue." },

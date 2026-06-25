@@ -2,6 +2,7 @@ import { Preloader } from '../components/home/Preloader';
 import { Hero } from '../components/home/Hero';
 import { AboutSection } from '../components/home/AboutSection';
 import { ServicesSection } from '../components/home/ServicesSection';
+import { PartnersBand } from '../components/home/PartnersBand';
 import { ProcessSection } from '../components/home/ProcessSection';
 import { ProjectsStack } from '../components/home/ProjectsStack';
 import { ScheduleSection } from '../components/home/ScheduleSection';
@@ -17,6 +18,7 @@ export function Home() {
       <Hero />
       <AboutSection />
       <ServicesSection />
+      <PartnersBand />
       <ProcessSection />
       <ProjectsStack />
       <ScheduleSection />

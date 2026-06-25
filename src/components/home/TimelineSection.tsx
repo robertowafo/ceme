@@ -5,7 +5,7 @@ const milestones = [
   { year: '2001', label: 'Fondation de la CEME', detail: 'Chapelle de l’Éternel Mon Étendard — Décret du 5 janvier 2001, Yaoundé.' },
   { year: '2011', label: 'Naissance de Grâce TV', detail: 'Lancement de la chaîne le 14 mars 2011, sous l’impulsion du Rev. Dr Alphonse ESSOMBA BOUNOUGOU.' },
   { year: '2015', label: 'Immatriculation officielle', detail: 'Enregistrement au RCCM RC/YAO/2015/A/320 le 16 janvier 2015.' },
-  { year: "Aujourd'hui", label: 'Diffusion sans frontières', detail: 'Émission 24h/24 sur YouTube, le web et le câble à Yaoundé et Douala.' },
+  { year: "Aujourd'hui", label: 'Diffusion sans frontières', detail: 'Émission 24h/24 partout : YouTube, web, satellite et câble (Yaoundé, Douala et au-delà), avec les voix de pasteurs partenaires.' },
 ];
 
 export function TimelineSection() {

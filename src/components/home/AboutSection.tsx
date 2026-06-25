@@ -54,7 +54,11 @@ export function AboutSection() {
           <Stat target={2001} label="Fondation de la CEME" sub="Décret du 5 janvier 2001" />
           <Stat target={2011} label="Lancement de Grâce TV" sub="Le 14 mars 2011, Yaoundé" />
           <Stat target={24} suffix="/7" label="Diffusion en continu" sub="Jour et nuit, sans interruption" />
-          <Stat target={2} label="Villes câblées" sub="Yaoundé & Douala" />
+          <div className="text-center sm:text-left">
+            <div className="font-serif text-5xl sm:text-6xl font-extrabold text-soft-black leading-none">Partout</div>
+            <p className="font-sans font-semibold text-soft-black mt-3">Diffusion sans frontières</p>
+            <p className="font-sans text-sm text-soft-black/55">Web · YouTube · satellite · câble</p>
+          </div>
         </div>
 
         {/* Grande déclaration */}
