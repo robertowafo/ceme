@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Globe, Share2, Tv, HandHeart, ArrowRight, Cable } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 const reveal = {
   initial: { opacity: 0, y: 30 },
@@ -17,6 +18,11 @@ const pillars = [
 export function Partenaires() {
   return (
     <div className="bg-white">
+      <SEO
+        title="Nos partenaires — Grâce TV"
+        description="Grâce TV collabore avec CREOLINK, des câblodistributeurs et des pasteurs partenaires pour porter la Bonne Nouvelle partout, au Cameroun et au-delà."
+        path="/partenaires"
+      />
       {/* HERO */}
       <section className="relative overflow-hidden bg-grace-blue-deep text-white pt-36 pb-20 sm:pt-44 sm:pb-24">
         <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: "url('/uploads/fonds-bleu.jpg')" }} />

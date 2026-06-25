@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Send, ShieldCheck, Clock, Users, FileText, BookOpen, Quote, Phone, Loader2 } from 'lucide-react';
 import { submitPrayerRequest, getPublicPrayerRequests, PrayerRequestPublic } from '../../lib/dbService';
+import { SEO } from '../../components/SEO';
 
 const promises = [
   { ref: 'Matthieu 7:7',    text: '"Demandez, et l\'on vous donnera; cherchez, et vous trouverez; frappez, et l\'on vous ouvrira."',     bg: 'bg-burgundy' },
@@ -84,6 +85,11 @@ export function Prayer() {
 
   return (
     <div className="bg-[#f5f2ed] min-h-screen">
+      <SEO
+        title="Demandes de prière — Chapelle de l'Éternel Mon Étendard"
+        description="Confiez votre demande de prière à l'équipe d'intercession de la Chapelle de l'Éternel Mon Étendard, église porteuse de Grâce TV."
+        path="/eglise/priere"
+      />
 
       {/* ====================================================== HERO */}
       <div className="relative bg-soft-black text-white py-32 px-4 overflow-hidden">

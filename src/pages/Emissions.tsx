@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Play, Church, Sunrise, Sparkles, Briefcase, HandHeart, Quote, ArrowRight } from 'lucide-react';
 import { PagePlaceholder } from '../components/PagePlaceholder';
+import { SEO } from '../components/SEO';
 
 const reveal = {
   initial: { opacity: 0, y: 30 },
@@ -27,6 +28,11 @@ const programs = [
 export function Emissions() {
   return (
     <div className="bg-white">
+      <SEO
+        title="Nos émissions — Grâce TV"
+        description="Découvrez l'ensemble des émissions de Grâce TV : enseignements bibliques, cultes, témoignages, musique chrétienne et programmes d'évangélisation."
+        path="/emissions"
+      />
       {/* HERO */}
       <section className="relative overflow-hidden bg-grace-blue-deep text-white pt-36 pb-20 sm:pt-44 sm:pb-24">
         <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: "url('/uploads/fonds-bleu.jpg')" }} />

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { HeartHandshake, CreditCard, Landmark, Smartphone, Target, TrendingUp, HandHeart, BookOpen, CheckCircle, Quote, ClipboardList } from 'lucide-react';
 import { submitDonation, getDonationProjects, DonationProject } from '../lib/dbService';
+import { SEO } from '../components/SEO';
 
 const impacts = [
   { value: '1 200+', label: 'Repas distribués / an',      desc: 'Aux familles dans le besoin de notre quartier'           },
@@ -93,6 +94,11 @@ export function Give() {
 
   return (
     <div className="bg-white min-h-screen">
+      <SEO
+        title="Soutenir Grâce TV — Faire un don"
+        description="Votre don soutient la diffusion 24/7 de la Bonne Nouvelle à travers Grâce TV et son église porteuse, la Chapelle de l'Éternel Mon Étendard."
+        path="/faire-un-don"
+      />
 
       {/* HERO */}
       <div className="relative bg-soft-black text-white py-36 px-4 overflow-hidden">

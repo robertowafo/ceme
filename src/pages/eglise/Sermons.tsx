@@ -16,6 +16,7 @@ import {
   Radio
 } from 'lucide-react';
 import { getRecommendedLinks, RecommendedLink } from '../../lib/dbService';
+import { SEO } from '../../components/SEO';
 
 
 interface RecommendedVideo {
@@ -159,6 +160,11 @@ export function Sermons() {
 
   return (
     <div className="pt-10 pb-20 bg-[#f5f2ed] min-h-screen">
+      <SEO
+        title="Sermons — Chapelle de l'Éternel Mon Étendard"
+        description="Retrouvez tous les sermons et prédications de la Chapelle de l'Éternel Mon Étendard, église porteuse de Grâce TV."
+        path="/eglise/sermons"
+      />
       {/* Grâce TV Hero Header */}
       <div className="bg-[#12100f] text-white py-24 mb-12 relative overflow-hidden border-b border-gold/15">
         {/* Subtle, deep background lighting and glows far behind high-contrast text */}

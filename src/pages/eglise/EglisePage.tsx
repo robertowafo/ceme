@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Calendar, BookOpen, Heart, ArrowRight, MapPin, Church } from 'lucide-react';
+import { SEO } from '../../components/SEO';
+import { churchSchema } from '../../lib/structuredData';
 
 const quickLinks = [
   { to: '/eglise/cultes', label: 'Agenda des cultes', desc: 'Horaires et programme de la semaine', icon: Calendar },
@@ -11,6 +13,12 @@ const quickLinks = [
 export function EglisePage() {
   return (
     <div className="bg-[#f5f2ed] min-h-screen">
+      <SEO
+        title="Chapelle de l'Éternel Mon Étendard — Église porteuse de Grâce TV"
+        description="La Chapelle de l'Éternel Mon Étendard (CEME) est l'église évangélique porteuse de Grâce TV. Découvrez nos cultes, sermons et activités à Yaoundé."
+        path="/eglise"
+        structuredData={churchSchema}
+      />
       {/* ====== HERO ====== */}
       <section className="relative bg-soft-black text-white overflow-hidden">
         <div className="absolute inset-0">

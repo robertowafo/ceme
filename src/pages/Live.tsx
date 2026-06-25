@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Heart, Share2, CalendarClock, Radio, Play, WifiOff, Settings, Link2, Check, X, MonitorPlay } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { SEO } from '../components/SEO';
 
 function parsePreacher(title: string): string {
   const t = title.toUpperCase();
@@ -99,7 +100,13 @@ export function Live() {
 
   return (
     <div className="min-h-screen bg-soft-black text-white pt-24 pb-20">
-      
+      <SEO
+        title="Regarder Grâce TV en direct"
+        description="Suivez Grâce TV en direct 24h/24. Cultes télévisés, prières, prédications et musique chrétienne en streaming, partout."
+        path="/live"
+        type="video.other"
+      />
+
       {/* Grâce TV Live Banner Header */}
       <div className="border-b border-grace-orange/15 bg-[#12100f] py-12 relative overflow-hidden mb-12">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-grace-orange/15 via-transparent to-transparent opacity-80 pointer-events-none" />

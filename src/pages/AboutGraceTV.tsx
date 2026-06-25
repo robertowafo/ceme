@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { BookOpenCheck, HeartHandshake, Megaphone, Radio, Church, ArrowRight, MapPin } from 'lucide-react';
+import { SEO } from '../components/SEO';
+import { founderSchema } from '../lib/structuredData';
 
 const reveal = {
   initial: { opacity: 0, y: 30 },
@@ -19,6 +21,12 @@ const editorial = [
 export function AboutGraceTV() {
   return (
     <div className="bg-white">
+      <SEO
+        title="À propos de Grâce TV — Une voix chrétienne qui rejoint les nations"
+        description="Grâce TV, créée le 14 mars 2011 par le Rev. Dr Alphonse ESSOMBA BOUNOUGOU à Yaoundé, est une chaîne chrétienne dédiée à la diffusion fidèle de l'Évangile."
+        path="/a-propos"
+        structuredData={founderSchema}
+      />
       {/* HERO */}
       <section className="relative overflow-hidden bg-grace-blue-deep text-white pt-36 pb-20 sm:pt-44 sm:pb-28">
         <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: "url('/uploads/fonds-bleu.jpg')" }} />

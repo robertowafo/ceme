@@ -1,5 +1,6 @@
 import { motion } from 'motion/react';
 import { MapPin, Phone, Mail, Clock, Car, Bus, Heart, Star, Users, BookOpen, Smile, Coffee, ChevronRight, CheckCircle } from 'lucide-react';
+import { SEO } from '../../components/SEO';
 
 const steps = [
   { icon: MapPin,   title: "Vous Arrivez",            desc: "Un parking gratuit vous attend, ainsi qu'une équipe d'accueil chaleureuse qui vous guidera vers l'entrée. Pas de code vestimentaire, venez comme vous êtes." },
@@ -41,6 +42,11 @@ const faqs = [
 export function JoinUs() {
   return (
     <div className="bg-white min-h-screen">
+      <SEO
+        title="Nous rejoindre — Chapelle de l'Éternel Mon Étendard"
+        description="Rejoignez la Chapelle de l'Éternel Mon Étendard à Yaoundé (Emombo Auberge). Horaires, accès et accueil — vous êtes les bienvenus."
+        path="/eglise/nous-rejoindre"
+      />
 
       {/* ======================================================
           HERO

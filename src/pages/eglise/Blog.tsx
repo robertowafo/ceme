@@ -3,6 +3,7 @@ import { ArrowRight, Calendar, User, Search, Tag, Mail, Loader2, BookOpen, Check
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import { getBlogPosts, BlogPost, subscribeNewsletter } from '../../lib/dbService';
+import { SEO } from '../../components/SEO';
 
 export function Blog() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -52,6 +53,11 @@ export function Blog() {
 
   return (
     <div className="pt-10 pb-20 bg-[#f5f2ed] min-h-screen">
+      <SEO
+        title="Blog — Chapelle de l'Éternel Mon Étendard"
+        description="Articles, actualités et encouragements de la Chapelle de l'Éternel Mon Étendard, église porteuse de Grâce TV."
+        path="/eglise/blog"
+      />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <div className="text-center mb-16 pt-10">

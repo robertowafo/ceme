@@ -4,6 +4,7 @@ import { Target, Shield, Flame, BookOpen, Heart, Users, Compass, ChevronRight, C
 import { Link } from 'react-router-dom';
 import { TestimonialCross } from '../../components/TestimonialCross';
 import { getGalleryPhotos, getStudyDocuments } from '../../lib/dbService';
+import { SEO } from '../../components/SEO';
 
 
 const timeline = [
@@ -181,6 +182,11 @@ export function About() {
 
   return (
     <>
+    <SEO
+      title="À propos de l'église — Chapelle de l'Éternel Mon Étendard"
+      description="Découvrez la Chapelle de l'Éternel Mon Étendard (CEME), église évangélique de Yaoundé et porteuse de Grâce TV : sa vision, son histoire et sa communauté."
+      path="/eglise/a-propos"
+    />
     <div className="bg-white min-h-screen">
 
       {/* ======================================================

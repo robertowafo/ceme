@@ -1,9 +1,15 @@
 import { Mail, Phone, MapPin, Send, MessageCircle, Info } from 'lucide-react';
 import { motion } from 'motion/react';
+import { SEO } from '../components/SEO';
 
 export function Contact() {
   return (
     <div className="pt-24 pb-20 bg-white min-h-screen">
+      <SEO
+        title="Contact — Grâce TV"
+        description="Contactez Grâce TV et la Chapelle de l'Éternel Mon Étendard à Yaoundé. Questions, prière, partenariats — nous sommes à votre écoute."
+        path="/contact"
+      />
       {/* Header Base */}
       <div className="bg-soft-black text-white py-20 mb-16 text-center px-4 relative overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-5xl opacity-5 bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-white to-transparent"></div>

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, BookOpen, Loader2, Tag } from 'lucide-react';
 import { motion } from 'motion/react';
 import { getBlogPost, type BlogPost as BlogPostType } from '../../lib/dbService';
+import { SEO } from '../../components/SEO';
 
 export function BlogPost() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +44,13 @@ export function BlogPost() {
 
   return (
     <div className="bg-[#f5f2ed] min-h-screen">
+      <SEO
+        title={`${post.title} — Blog Grâce TV`}
+        description={(post.excerpt || post.title || '').slice(0, 160)}
+        path={`/eglise/blog/${post.id}`}
+        type="article"
+        image={post.coverImage || undefined}
+      />
 
       {/* Hero */}
       <div className="relative bg-soft-black text-white overflow-hidden">

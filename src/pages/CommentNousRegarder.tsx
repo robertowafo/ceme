@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Youtube, Globe, Satellite, Tv, Play, ArrowRight, Share2 } from 'lucide-react';
+import { SEO } from '../components/SEO';
 
 const reveal = {
   initial: { opacity: 0, y: 30 },
@@ -18,6 +19,11 @@ const channels = [
 export function CommentNousRegarder() {
   return (
     <div className="bg-white">
+      <SEO
+        title="Comment regarder Grâce TV — web, YouTube, satellite, câble"
+        description="Grâce TV est disponible partout : sur le web, YouTube, par satellite et sur le câble (Yaoundé, Douala et au-delà). Toutes les options pour nous suivre."
+        path="/comment-nous-regarder"
+      />
       {/* HERO */}
       <section className="relative overflow-hidden bg-grace-blue-deep text-white pt-36 pb-20 sm:pt-44 sm:pb-24">
         <div className="absolute inset-0 bg-cover bg-center opacity-50" style={{ backgroundImage: "url('/uploads/fonds-bleu.jpg')" }} />
