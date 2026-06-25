@@ -29,13 +29,13 @@
   /* ===== Identité de marque Grâce TV (cobalt / ciel / orange / or) =====
      Génère les utilitaires Tailwind: bg-grace-blue, text-grace-orange, border-grace-sky…
      Disponibles aussi en CSS pur via var(--color-grace-blue), etc. */
-  --color-grace-blue: #1565C0;       /* Cobalt — primaire dominant */
-  --color-grace-blue-deep: #0D2B6E;  /* Cobalt sombre — section live/player */
-  --color-grace-indigo: #1A237E;     /* Indigo profond — bande nom, dégradés */
-  --color-grace-sky: #42A5F5;        /* Bleu ciel lumineux — hero, sections claires */
-  --color-grace-sky-light: #90CAF9;  /* Ciel clair — haut du dégradé hero */
-  --color-grace-orange: #FF6D00;     /* Orange vif — accents, hover, CTA */
-  --color-grace-orange-dark: #E65100;/* Hover bouton orange */
+  --color-grace-blue: #1763B0;       /* Cobalt du logo — primaire dominant */
+  --color-grace-blue-deep: #0C2E66;  /* Bleu profond — sections sombres (remplace le noir) */
+  --color-grace-indigo: #0A2150;     /* Bleu nuit — footer, dégradés profonds */
+  --color-grace-sky: #4AA3E0;        /* Bleu ciel du "TV" — secondaire */
+  --color-grace-sky-light: #9AD0F0;  /* Ciel clair — halos, dégradés */
+  --color-grace-orange: #F26522;     /* Orange du cercle du logo — accent principal */
+  --color-grace-orange-dark: #D2520F;/* Hover bouton orange */
   --color-grace-gold: #FFD700;       /* Or — éléments spirituels, séparateurs */
   --color-grace-dark: #1A1A2E;       /* Noir doux — footer, sections sombres */
   --color-gray-soft: #F5F5F7;        /* Fond sections alternées */

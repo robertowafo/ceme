@@ -38,15 +38,15 @@ export function ProcessSection() {
   return (
     <section ref={root} className="bg-white py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <span className="block text-burgundy text-xs font-semibold uppercase tracking-[0.2em] mb-4">Notre démarche</span>
+        <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Notre démarche</span>
         <h2 className="font-serif text-3xl sm:text-5xl font-extrabold text-soft-black max-w-2xl leading-tight mb-16">
-          Un chemin <span className="text-gold italic">transparent</span>, pensé pour vous accueillir.
+          Un chemin <span className="text-grace-orange italic">transparent</span>, pensé pour vous accueillir.
         </h2>
 
         <div className="process-track relative pl-8 sm:pl-0">
           {/* Ligne verticale */}
-          <div className="absolute left-2 sm:left-1/2 top-0 bottom-0 w-px bg-soft-black/10 sm:-translate-x-1/2">
-            <div className="process-line-fill absolute inset-0 bg-gold origin-top" style={{ transform: 'scaleY(0)' }} />
+          <div className="absolute left-2 sm:left-1/2 top-0 bottom-0 w-px bg-grace-blue/15 sm:-translate-x-1/2">
+            <div className="process-line-fill absolute inset-0 bg-grace-orange origin-top" style={{ transform: 'scaleY(0)' }} />
           </div>
 
           <div className="space-y-16">
@@ -56,7 +56,7 @@ export function ProcessSection() {
                 className={`process-step relative grid sm:grid-cols-2 gap-8 items-center ${i % 2 ? 'sm:[direction:rtl]' : ''}`}
               >
                 <div className="[direction:ltr] sm:px-10">
-                  <span className="font-serif text-gold text-5xl font-extrabold">{step.num}</span>
+                  <span className="font-serif text-grace-orange text-5xl font-extrabold">{step.num}</span>
                   <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-soft-black mt-3 mb-3">{step.title}</h3>
                   <p className="font-sans text-soft-black/65 leading-relaxed max-w-md">{step.desc}</p>
                 </div>

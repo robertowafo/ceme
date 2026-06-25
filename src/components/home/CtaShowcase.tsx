@@ -45,25 +45,25 @@ export function CtaShowcase() {
   }, []);
 
   return (
-    <section ref={root} className="relative overflow-hidden bg-soft-black py-28 sm:py-40">
+    <section ref={root} className="relative overflow-hidden bg-grace-blue-deep py-28 sm:py-40">
       {/* Grille inclinée */}
       <div className="absolute inset-0 flex flex-col justify-center gap-4 opacity-40" style={{ transform: 'rotate(-16deg) scale(1.4)' }}>
         <Row list={[...imgs, ...imgs]} cls="cta-row-a" />
         <Row list={[...imgs.slice(4), ...imgs, ...imgs.slice(0, 4)]} cls="cta-row-b" />
       </div>
-      <div className="absolute inset-0 bg-soft-black/70" />
+      <div className="absolute inset-0 bg-grace-blue-deep/70" />
 
       {/* CTA central */}
       <div className="cta-center relative z-10 max-w-2xl mx-auto px-4 sm:px-6 text-center text-white">
-        <span className="inline-block text-gold text-2xl mb-4">✦</span>
-        <p className="text-gold text-xs font-semibold uppercase tracking-[0.2em] mb-5">CEME Church</p>
+        <span className="inline-block text-grace-orange text-2xl mb-4">✦</span>
+        <p className="text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-5">CEME Church</p>
         <h2 className="font-serif text-4xl sm:text-6xl font-extrabold leading-tight mb-6">
-          Prêt pour la <span className="text-gold italic">Grâce</span> ?
+          Prêt pour la <span className="text-grace-orange italic">Grâce</span> ?
         </h2>
         <p className="font-sans text-white/70 text-lg mb-9">Laissons-la entrer dans ta vie.</p>
         <Link
           to="/eglise"
-          className="inline-flex items-center gap-2 bg-gold hover:bg-yellow-500 text-soft-black px-8 py-4 rounded-full font-sans font-bold text-sm uppercase tracking-wider transition-colors"
+          className="inline-flex items-center gap-2 bg-grace-orange hover:bg-grace-orange-dark text-white px-8 py-4 rounded-full font-sans font-bold text-sm uppercase tracking-wider transition-colors"
         >
           Nous rejoindre <ArrowRight className="w-4 h-4" />
         </Link>

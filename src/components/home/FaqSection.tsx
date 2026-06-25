@@ -13,12 +13,12 @@ export function FaqSection() {
   const [open, setOpen] = useState<number | null>(0);
 
   return (
-    <section className="bg-cream py-20 sm:py-28">
+    <section className="bg-white py-20 sm:py-28">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-14">
-          <span className="block text-burgundy text-xs font-semibold uppercase tracking-[0.2em] mb-4">Questions</span>
+          <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Questions</span>
           <h2 className="font-serif text-3xl sm:text-5xl font-extrabold text-soft-black">
-            Ce que vous voulez <span className="text-gold italic">savoir.</span>
+            Ce que vous voulez <span className="text-grace-orange italic">savoir.</span>
           </h2>
         </div>
 
@@ -33,7 +33,7 @@ export function FaqSection() {
                   aria-expanded={isOpen}
                 >
                   <span className="font-serif text-lg sm:text-xl font-extrabold text-soft-black">{f.q}</span>
-                  <span className="shrink-0 w-8 h-8 rounded-full bg-soft-black/5 flex items-center justify-center text-gold">
+                  <span className="shrink-0 w-8 h-8 rounded-full bg-grace-blue/5 flex items-center justify-center text-grace-orange">
                     {isOpen ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                   </span>
                 </button>

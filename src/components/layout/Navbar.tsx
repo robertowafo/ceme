@@ -25,24 +25,25 @@ export function Navbar() {
 
   useEffect(() => { setIsMobileMenuOpen(false); }, [location]);
 
-  // Pilule sombre dès qu'on scrolle, ou sur les pages non-home (lisibilité)
-  const compact = isScrolled || !isHome || isMobileMenuOpen;
+  // Pilule blanche dès qu'on scrolle, ou hors home (logo en couleurs, lisible).
+  // Transparente uniquement en haut de la home (logo blanc sur le hero).
+  const solid = isScrolled || !isHome || isMobileMenuOpen;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5">
       <div
         className={`mx-auto transition-all duration-500 ${
-          compact
-            ? 'max-w-3xl bg-soft-black/95 backdrop-blur-md border border-white/10 rounded-full shadow-xl'
+          solid
+            ? 'max-w-3xl bg-white/95 backdrop-blur-md border border-grace-blue/10 rounded-full shadow-xl'
             : 'max-w-7xl bg-transparent'
         }`}
       >
-        <div className="px-5 sm:px-7 py-3 flex justify-between items-center">
+        <div className="px-4 sm:px-6 py-2.5 flex justify-between items-center">
           <Link to="/" className="flex items-center group shrink-0" aria-label="Accueil Grâce TV">
             <img
-              src="/logo-gracetv-white.png"
+              src={solid ? '/logo-gracetv.png' : '/logo-gracetv-white.png'}
               alt="Logo Grâce TV"
-              className={`object-contain transition-all duration-500 ${compact ? 'h-8' : 'h-9 sm:h-11'}`}
+              className={`object-contain transition-all duration-500 ${solid ? 'h-10' : 'h-10 sm:h-12'}`}
             />
           </Link>
 
@@ -53,7 +54,11 @@ export function Navbar() {
                 to={link.path}
                 className={({ isActive }) =>
                   `font-sans text-sm font-medium px-3 py-2 rounded-lg transition-colors ${
-                    isActive ? 'text-gold' : 'text-white/90 hover:text-gold'
+                    isActive
+                      ? 'text-grace-orange'
+                      : solid
+                        ? 'text-grace-blue-deep hover:text-grace-orange'
+                        : 'text-white hover:text-grace-orange'
                   }`
                 }
               >
@@ -65,14 +70,14 @@ export function Navbar() {
           <div className="hidden lg:flex items-center shrink-0">
             <Link
               to="/live"
-              className="inline-flex items-center gap-2 bg-gold hover:bg-yellow-500 text-soft-black px-5 py-2.5 rounded-full font-sans text-xs font-bold uppercase tracking-wider transition-colors"
+              className="inline-flex items-center gap-2 bg-grace-orange hover:bg-grace-orange-dark text-white px-5 py-2.5 rounded-full font-sans text-xs font-bold uppercase tracking-wider transition-colors"
             >
-              <Play className="w-3.5 h-3.5 fill-soft-black" /> Regarder en direct
+              <Play className="w-3.5 h-3.5 fill-white" /> Regarder en direct
             </Link>
           </div>
 
           <button
-            className="lg:hidden text-white p-2"
+            className={`lg:hidden p-2 ${solid ? 'text-grace-blue-deep' : 'text-white'}`}
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             aria-label={isMobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
             aria-expanded={isMobileMenuOpen}
@@ -89,14 +94,14 @@ export function Navbar() {
               exit={{ opacity: 0, height: 0 }}
               className="lg:hidden overflow-hidden"
             >
-              <nav className="flex flex-col px-5 pb-4 gap-1">
+              <nav className="flex flex-col px-4 pb-4 gap-1">
                 {navLinks.map((link) => (
                   <NavLink
                     key={link.path}
                     to={link.path}
                     className={({ isActive }) =>
                       `flex items-center gap-3 font-sans text-base font-medium p-2.5 rounded-lg transition-colors ${
-                        isActive ? 'bg-white/10 text-gold' : 'text-white/90 hover:bg-white/5'
+                        isActive ? 'bg-grace-blue/10 text-grace-orange' : 'text-grace-blue-deep hover:bg-grace-blue/5'
                       }`
                     }
                   >
@@ -106,9 +111,9 @@ export function Navbar() {
                 ))}
                 <Link
                   to="/live"
-                  className="mt-2 inline-flex items-center justify-center gap-2 bg-gold text-soft-black px-5 py-3 rounded-full font-sans text-xs font-bold uppercase tracking-wider"
+                  className="mt-2 inline-flex items-center justify-center gap-2 bg-grace-orange text-white px-5 py-3 rounded-full font-sans text-xs font-bold uppercase tracking-wider"
                 >
-                  <Play className="w-3.5 h-3.5 fill-soft-black" /> Regarder en direct
+                  <Play className="w-3.5 h-3.5 fill-white" /> Regarder en direct
                 </Link>
               </nav>
             </motion.div>

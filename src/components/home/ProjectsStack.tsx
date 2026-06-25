@@ -29,24 +29,24 @@ export function ProjectsStack() {
   }, []);
 
   return (
-    <section ref={root} className="bg-soft-black text-white py-20 sm:py-28">
+    <section ref={root} className="bg-grace-blue-deep text-white py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <span className="block text-gold text-xs font-semibold uppercase tracking-[0.2em] mb-4">Archives</span>
+        <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Archives</span>
         <h2 className="font-serif text-3xl sm:text-5xl font-extrabold max-w-3xl leading-tight">
-          Nos grandes émissions et <span className="text-gold italic">moments de transformation.</span>
+          Nos grandes émissions et <span className="text-grace-orange italic">moments de transformation.</span>
         </h2>
       </div>
 
       <div className="project-list-wrapper max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         {projects.map((p, i) => (
           <div key={p.title} className="projects-sticky sticky" style={{ top: `${90 + i * 18}px`, transformOrigin: 'center top' }}>
-            <div className="relative grid md:grid-cols-2 gap-0 rounded-3xl overflow-hidden border border-white/10 bg-[#222] mb-8 shadow-2xl">
+            <div className="relative grid md:grid-cols-2 gap-0 rounded-3xl overflow-hidden border border-white/10 bg-grace-blue mb-8 shadow-2xl">
               <div className="relative aspect-[16/10] md:aspect-auto md:min-h-[320px]">
                 <img src={p.img} alt={p.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-                <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-[#222] via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-grace-blue via-transparent to-transparent" />
               </div>
               <div className="p-8 sm:p-10 flex flex-col justify-center">
-                <span className="text-gold text-[11px] font-semibold uppercase tracking-[0.2em]">{p.tag}</span>
+                <span className="text-grace-orange text-[11px] font-semibold uppercase tracking-[0.2em]">{p.tag}</span>
                 <span className="font-sans text-white/50 text-sm mt-3">{p.sub}</span>
                 <h3 className="font-serif text-2xl sm:text-3xl font-extrabold mt-1 mb-4">{p.title}</h3>
                 <p className="font-sans text-white/65 leading-relaxed">{p.desc}</p>

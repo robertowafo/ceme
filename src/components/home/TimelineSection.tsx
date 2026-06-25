@@ -29,23 +29,23 @@ export function TimelineSection() {
   }, []);
 
   return (
-    <section ref={root} className="bg-soft-black text-white py-20 sm:py-28">
+    <section ref={root} className="bg-grace-blue text-white py-20 sm:py-28">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <span className="block text-gold text-xs font-semibold uppercase tracking-[0.2em] mb-4">Notre parcours</span>
+        <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Notre parcours</span>
         <h2 className="font-serif text-3xl sm:text-5xl font-extrabold leading-tight mb-16">
-          L'excellence, fruit d'une <span className="text-gold italic">obéissance constante.</span>
+          L'excellence, fruit d'une <span className="text-grace-orange italic">obéissance constante.</span>
         </h2>
 
         <div className="timeline-track relative pl-10">
           <div className="absolute left-[7px] top-2 bottom-2 w-px bg-white/15">
-            <div className="timeline-fill absolute inset-0 bg-gold origin-top" style={{ transform: 'scaleY(0)' }} />
+            <div className="timeline-fill absolute inset-0 bg-grace-orange origin-top" style={{ transform: 'scaleY(0)' }} />
           </div>
           <div className="space-y-12">
             {milestones.map((m) => (
               <div key={m.year} className="timeline-row relative">
-                <span className="absolute -left-10 top-1.5 w-4 h-4 rounded-full bg-gold ring-4 ring-soft-black" />
+                <span className="absolute -left-10 top-1.5 w-4 h-4 rounded-full bg-grace-orange ring-4 ring-grace-blue" />
                 <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-5">
-                  <span className="font-serif text-gold text-2xl font-extrabold shrink-0 w-32">{m.year}</span>
+                  <span className="font-serif text-grace-orange text-2xl font-extrabold shrink-0 w-32">{m.year}</span>
                   <div>
                     <h3 className="font-serif text-xl font-extrabold">{m.label}</h3>
                     <p className="font-sans text-white/60 text-sm leading-relaxed mt-1">{m.detail}</p>

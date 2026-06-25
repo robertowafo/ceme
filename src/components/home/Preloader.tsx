@@ -37,12 +37,12 @@ export function Preloader() {
   return (
     <div
       ref={root}
-      className="fixed inset-0 z-[200] bg-soft-black flex flex-col items-center justify-center gap-6"
+      className="fixed inset-0 z-[200] bg-grace-blue-deep flex flex-col items-center justify-center gap-6"
     >
       <svg className="preloader-cross" width="56" height="72" viewBox="0 0 56 72" fill="none">
         <path
           d="M28 4 V68 M10 24 H46"
-          stroke="#C9A84C"
+          stroke="#F26522"
           strokeWidth="3"
           strokeLinecap="round"
           style={{ strokeDasharray: 200, strokeDashoffset: 200 }}

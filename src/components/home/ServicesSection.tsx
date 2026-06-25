@@ -35,26 +35,26 @@ export function ServicesSection() {
   }, []);
 
   return (
-    <section ref={root} className="bg-soft-black text-white py-20 sm:py-28">
+    <section ref={root} className="bg-grace-blue text-white py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <span className="block text-gold text-xs font-semibold uppercase tracking-[0.2em] mb-4">Programmes</span>
+        <span className="block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">Programmes</span>
         <h2 className="font-serif text-3xl sm:text-5xl font-extrabold max-w-2xl leading-tight mb-14">
-          Découvrez nos émissions <span className="text-gold italic">emblématiques.</span>
+          Découvrez nos émissions <span className="text-grace-orange italic">emblématiques.</span>
         </h2>
 
         <div className="services-grid grid md:grid-cols-3 gap-px bg-white/10 rounded-3xl overflow-hidden">
           {services.map((s) => (
             <div
               key={s.title}
-              className="service-card group relative bg-soft-black p-8 sm:p-10 min-h-[300px] flex flex-col justify-between overflow-hidden transition-colors"
+              className="service-card group relative bg-grace-blue p-8 sm:p-10 min-h-[300px] flex flex-col justify-between overflow-hidden transition-colors"
             >
               {/* Fond or qui glisse au hover */}
-              <span className="absolute inset-0 bg-gold scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 ease-out" />
+              <span className="absolute inset-0 bg-grace-orange scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500 ease-out" />
               <div className="relative z-10 flex items-start justify-between">
-                <span className="font-serif text-gold group-hover:text-soft-black text-2xl font-extrabold transition-colors">{s.num}</span>
+                <span className="font-serif text-grace-orange group-hover:text-soft-black text-2xl font-extrabold transition-colors">{s.num}</span>
                 <svg className="draw-icon w-12 h-12" viewBox="0 0 56 56" fill="none"
                   stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <g className="text-gold group-hover:text-soft-black transition-colors">{s.icon}</g>
+                  <g className="text-grace-orange group-hover:text-soft-black transition-colors">{s.icon}</g>
                 </svg>
               </div>
               <div className="relative z-10">

@@ -40,13 +40,13 @@ export function AboutSection() {
   }, []);
 
   return (
-    <section ref={root} className="bg-cream py-20 sm:py-28">
+    <section ref={root} className="bg-white py-20 sm:py-28">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <span className="about-reveal block text-burgundy text-xs font-semibold uppercase tracking-[0.2em] mb-4">
+        <span className="about-reveal block text-grace-orange text-xs font-semibold uppercase tracking-[0.2em] mb-4">
           À propos
         </span>
         <h2 className="about-reveal font-serif text-3xl sm:text-5xl font-extrabold text-soft-black max-w-3xl leading-tight">
-          L'excellence n'est pas un acte, <span className="text-gold italic">c'est une habitude.</span>
+          L'excellence n'est pas un acte, <span className="text-grace-orange italic">c'est une habitude.</span>
         </h2>
 
         {/* Stats réelles */}
@@ -61,7 +61,7 @@ export function AboutSection() {
         <div className="statement-text mt-20 sm:mt-28 overflow-hidden">
           <h2 className="font-serif text-3xl sm:text-5xl lg:text-6xl font-extrabold text-soft-black leading-[1.1]">
             <span className="statement-line block">Nous croyons que les personnes</span>
-            <span className="statement-line block">les plus <span className="text-gold italic">transformées</span> sont celles</span>
+            <span className="statement-line block">les plus <span className="text-grace-orange italic">transformées</span> sont celles</span>
             <span className="statement-line block">qui ont rencontré Jésus-Christ.</span>
           </h2>
         </div>
@@ -72,7 +72,7 @@ export function AboutSection() {
         <div className="animate-marquee flex w-max items-center gap-12">
           {[...tickerItems, ...tickerItems].map((t, i) => (
             <span key={i} className="font-serif text-xl font-extrabold text-soft-black/30 whitespace-nowrap shrink-0">
-              {t} <span className="text-gold">✦</span>
+              {t} <span className="text-grace-orange">✦</span>
             </span>
           ))}
         </div>
