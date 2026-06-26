@@ -11,22 +11,33 @@ const programs = [
   { icon: Quote,     title: 'Témoignage pour la Gloire de Dieu', sub: 'Des vies transformées qui rendent gloire',      color: '#F26522' },
 ];
 
-/* Arc geometry — 6 cards in a fan, angles from the vertical axis */
-const ANGLES_DEG  = [-52, -31, -11, 11, 31, 52];
-const R           = 290;  // arc radius in px
-const CARD_W      = 158;
-const CARD_H      = 205;
+/*
+ * Arc geometry: pivot is placed BELOW the visible container (like the bottom of a Ferris wheel).
+ * Only the upper arc is visible — cards fan around the center text.
+ *
+ * Pivot at y = CONTAINER_H + PIVOT_BELOW (i.e. below the visible area).
+ * Card center = (pivot_x + R·sin θ, pivot_y - R·cos θ).
+ */
+const ANGLES_DEG : number[] = [-55, -33, -11, 11, 33, 55];
+const R           = 460;
+const CARD_W      = 155;
+const CARD_H      = 195;
+const CONTAINER_H = 540;   // visible arc container height
+const PIVOT_BELOW = 50;    // how far below the container the pivot sits
+const PIVOT_Y     = CONTAINER_H + PIVOT_BELOW;  // 590 from top of container
 
-function toRad(d: number) { return (d * Math.PI) / 180; }
-
-/* Pre-compute rest positions (transform strings applied to each card) */
-const restPositions = ANGLES_DEG.map((a) => {
-  const rad = toRad(a);
-  const x   = Math.sin(rad) * R;         // horizontal offset from arc centre
-  const y   = -Math.cos(rad) * R;        // vertical offset (negative = up)
-  const rot = a * 0.45;                  // subtle tilt matching arc position
-  return { x, y, rot };
+/* Pre-compute card positions */
+const cardPositions = ANGLES_DEG.map((deg) => {
+  const rad = (deg * Math.PI) / 180;
+  return {
+    left: Math.sin(rad) * R,                     // offset from horizontal center
+    top : PIVOT_Y - Math.cos(rad) * R - CARD_H / 2, // distance from container top
+    rot : deg * 0.48,                            // gentle tilt following arc tangent
+  };
 });
+
+/* Center text block sits at this y position inside the container */
+const TEXT_TOP = 310;
 
 export function ServicesSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -40,44 +51,39 @@ export function ServicesSection() {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  /* Entry animation */
+  /* ── Entry ScrollTrigger ── */
   useEffect(() => {
     if (isMobile) return;
     const el = sectionRef.current;
     if (!el) return;
     const ctx = gsap.context(() => {
       gsap.from(cardRefs.current.filter(Boolean), {
-        scale: 0.7, opacity: 0, y: 60,
-        duration: 0.75, stagger: 0.09, ease: 'back.out(1.6)',
+        scale: 0.75, opacity: 0, y: 50,
+        duration: 0.8, stagger: 0.09, ease: 'back.out(1.5)',
         scrollTrigger: { trigger: el, start: 'top 78%' },
       });
     }, el);
     return () => ctx.revert();
   }, [isMobile]);
 
-  /* Hover: lift active, dim siblings */
+  /* ── Hover ── */
   const handleEnter = (i: number) => {
     if (isMobile) return;
     cardRefs.current.forEach((c, j) => {
       if (!c) return;
       if (j === i) {
         gsap.to(c, {
-          y: -22, scale: 1.1,
-          boxShadow: `0 28px 56px rgba(242,101,34,0.40), 0 0 0 2.5px rgba(242,101,34,0.75)`,
-          duration: 0.42, ease: 'back.out(1.5)',
+          y: -20, scale: 1.09,
+          boxShadow: `0 28px 56px rgba(242,101,34,0.42), 0 0 0 2.5px rgba(242,101,34,0.75)`,
+          duration: 0.42, ease: 'back.out(1.6)',
         });
         gsap.to(c.querySelector('.icon-wrap'), {
-          scale: 1.15, backgroundColor: programs[i].color,
-          duration: 0.3, ease: 'power2.out',
+          scale: 1.12, backgroundColor: programs[i].color,
+          duration: 0.28, ease: 'power2.out',
         });
-        gsap.to(c.querySelector('.icon-svg'), {
-          color: '#fff', duration: 0.3,
-        });
+        gsap.to(c.querySelector('.icon-svg'), { color: '#fff', duration: 0.25 });
       } else {
-        gsap.to(c, {
-          scale: 0.93, opacity: 0.40,
-          duration: 0.35, ease: 'power2.out',
-        });
+        gsap.to(c, { scale: 0.93, opacity: 0.38, duration: 0.32, ease: 'power2.out' });
       }
     });
   };
@@ -88,20 +94,18 @@ export function ServicesSection() {
       if (!c) return;
       gsap.to(c, {
         y: 0, scale: 1, opacity: 1,
-        boxShadow: '0 6px 28px rgba(0,0,0,0.09)',
-        duration: 0.52, ease: 'power3.inOut',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.09)',
+        duration: 0.5, ease: 'power3.inOut',
       });
       gsap.to(c.querySelector('.icon-wrap'), {
         scale: 1, backgroundColor: `${programs[i].color}18`,
-        duration: 0.35, ease: 'power2.inOut',
+        duration: 0.32, ease: 'power2.inOut',
       });
-      gsap.to(c.querySelector('.icon-svg'), {
-        color: programs[i].color, duration: 0.3,
-      });
+      gsap.to(c.querySelector('.icon-svg'), { color: programs[i].color, duration: 0.28 });
     });
   };
 
-  /* ─── MOBILE: simple 2-col grid ─── */
+  /* ─── MOBILE fallback ─── */
   if (isMobile) {
     return (
       <section ref={sectionRef} className="bg-gray-50 py-20 px-4">
@@ -127,72 +131,64 @@ export function ServicesSection() {
     );
   }
 
-  /* ─── DESKTOP: fan arc layout ─── */
-  // Pivot is at bottom of container. Highest card (angle≈0) sits at arcH - R from top.
-  // arcH must be ≥ R + CARD_H/2 so cards don't overflow above.
-  const arcH = R + Math.round(CARD_H / 2) + 30;
-
+  /* ─── DESKTOP: Ferris-wheel arc ─── */
   return (
-    <section ref={sectionRef} className="bg-gray-50 overflow-hidden py-16">
-      <div className="max-w-6xl mx-auto px-4">
-
-        {/* Arc container — cards positioned absolutely inside */}
-        <div className="relative mx-auto" style={{ height: arcH, maxWidth: 920 }}>
-          {programs.map((p, i) => {
-            const { x, y, rot } = restPositions[i];
-            return (
+    <section ref={sectionRef} className="bg-gray-50 overflow-hidden">
+      {/* Arc container — fixed height, overflow hidden to clip bottom of arc */}
+      <div
+        className="relative mx-auto overflow-hidden"
+        style={{ maxWidth: 1000, height: CONTAINER_H }}
+      >
+        {/* 6 cards along the arc */}
+        {programs.map((p, i) => {
+          const { left, top, rot } = cardPositions[i];
+          return (
+            <div
+              key={p.title}
+              ref={(el) => { cardRefs.current[i] = el; }}
+              className="absolute bg-white rounded-2xl p-6 cursor-pointer"
+              style={{
+                width : CARD_W,
+                height: CARD_H,
+                left  : `calc(50% + ${left}px - ${CARD_W / 2}px)`,
+                top   : `${top}px`,
+                transform     : `rotate(${rot}deg)`,
+                boxShadow     : '0 4px 24px rgba(0,0,0,0.09)',
+                willChange    : 'transform, box-shadow, opacity',
+                transformOrigin: 'center center',
+                zIndex: 10 - Math.round(Math.abs(i - 2.5) * 2),
+              }}
+              onMouseEnter={() => handleEnter(i)}
+              onMouseLeave={handleLeave}
+            >
               <div
-                key={p.title}
-                ref={(el) => { cardRefs.current[i] = el; }}
-                className="absolute bg-white rounded-2xl p-6 cursor-pointer select-none"
-                style={{
-                  width:  CARD_W,
-                  height: CARD_H,
-                  /* Pivot at bottom of container → top = arcH + y - CARD_H/2 */
-                  left: `calc(50% + ${x}px - ${CARD_W / 2}px)`,
-                  top:  `${arcH + y - CARD_H / 2}px`,
-                  transform: `rotate(${rot}deg)`,
-                  boxShadow: '0 6px 28px rgba(0,0,0,0.09)',
-                  willChange: 'transform, box-shadow, opacity',
-                  zIndex: 10 - Math.round(Math.abs(i - 2.5) * 2),
-                  transformOrigin: 'center center',
-                }}
-                onMouseEnter={() => handleEnter(i)}
-                onMouseLeave={handleLeave}
+                className="icon-wrap w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                style={{ backgroundColor: `${p.color}18` }}
               >
-                <div
-                  className="icon-wrap w-11 h-11 rounded-xl flex items-center justify-center mb-5"
-                  style={{ backgroundColor: `${p.color}18` }}
-                >
-                  <p.icon
-                    className="icon-svg w-5 h-5"
-                    style={{ color: p.color }}
-                    strokeWidth={1.7}
-                  />
-                </div>
-                <h3 className="font-serif text-sm font-bold text-gray-900 leading-snug mb-2">
-                  {p.title}
-                </h3>
-                <p className="text-[11px] text-gray-400 leading-relaxed">{p.sub}</p>
+                <p.icon className="icon-svg w-5 h-5" style={{ color: p.color }} strokeWidth={1.7} />
               </div>
-            );
-          })}
-        </div>
+              <h3 className="font-serif text-sm font-bold text-gray-900 leading-snug mb-2">{p.title}</h3>
+              <p className="text-[11px] text-gray-400 leading-relaxed">{p.sub}</p>
+            </div>
+          );
+        })}
 
-        {/* Title + subtitle centred below the arc */}
-        <div className="text-center mt-2 max-w-2xl mx-auto">
-          <span className="text-grace-orange text-xs font-bold uppercase tracking-[0.2em] mb-4 block">
+        {/* Centre text — sits inside the arc bowl */}
+        <div
+          className="absolute left-0 right-0 text-center pointer-events-none"
+          style={{ top: TEXT_TOP }}
+        >
+          <span className="text-grace-orange text-[10px] font-bold uppercase tracking-[0.22em] mb-3 block">
             Programmes
           </span>
-          <h2 className="font-serif text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
-            Découvrez nos émissions{' '}
+          <h2 className="font-serif text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-4">
+            Découvrez nos émissions<br />
             <span className="text-grace-orange italic">emblématiques.</span>
           </h2>
-          <p className="text-gray-500 text-base leading-relaxed">
-            Grâce TV diffuse partout, en continu — pour nourrir, élever et transformer chaque vie.
+          <p className="text-gray-500 text-sm max-w-sm mx-auto leading-relaxed">
+            Grâce TV diffuse partout, en continu — pour nourrir,<br />élever et transformer chaque vie.
           </p>
         </div>
-
       </div>
     </section>
   );
