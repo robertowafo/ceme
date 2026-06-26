@@ -308,7 +308,7 @@ export function Schedule() {
 
 
   return (
-    <div className="pt-10 pb-20 bg-[#FBF9F6] min-h-screen">
+    <div className="pt-28 pb-20 bg-[#FBF9F6] min-h-screen">
       <SEO
         title="Agenda des cultes — Chapelle de l'Éternel Mon Étendard"
         description="Horaires des cultes, soirées de prière et rencontres de la Chapelle de l'Éternel Mon Étendard à Yaoundé, église porteuse de Grâce TV."

@@ -159,7 +159,7 @@ export function Sermons() {
   };
 
   return (
-    <div className="pt-10 pb-20 bg-[#f5f2ed] min-h-screen">
+    <div className="pt-28 pb-20 bg-[#f5f2ed] min-h-screen">
       <SEO
         title="Sermons — Chapelle de l'Éternel Mon Étendard"
         description="Retrouvez tous les sermons et prédications de la Chapelle de l'Éternel Mon Étendard, église porteuse de Grâce TV."

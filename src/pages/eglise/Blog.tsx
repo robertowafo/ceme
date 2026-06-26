@@ -52,7 +52,7 @@ export function Blog() {
   const rest = filtered.slice(1);
 
   return (
-    <div className="pt-10 pb-20 bg-[#f5f2ed] min-h-screen">
+    <div className="pt-28 pb-20 bg-[#f5f2ed] min-h-screen">
       <SEO
         title="Blog — Chapelle de l'Éternel Mon Étendard"
         description="Articles, actualités et encouragements de la Chapelle de l'Éternel Mon Étendard, église porteuse de Grâce TV."
