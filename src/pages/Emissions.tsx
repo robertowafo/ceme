@@ -1,29 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Play, Church, Sunrise, Sparkles, Briefcase, HandHeart, Quote,
   ExternalLink, Globe, Youtube, ChevronRight, X, Users,
+  Loader2, AlertCircle, Share2, ChevronDown,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 import { PARTNERS } from '../lib/partners';
 import { PagePlaceholder } from '../components/PagePlaceholder';
 
-/* ── Programme CEME avec lien YouTube ───────────────────────────────── */
+/* ── Playlist YouTube (retournée par /api/youtube/playlists) ── */
+interface YTPlaylist {
+  id         : string;
+  title      : string;
+  description: string;
+  thumbnail  : string;
+  videoCount : number;
+}
+
+/* ── Programme CEME ─────────────────────────────────────────── */
 interface Program {
-  icon     : React.ElementType;
-  title    : string;
-  cat      : string;
-  img      : string;
-  desc     : string;
-  /*
-   * ID de la playlist YouTube correspondante.
-   * Format : PLxxxxxxx  (ex: PLbHnAekiZWNDUFt0R2U4D_qeWcDSiPsXK)
-   * Laisser vide → lien vers recherche YouTube à la place de l'embed.
-   */
-  playlistId ?: string;
-  /* Lien direct vers la recherche YouTube si pas de playlist */
-  youtubeSearch : string;
+  icon    : React.ElementType;
+  title   : string;
+  cat     : string;
+  img     : string;
+  desc    : string;
+  /* Mots-clés pour matcher une playlist YouTube par son titre */
+  keywords: string[];
 }
 
 const programs: Program[] = [
@@ -33,8 +37,7 @@ const programs: Program[] = [
     cat: 'Célébration',
     img: '/uploads/sermons.jpeg',
     desc: "Le rassemblement principal de la semaine : adoration, louange et prédication de la Parole, retransmis en direct.",
-    youtubeSearch: 'Grâce TV Culte du Dimanche CEME',
-    // playlistId: 'PLxxxxxx',  ← à renseigner avec la vraie playlist YouTube
+    keywords: ['culte', 'dimanche'],
   },
   {
     icon: Sunrise,
@@ -42,7 +45,7 @@ const programs: Program[] = [
     cat: 'Quotidien',
     img: '/uploads/fonde en.jpeg',
     desc: "Le rendez-vous quotidien pour commencer la journée nourri de la Parole de Dieu, où que vous soyez.",
-    youtubeSearch: 'Grâce TV Manne Matinale CEME',
+    keywords: ['manne', 'matinale'],
   },
   {
     icon: Sparkles,
@@ -50,7 +53,7 @@ const programs: Program[] = [
     cat: 'Rassemblement',
     img: '/uploads/impact jeunesse.png',
     desc: "Un grand rassemblement d'élévation spirituelle, de délivrance et d'enseignement de haut niveau.",
-    youtubeSearch: "Grâce TV Sommet d'Élévation CEME",
+    keywords: ['sommet', 'élévation', 'elevation'],
   },
   {
     icon: Briefcase,
@@ -58,7 +61,7 @@ const programs: Program[] = [
     cat: 'Enseignement',
     img: '/uploads/louange et adoration.png',
     desc: "Sagesse entrepreneuriale et leadership selon les principes bibliques, pour impacter le monde des affaires.",
-    youtubeSearch: 'Grâce TV École des Affaires du Royaume CEME',
+    keywords: ['affaires', 'royaume', 'école', 'ecole'],
   },
   {
     icon: HandHeart,
@@ -66,7 +69,7 @@ const programs: Program[] = [
     cat: 'Intercession',
     img: '/uploads/priere.jpeg',
     desc: "Des temps d'intercession et de combat spirituel où l'Éternel intervient dans les situations impossibles.",
-    youtubeSearch: 'Grâce TV Prières Intercession CEME',
+    keywords: ['prière', 'priere', 'intercession'],
   },
   {
     icon: Quote,
@@ -74,44 +77,94 @@ const programs: Program[] = [
     cat: 'Inspiration',
     img: '/uploads/mama marie.jpeg',
     desc: "Des vies transformées qui rendent gloire à Dieu et fortifient la foi de toute la communauté.",
-    youtubeSearch: 'Grâce TV Témoignage Gloire de Dieu CEME',
+    keywords: ['témoignage', 'temoignage', 'gloire'],
   },
 ];
 
-/* ── Tabs ─────────────────────────────────────────────────────────────── */
+/* ── Tabs ────────────────────────────────────────────────────── */
 type Tab = 'ceme' | 'partenaires';
-
 const TABS: { id: Tab; label: string }[] = [
   { id: 'ceme',        label: 'Émissions Grâce TV / Église CEME' },
   { id: 'partenaires', label: 'Nos Partenaires' },
 ];
 
-/* ── YouTube embed URL ───────────────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────────── */
 function buildEmbedUrl(playlistId: string) {
   return `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1&rel=0&modestbranding=1`;
 }
-
 function buildSearchUrl(query: string) {
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
+function normalize(s: string) {
+  return s.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function findPlaylist(p: Program, playlists: YTPlaylist[]): YTPlaylist | undefined {
+  return playlists.find((pl) => {
+    const t = normalize(pl.title);
+    return p.keywords.some((k) => t.includes(normalize(k)));
+  });
+}
 
-/* ══════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════ */
 export function Emissions() {
-  const [activeTab, setActiveTab]       = useState<Tab>('ceme');
-  const [selectedProgram, setSelected]  = useState<Program | null>(null);
+  const [activeTab, setActiveTab]   = useState<Tab>('ceme');
+  const [playlists, setPlaylists]   = useState<YTPlaylist[]>([]);
+  const [isLoading, setIsLoading]   = useState(true);
+  const [apiError, setApiError]     = useState<string | null>(null);
 
+  /* Inline player state */
+  const [activePlaylist, setActivePlaylist] = useState<YTPlaylist | null>(null);
+  const [activeProgram,  setActiveProgram]  = useState<Program   | null>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
+
+  /* ── Fetch playlists depuis la chaîne ── */
+  useEffect(() => {
+    fetch('/api/youtube/playlists')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: YTPlaylist[]) => setPlaylists(data))
+      .catch((err) => {
+        console.error('Playlists fetch error:', err);
+        setApiError('Impossible de charger les playlists YouTube pour le moment.');
+      })
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  /* ── Clic sur une émission ── */
   const handleSelectProgram = (p: Program) => {
-    if (selectedProgram?.title === p.title) {
-      setSelected(null);
+    if (activeProgram?.title === p.title) {
+      setActivePlaylist(null);
+      setActiveProgram(null);
+      return;
+    }
+    const matched = findPlaylist(p, playlists);
+    setActiveProgram(p);
+    setActivePlaylist(matched ?? null);
+
+    if (!matched) {
+      /* Aucune playlist matchée → ouvrir YouTube dans un nouvel onglet */
+      window.open(buildSearchUrl(p.keywords.join(' ') + ' grace tv'), '_blank', 'noopener,noreferrer');
     } else {
-      setSelected(p);
-      // Si pas de playlist configurée, ouvre YouTube directement dans un nouvel onglet
-      if (!p.playlistId) {
-        window.open(buildSearchUrl(p.youtubeSearch), '_blank', 'noopener,noreferrer');
-      }
       setTimeout(() => {
-        document.getElementById('yt-player')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 80);
+    }
+  };
+
+  const closePlayer = () => {
+    setActivePlaylist(null);
+    setActiveProgram(null);
+  };
+
+  const sharePlaylist = (pl: YTPlaylist) => {
+    const url = `https://www.youtube.com/playlist?list=${pl.id}`;
+    if (navigator.share) {
+      navigator.share({ title: pl.title, url }).catch(() => navigator.clipboard.writeText(url));
+    } else {
+      navigator.clipboard.writeText(url);
     }
   };
 
@@ -145,15 +198,13 @@ export function Emissions() {
       {/* ── TABS ─────────────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-0 overflow-x-auto scrollbar-none">
+          <div className="flex gap-0 overflow-x-auto">
             {TABS.map((t) => (
               <button
                 key={t.id}
-                onClick={() => { setActiveTab(t.id); setSelected(null); }}
+                onClick={() => { setActiveTab(t.id); closePlayer(); }}
                 className={`relative flex-shrink-0 px-6 py-4 text-sm font-bold transition-colors duration-200 ${
-                  activeTab === t.id
-                    ? 'text-grace-blue'
-                    : 'text-gray-400 hover:text-gray-700'
+                  activeTab === t.id ? 'text-grace-blue' : 'text-gray-400 hover:text-gray-700'
                 }`}
               >
                 {t.label}
@@ -171,7 +222,9 @@ export function Emissions() {
 
       {/* ── CONTENU ─────────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
-        {activeTab === 'ceme' ? (
+
+        {/* ══════════ ONGLET CEME ══════════ */}
+        {activeTab === 'ceme' && (
           <motion.div
             key="ceme"
             initial={{ opacity: 0, y: 16 }}
@@ -187,123 +240,169 @@ export function Emissions() {
               </p>
             </div>
 
-            {/* Grille programmes */}
-            <section className="py-16 sm:py-20 bg-white">
-              <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {programs.map((p, i) => {
-                    const isActive = selectedProgram?.title === p.title;
-                    return (
-                      <motion.button
-                        key={p.title}
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, amount: 0.15 }}
-                        transition={{ duration: 0.45, delay: (i % 3) * 0.08 }}
-                        onClick={() => handleSelectProgram(p)}
-                        className={`group text-left rounded-3xl overflow-hidden border-2 transition-all duration-300 shadow-sm ${
-                          isActive
-                            ? 'border-grace-orange shadow-xl shadow-grace-orange/20 -translate-y-1'
-                            : 'border-transparent hover:border-grace-blue/20 hover:shadow-lg hover:-translate-y-1'
-                        }`}
-                      >
-                        {/* Image */}
-                        <div className="relative aspect-[16/10] overflow-hidden">
-                          <img
-                            src={p.img} alt={p.title}
-                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-grace-blue-deep/70 to-transparent" />
-                          <span className="absolute top-3 left-3 bg-grace-orange text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
-                            {p.cat}
-                          </span>
-
-                          {/* Play badge */}
-                          <div className={`absolute bottom-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
-                            isActive ? 'bg-grace-orange' : 'bg-white/90 group-hover:bg-grace-orange'
-                          }`}>
-                            {isActive
-                              ? <X className="w-4 h-4 text-white" />
-                              : <Play className={`w-4 h-4 fill-current transition-colors ${isActive ? 'text-white' : 'text-grace-blue group-hover:text-white'}`} />
-                            }
-                          </div>
-
-                          <div className="absolute bottom-3 left-3 w-9 h-9 rounded-xl bg-white/90 flex items-center justify-center">
-                            <p.icon className="w-4 h-4 text-grace-blue" />
-                          </div>
-                        </div>
-
-                        {/* Text */}
-                        <div className={`p-6 transition-colors duration-300 ${isActive ? 'bg-grace-blue-deep/3' : 'bg-white'}`}>
-                          <h2 className="font-serif text-lg font-extrabold text-soft-black mb-2 leading-tight">
-                            {p.title}
-                          </h2>
-                          <p className="font-sans text-sm text-soft-black/60 leading-relaxed line-clamp-2">{p.desc}</p>
-                          <div className={`mt-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
-                            isActive ? 'text-grace-orange' : 'text-grace-blue/60 group-hover:text-grace-orange'
-                          }`}>
-                            <Youtube className="w-3.5 h-3.5" />
-                            {p.playlistId
-                              ? (isActive ? 'Masquer la playlist' : 'Voir la playlist')
-                              : 'Voir sur YouTube ↗'}
-                          </div>
-                        </div>
-                      </motion.button>
-                    );
-                  })}
-                </div>
+            {/* ── Loading / Error ── */}
+            {isLoading && (
+              <div className="py-20 flex flex-col items-center gap-3 text-gray-400">
+                <Loader2 className="w-8 h-8 animate-spin text-grace-orange" />
+                <p className="text-sm">Chargement des playlists depuis la chaîne Grâce TV…</p>
               </div>
-            </section>
+            )}
 
-            {/* ── Lecteur YouTube inline — uniquement si playlist configurée ── */}
+            {apiError && !isLoading && (
+              <div className="max-w-xl mx-auto my-12 bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+                <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+                <p className="text-red-700 font-semibold text-sm">{apiError}</p>
+              </div>
+            )}
+
+            {/* ── Grille programmes ── */}
+            {!isLoading && (
+              <section className="py-16 sm:py-20 bg-white">
+                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {programs.map((p, i) => {
+                      const matched  = findPlaylist(p, playlists);
+                      const isActive = activeProgram?.title === p.title;
+                      return (
+                        <motion.button
+                          key={p.title}
+                          initial={{ opacity: 0, y: 30 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          viewport={{ once: true, amount: 0.15 }}
+                          transition={{ duration: 0.45, delay: (i % 3) * 0.08 }}
+                          onClick={() => handleSelectProgram(p)}
+                          className={`group text-left rounded-3xl overflow-hidden border-2 transition-all duration-300 shadow-sm ${
+                            isActive
+                              ? 'border-grace-orange shadow-xl shadow-grace-orange/20 -translate-y-1'
+                              : 'border-transparent hover:border-grace-blue/20 hover:shadow-lg hover:-translate-y-1'
+                          }`}
+                        >
+                          {/* Image */}
+                          <div className="relative aspect-[16/10] overflow-hidden">
+                            <img src={p.img} alt={p.title}
+                              className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-grace-blue-deep/70 to-transparent" />
+                            <span className="absolute top-3 left-3 bg-grace-orange text-white text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">
+                              {p.cat}
+                            </span>
+                            {/* Badge playlist trouvée / non trouvée */}
+                            {!isLoading && (
+                              <span className={`absolute top-3 right-3 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${
+                                matched
+                                  ? 'bg-emerald-500/90 text-white'
+                                  : 'bg-white/20 text-white/70'
+                              }`}>
+                                {matched ? `${matched.videoCount} vidéos` : 'YouTube ↗'}
+                              </span>
+                            )}
+                            {/* Play / close badge */}
+                            <div className={`absolute bottom-3 right-3 w-9 h-9 rounded-full flex items-center justify-center transition-all duration-300 ${
+                              isActive ? 'bg-grace-orange' : 'bg-white/90 group-hover:bg-grace-orange'
+                            }`}>
+                              {isActive
+                                ? <X className="w-4 h-4 text-white" />
+                                : <Play className={`w-4 h-4 fill-current transition-colors ${isActive ? 'text-white' : 'text-grace-blue group-hover:text-white'}`} />
+                              }
+                            </div>
+                            <div className="absolute bottom-3 left-3 w-9 h-9 rounded-xl bg-white/90 flex items-center justify-center">
+                              <p.icon className="w-4 h-4 text-grace-blue" />
+                            </div>
+                          </div>
+
+                          {/* Text */}
+                          <div className={`p-6 transition-colors duration-300 ${isActive ? 'bg-grace-blue-deep/3' : 'bg-white'}`}>
+                            <h2 className="font-serif text-lg font-extrabold text-soft-black mb-2 leading-tight">{p.title}</h2>
+                            <p className="font-sans text-sm text-soft-black/60 leading-relaxed line-clamp-2">{p.desc}</p>
+                            <div className={`mt-4 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider transition-colors ${
+                              isActive ? 'text-grace-orange' : 'text-grace-blue/60 group-hover:text-grace-orange'
+                            }`}>
+                              <Youtube className="w-3.5 h-3.5" />
+                              {isActive
+                                ? 'Masquer la playlist'
+                                : matched
+                                  ? `Voir la playlist · ${matched.title}`
+                                  : 'Voir sur YouTube ↗'}
+                            </div>
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* ── Lecteur playlist inline (style Sermons) ── */}
             <AnimatePresence>
-              {selectedProgram?.playlistId && (
+              {activePlaylist && activeProgram && (
                 <motion.div
-                  id="yt-player"
-                  key={selectedProgram.title}
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.4, ease: 'easeInOut' }}
-                  className="overflow-hidden bg-grace-blue-deep"
+                  ref={playerRef}
+                  key={activePlaylist.id}
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.35 }}
+                  className="bg-grace-blue-deep overflow-hidden"
                 >
-                  <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <span className="text-grace-orange text-xs font-bold uppercase tracking-widest block mb-1">
-                          Playlist — {selectedProgram.cat}
-                        </span>
-                        <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-white">
-                          {selectedProgram.title}
-                        </h3>
-                      </div>
-                      <button
-                        onClick={() => setSelected(null)}
-                        className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-                      >
-                        <X className="w-4 h-4 text-white" />
-                      </button>
-                    </div>
-                    <div className="relative w-full rounded-2xl overflow-hidden bg-black"
+                  <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    {/* Embed */}
+                    <div className="relative w-full rounded-2xl overflow-hidden bg-black mb-6"
                       style={{ paddingBottom: '56.25%' }}>
                       <iframe
-                        className="absolute inset-0 w-full h-full"
-                        src={buildEmbedUrl(selectedProgram.playlistId)}
-                        title={selectedProgram.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        className="absolute inset-0 w-full h-full border-0"
+                        src={buildEmbedUrl(activePlaylist.id)}
+                        title={activePlaylist.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                         allowFullScreen
                       />
+                    </div>
+
+                    {/* Infos + actions */}
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-grace-orange text-[10px] font-bold uppercase tracking-widest mb-1">
+                          En lecture · {activeProgram.cat}
+                        </p>
+                        <h3 className="font-serif text-xl sm:text-2xl font-extrabold text-white leading-tight mb-1">
+                          {activeProgram.title}
+                        </h3>
+                        <p className="text-white/50 text-xs">
+                          {activePlaylist.videoCount} vidéo{activePlaylist.videoCount > 1 ? 's' : ''} · {activePlaylist.title}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          onClick={() => sharePlaylist(activePlaylist)}
+                          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors"
+                        >
+                          <Share2 className="w-4 h-4" /> Partager
+                        </button>
+                        <a
+                          href={`https://www.youtube.com/playlist?list=${activePlaylist.id}`}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors"
+                        >
+                          <ExternalLink className="w-4 h-4" /> YouTube
+                        </a>
+                        <button
+                          onClick={closePlayer}
+                          className="flex items-center gap-2 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/30 text-white text-xs font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl transition-colors"
+                        >
+                          <ChevronDown className="w-4 h-4" /> Fermer
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
+        )}
 
-        ) : (
-
-          /* ══════════ ONGLET PARTENAIRES ══════════ */
+        {/* ══════════ ONGLET PARTENAIRES ══════════ */}
+        {activeTab === 'partenaires' && (
           <motion.div
             key="partenaires"
             initial={{ opacity: 0, y: 16 }}
@@ -313,8 +412,6 @@ export function Emissions() {
           >
             <section className="py-16 sm:py-24 bg-gray-50">
               <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-
-                {/* Intro */}
                 <div className="text-center mb-14">
                   <div className="inline-flex items-center gap-2 bg-grace-blue/8 text-grace-blue px-4 py-2 rounded-full text-xs font-bold uppercase tracking-widest mb-5">
                     <Users className="w-3.5 h-3.5" /> Ministères partenaires
@@ -329,7 +426,6 @@ export function Emissions() {
                   </p>
                 </div>
 
-                {/* Partner cards */}
                 <div className="grid sm:grid-cols-2 gap-8">
                   {PARTNERS.map((partner, i) => (
                     <motion.div
@@ -340,18 +436,12 @@ export function Emissions() {
                       transition={{ duration: 0.45, delay: i * 0.1 }}
                       className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group"
                     >
-                      {/* Header stripe */}
                       <div className="h-2 bg-gradient-to-r from-grace-blue to-grace-orange" />
-
                       <div className="p-8">
-                        {/* Avatar placeholder + name */}
                         <div className="flex items-center gap-4 mb-6">
                           {partner.avatar ? (
-                            <img
-                              src={partner.avatar}
-                              alt={partner.name}
-                              className="w-16 h-16 rounded-2xl object-cover border-2 border-gray-100"
-                            />
+                            <img src={partner.avatar} alt={partner.name}
+                              className="w-16 h-16 rounded-2xl object-cover border-2 border-gray-100" />
                           ) : (
                             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-grace-blue to-grace-blue-deep flex items-center justify-center flex-shrink-0">
                               <span className="text-white font-black text-2xl">
@@ -360,35 +450,22 @@ export function Emissions() {
                             </div>
                           )}
                           <div>
-                            <h3 className="font-serif text-xl font-extrabold text-soft-black leading-tight">
-                              {partner.name}
-                            </h3>
+                            <h3 className="font-serif text-xl font-extrabold text-soft-black leading-tight">{partner.name}</h3>
                             <p className="text-grace-orange font-bold text-sm">{partner.ministry}</p>
                             <p className="text-gray-400 text-xs mt-0.5 flex items-center gap-1">
                               <Globe className="w-3 h-3" /> {partner.location}
                             </p>
                           </div>
                         </div>
-
                         <p className="text-gray-600 text-sm leading-relaxed mb-6">{partner.bio}</p>
-
-                        {/* Links */}
                         <div className="flex flex-wrap gap-3">
-                          <a
-                            href={partner.youtube}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-grace-blue-deep text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-grace-blue transition-colors"
-                          >
+                          <a href={partner.youtube} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-grace-blue-deep text-white px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-grace-blue transition-colors">
                             <Youtube className="w-4 h-4" /> Chaîne YouTube
                           </a>
                           {partner.website && (
-                            <a
-                              href={partner.website}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:border-grace-blue hover:text-grace-blue transition-colors"
-                            >
+                            <a href={partner.website} target="_blank" rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 border border-gray-200 text-gray-600 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:border-grace-blue hover:text-grace-blue transition-colors">
                               <Globe className="w-4 h-4" /> Site web
                             </a>
                           )}
@@ -398,31 +475,23 @@ export function Emissions() {
                   ))}
                 </div>
 
-                {/* Note admin */}
                 <p className="text-center text-gray-400 text-xs mt-10">
                   D'autres partenaires peuvent être ajoutés via le tableau de bord administrateur.
                 </p>
-
               </div>
             </section>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── CTA bas de page ─────────────────────────────────────── */}
+      {/* ── CTA ─────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-grace-blue text-white py-16">
         <div className="absolute -top-1/2 right-0 w-[40%] h-[200%] rounded-full bg-grace-orange/15 blur-[100px]" />
         <div className="relative max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-serif text-3xl sm:text-4xl font-extrabold mb-4 text-white">
-            Ne manquez aucune émission
-          </h2>
-          <p className="font-sans text-white/75 mb-8">
-            Suivez Grâce TV en direct, 24h/24, où que vous soyez.
-          </p>
-          <Link
-            to="/live"
-            className="inline-flex items-center gap-2 bg-grace-orange hover:bg-grace-orange-dark text-white px-8 py-4 rounded-full font-bold text-sm uppercase tracking-wider transition-colors"
-          >
+          <h2 className="font-serif text-3xl sm:text-4xl font-extrabold mb-4 text-white">Ne manquez aucune émission</h2>
+          <p className="font-sans text-white/75 mb-8">Suivez Grâce TV en direct, 24h/24, où que vous soyez.</p>
+          <Link to="/live"
+            className="inline-flex items-center gap-2 bg-grace-orange hover:bg-grace-orange-dark text-white px-8 py-4 rounded-full font-bold text-sm uppercase tracking-wider transition-colors">
             <Play className="w-4 h-4 fill-white" /> Regarder en direct
             <ChevronRight className="w-4 h-4" />
           </Link>
@@ -432,7 +501,6 @@ export function Emissions() {
   );
 }
 
-/* Page détail — V2 */
 export function EmissionDetail() {
   return (
     <PagePlaceholder
