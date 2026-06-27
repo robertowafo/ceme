@@ -102,10 +102,13 @@ export function Emissions() {
 
   const handleSelectProgram = (p: Program) => {
     if (selectedProgram?.title === p.title) {
-      setSelected(null); // toggle off
+      setSelected(null);
     } else {
       setSelected(p);
-      // scroll to player after a tick
+      // Si pas de playlist configurée, ouvre YouTube directement dans un nouvel onglet
+      if (!p.playlistId) {
+        window.open(buildSearchUrl(p.youtubeSearch), '_blank', 'noopener,noreferrer');
+      }
       setTimeout(() => {
         document.getElementById('yt-player')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 80);
@@ -241,7 +244,9 @@ export function Emissions() {
                             isActive ? 'text-grace-orange' : 'text-grace-blue/60 group-hover:text-grace-orange'
                           }`}>
                             <Youtube className="w-3.5 h-3.5" />
-                            {isActive ? 'Masquer la playlist' : 'Voir la playlist'}
+                            {p.playlistId
+                              ? (isActive ? 'Masquer la playlist' : 'Voir la playlist')
+                              : 'Voir sur YouTube ↗'}
                           </div>
                         </div>
                       </motion.button>
@@ -251,9 +256,9 @@ export function Emissions() {
               </div>
             </section>
 
-            {/* ── Lecteur YouTube inline ── */}
+            {/* ── Lecteur YouTube inline — uniquement si playlist configurée ── */}
             <AnimatePresence>
-              {selectedProgram && (
+              {selectedProgram?.playlistId && (
                 <motion.div
                   id="yt-player"
                   key={selectedProgram.title}
@@ -264,7 +269,6 @@ export function Emissions() {
                   className="overflow-hidden bg-grace-blue-deep"
                 >
                   <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-                    {/* Header */}
                     <div className="flex items-center justify-between mb-6">
                       <div>
                         <span className="text-grace-orange text-xs font-bold uppercase tracking-widest block mb-1">
@@ -281,42 +285,16 @@ export function Emissions() {
                         <X className="w-4 h-4 text-white" />
                       </button>
                     </div>
-
-                    {/* Embed or fallback */}
-                    {selectedProgram.playlistId ? (
-                      <div className="relative w-full rounded-2xl overflow-hidden bg-black"
-                        style={{ paddingBottom: '56.25%' }}>
-                        <iframe
-                          className="absolute inset-0 w-full h-full"
-                          src={buildEmbedUrl(selectedProgram.playlistId)}
-                          title={selectedProgram.title}
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                          allowFullScreen
-                        />
-                      </div>
-                    ) : (
-                      /* Pas encore de playlist ID configuré */
-                      <div className="rounded-2xl bg-white/5 border border-white/10 flex flex-col sm:flex-row items-center gap-6 p-8">
-                        <div className="w-16 h-16 rounded-2xl bg-grace-orange/15 flex items-center justify-center flex-shrink-0">
-                          <Youtube className="w-8 h-8 text-grace-orange" />
-                        </div>
-                        <div className="text-center sm:text-left">
-                          <p className="text-white font-bold text-lg mb-1">Playlist YouTube</p>
-                          <p className="text-white/60 text-sm mb-4">
-                            La playlist YouTube de cette émission sera bientôt configurée ici.
-                            En attendant, retrouvez les vidéos sur la chaîne Grâce TV.
-                          </p>
-                          <a
-                            href={buildSearchUrl(selectedProgram.youtubeSearch)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-grace-orange hover:bg-grace-orange-dark text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors"
-                          >
-                            Rechercher sur YouTube <ExternalLink className="w-4 h-4" />
-                          </a>
-                        </div>
-                      </div>
-                    )}
+                    <div className="relative w-full rounded-2xl overflow-hidden bg-black"
+                      style={{ paddingBottom: '56.25%' }}>
+                      <iframe
+                        className="absolute inset-0 w-full h-full"
+                        src={buildEmbedUrl(selectedProgram.playlistId)}
+                        title={selectedProgram.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
                   </div>
                 </motion.div>
               )}
