@@ -12,6 +12,7 @@ import { TimelineSection } from '../components/home/TimelineSection';
 import { Testimonials } from '../components/home/Testimonials';
 import { FaqSection } from '../components/home/FaqSection';
 import { CtaShowcase } from '../components/home/CtaShowcase';
+import { LiveSection } from '../components/home/LiveSection';
 
 export function Home() {
   return (
@@ -24,6 +25,7 @@ export function Home() {
       />
       <Preloader />
       <Hero />
+      <LiveSection />
       <AboutSection />
       <ServicesSection />
       <PartnersBand />
