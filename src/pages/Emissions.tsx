@@ -371,44 +371,51 @@ export function Emissions() {
                   </div>
 
                   {/* En-tête compact */}
-                  <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-6 sm:px-10 pt-7 pb-4 border-b border-white/5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-grace-orange/20 flex items-center justify-center shrink-0">
-                        <activeProgram.icon className="w-5 h-5 text-grace-orange" />
+                  <div className="relative z-10 flex flex-col xs:flex-row xs:items-center justify-between gap-3 px-4 sm:px-8 lg:px-10 pt-5 sm:pt-7 pb-4 border-b border-white/5">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-grace-orange/20 flex items-center justify-center shrink-0">
+                        <activeProgram.icon className="w-4 h-4 sm:w-5 sm:h-5 text-grace-orange" />
                       </div>
-                      <div>
-                        <p className="text-grace-orange text-[10px] font-bold uppercase tracking-[0.2em]">
+                      <div className="min-w-0">
+                        <p className="text-grace-orange text-[10px] font-bold uppercase tracking-[0.2em] truncate">
                           {activeProgram.cat} · Grâce TV
                         </p>
-                        <h3 className="font-serif text-lg sm:text-xl font-extrabold text-white leading-tight">
+                        <h3 className="font-serif text-base sm:text-lg lg:text-xl font-extrabold text-white leading-tight truncate">
                           {activeProgram.title}
                         </h3>
-                        <p className="text-white/35 text-xs mt-0.5">
+                        <p className="text-white/35 text-xs mt-0.5 truncate">
                           {isLoadingVideos
                             ? 'Chargement…'
                             : `${playlistVideos.length} vidéo${playlistVideos.length !== 1 ? 's' : ''} · ${activePlaylist.title}`}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    {/* Actions — icônes seules sur xs, icône+texte sur sm+ */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <button
                         onClick={() => sharePlaylist(activePlaylist)}
-                        className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-[11px] font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all"
+                        className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white/80 hover:text-white text-[11px] font-bold uppercase tracking-wider px-2.5 sm:px-3.5 py-2 rounded-xl transition-all"
+                        title="Partager"
                       >
-                        <Share2 className="w-3.5 h-3.5" /> Partager
+                        <Share2 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Partager</span>
                       </button>
                       <a
                         href={`https://www.youtube.com/playlist?list=${activePlaylist.id}`}
                         target="_blank" rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/30 text-white/80 hover:text-white text-[11px] font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all"
+                        className="flex items-center gap-1.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/30 text-white/80 hover:text-white text-[11px] font-bold uppercase tracking-wider px-2.5 sm:px-3.5 py-2 rounded-xl transition-all"
+                        title="Voir sur YouTube"
                       >
-                        <Youtube className="w-3.5 h-3.5" /> YouTube
+                        <Youtube className="w-4 h-4" />
+                        <span className="hidden sm:inline">YouTube</span>
                       </a>
                       <button
                         onClick={closePlayer}
-                        className="flex items-center gap-1.5 bg-grace-orange/10 hover:bg-grace-orange/20 border border-grace-orange/30 text-grace-orange text-[11px] font-bold uppercase tracking-wider px-3.5 py-2 rounded-xl transition-all"
+                        className="flex items-center gap-1.5 bg-grace-orange/10 hover:bg-grace-orange/20 border border-grace-orange/30 text-grace-orange text-[11px] font-bold uppercase tracking-wider px-2.5 sm:px-3.5 py-2 rounded-xl transition-all"
+                        title="Fermer"
                       >
-                        <X className="w-3.5 h-3.5" /> Fermer
+                        <X className="w-4 h-4" />
+                        <span className="hidden sm:inline">Fermer</span>
                       </button>
                     </div>
                   </div>
@@ -423,13 +430,19 @@ export function Emissions() {
 
                   {/* Contenu principal : iframe + liste */}
                   {!isLoadingVideos && playlistVideos.length > 0 && (
-                    <div className="relative z-10 flex flex-col lg:flex-row gap-0">
+                    /*
+                     * Mobile  (<lg) : colonne — player au-dessus, liste en dessous (max-h limitée)
+                     * Desktop (lg+) : ligne — player flex-1, liste sidebar fixe 340-380px
+                     * lg:items-stretch : la sidebar prend automatiquement la hauteur du player
+                     */
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-stretch gap-0">
 
-                      {/* ── Colonne gauche : player ── */}
-                      <div className="flex-1 min-w-0 p-5 sm:p-8">
-                        {/* Iframe 16:9 */}
-                        <div className="relative w-full rounded-2xl overflow-hidden bg-black shadow-2xl shadow-black/60"
-                          style={{ paddingBottom: '56.25%' }}>
+                      {/* ── Player ── */}
+                      <div className="flex-1 min-w-0 p-3 sm:p-5 lg:p-8">
+                        <div
+                          className="relative w-full rounded-xl sm:rounded-2xl overflow-hidden bg-black shadow-2xl shadow-black/60"
+                          style={{ paddingBottom: '56.25%' }}
+                        >
                           {activeVideoId && (
                             <iframe
                               key={activeVideoId}
@@ -442,51 +455,59 @@ export function Emissions() {
                           )}
                         </div>
 
-                        {/* Infos vidéo en cours */}
+                        {/* Vidéo en cours */}
                         {activeVideoId && (() => {
                           const cur = playlistVideos.find(v => v.videoId === activeVideoId);
                           return cur ? (
-                            <div className="mt-4 flex items-start gap-3">
-                              <div className="w-8 h-8 rounded-lg bg-grace-orange/20 flex items-center justify-center shrink-0 mt-0.5">
-                                <Play className="w-3.5 h-3.5 fill-grace-orange text-grace-orange ml-0.5" />
+                            <div className="mt-3 sm:mt-4 flex items-start gap-2 sm:gap-3">
+                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-grace-orange/20 flex items-center justify-center shrink-0 mt-0.5">
+                                <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-grace-orange text-grace-orange ml-0.5" />
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <p className="text-[10px] font-bold uppercase tracking-widest text-grace-orange mb-0.5">
                                   En lecture · vidéo {cur.position + 1}/{playlistVideos.length}
                                 </p>
-                                <p className="text-white text-sm sm:text-base font-semibold leading-snug">{cur.title}</p>
+                                <p className="text-white text-sm sm:text-base font-semibold leading-snug line-clamp-2">
+                                  {cur.title}
+                                </p>
                               </div>
                             </div>
                           ) : null;
                         })()}
                       </div>
 
-                      {/* ── Colonne droite : liste des vidéos ── */}
-                      <div className="lg:w-[340px] xl:w-[380px] shrink-0 border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col">
-                        {/* Entête liste */}
-                        <div className="px-4 py-3.5 border-b border-white/5 flex items-center gap-2 bg-white/2">
+                      {/* ── Sidebar liste ── */}
+                      <div className={`
+                        shrink-0
+                        w-full lg:w-[320px] xl:w-[360px]
+                        border-t lg:border-t-0 lg:border-l border-white/5
+                        flex flex-col
+                        max-h-64 sm:max-h-80 lg:max-h-none
+                      `}>
+                        {/* Header liste */}
+                        <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2 bg-white/[0.02] shrink-0">
                           <ListVideo className="w-4 h-4 text-grace-orange" />
                           <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
                             {playlistVideos.length} vidéos dans la playlist
                           </span>
                         </div>
 
-                        {/* Vidéos scrollables */}
-                        <div className="overflow-y-auto lg:max-h-[calc(56.25vw*0.6+80px)] xl:max-h-[480px] scrollbar-hide">
+                        {/* Liste scrollable — flex-1 remplit la hauteur restante sur desktop */}
+                        <div className="flex-1 overflow-y-auto scrollbar-hide">
                           {playlistVideos.map((v, idx) => {
                             const isCurrent = v.videoId === activeVideoId;
                             return (
                               <button
                                 key={v.videoId}
                                 onClick={() => handleSelectVideo(v.videoId)}
-                                className={`w-full flex items-start gap-3 px-4 py-3.5 text-left transition-all group border-l-[3px] ${
+                                className={`w-full flex items-start gap-3 px-3 sm:px-4 py-3 sm:py-3.5 text-left transition-all group border-l-[3px] ${
                                   isCurrent
                                     ? 'bg-grace-orange/15 border-grace-orange'
-                                    : 'hover:bg-white/4 border-transparent hover:border-white/20'
+                                    : 'hover:bg-white/[0.04] border-transparent hover:border-white/20'
                                 }`}
                               >
-                                {/* Miniature avec overlay play */}
-                                <div className="relative flex-shrink-0 w-28 rounded-xl overflow-hidden bg-black">
+                                {/* Miniature — plus petite sur mobile */}
+                                <div className="relative flex-shrink-0 w-20 sm:w-24 lg:w-28 rounded-lg sm:rounded-xl overflow-hidden bg-black">
                                   <div className="aspect-video">
                                     <img
                                       src={v.thumbnail}
@@ -497,24 +518,23 @@ export function Emissions() {
                                   </div>
                                   {isCurrent ? (
                                     <div className="absolute inset-0 bg-grace-orange/50 flex items-center justify-center">
-                                      <div className="w-8 h-8 rounded-full bg-grace-orange shadow-lg flex items-center justify-center">
-                                        <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
+                                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-grace-orange shadow-lg flex items-center justify-center">
+                                        <Play className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-white text-white ml-0.5" />
                                       </div>
                                     </div>
                                   ) : (
                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                                        <Play className="w-3.5 h-3.5 fill-white text-white ml-0.5" />
+                                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                        <Play className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 fill-white text-white ml-0.5" />
                                       </div>
                                     </div>
                                   )}
-                                  {/* Numéro */}
-                                  <span className="absolute bottom-1 right-1 text-[9px] font-bold text-white bg-black/70 px-1.5 py-0.5 rounded">
+                                  <span className="absolute bottom-0.5 right-0.5 sm:bottom-1 sm:right-1 text-[8px] sm:text-[9px] font-bold text-white bg-black/70 px-1 sm:px-1.5 py-0.5 rounded">
                                     {idx + 1}
                                   </span>
                                 </div>
 
-                                {/* Titre + indicator */}
+                                {/* Titre */}
                                 <div className="flex-1 min-w-0">
                                   {isCurrent && (
                                     <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-grace-orange mb-1">
@@ -522,7 +542,7 @@ export function Emissions() {
                                       En lecture
                                     </span>
                                   )}
-                                  <p className={`text-[13px] leading-snug line-clamp-2 transition-colors ${
+                                  <p className={`text-[12px] sm:text-[13px] leading-snug line-clamp-2 sm:line-clamp-3 transition-colors ${
                                     isCurrent
                                       ? 'text-white font-semibold'
                                       : 'text-white/55 group-hover:text-white/90'
