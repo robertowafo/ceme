@@ -187,9 +187,16 @@ app.get('/church-events', async (c) => {
     `SELECT id, title, type, date_str AS dateStr, iso_date AS isoDate,
             location, preacher, note AS desc, badge, badge_color AS badgeColor,
             image, is_popular AS isPopular
-     FROM church_events ORDER BY iso_date ASC`
+     FROM church_events WHERE iso_date >= date('now') ORDER BY iso_date ASC`
   ).all<any>()
   return c.json(results.map((r: any) => ({ ...r, isPopular: r.isPopular === 1 })))
+})
+
+app.post('/admin/events/cleanup', requireAdmin, async (c) => {
+  const result = await c.env.DB.prepare(
+    `DELETE FROM church_events WHERE iso_date < date('now')`
+  ).run()
+  return c.json({ deleted: result.meta.changes ?? 0 })
 })
 
 app.put('/church-events/:id', requireAdmin, async (c) => {

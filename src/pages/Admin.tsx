@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
+import { apiFetch } from '../lib/auth';
 import { AdminFileUpload } from '../components/AdminFileUpload';
 import {
   getRecommendedLinks, saveRecommendedLink, deleteRecommendedLink, RecommendedLink,
@@ -217,6 +218,8 @@ export function Admin() {
         const data = await getGalleryPhotos();
         setPhotos(data);
       } else if (activeTab === 'events') {
+        // Supprimer automatiquement les événements dont la date est passée
+        await apiFetch('/api/admin/events/cleanup', { method: 'POST' }).catch(() => {});
         const data = await getChurchEvents();
         setEvents(data);
       } else if (activeTab === 'testimonials') {
@@ -1866,12 +1869,30 @@ export function Admin() {
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date d'affichage humain</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtDateStr} onChange={e => setEvtDateStr(e.target.value)} placeholder="Ex: Dimanche 28 Juin à 09h00" />
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date réelle de l'événement *</label>
+                        <input
+                          type="date"
+                          required
+                          className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white"
+                          value={evtIsoDate}
+                          onChange={e => {
+                            const val = e.target.value;
+                            setEvtIsoDate(val);
+                            if (!evtDateStr && val) {
+                              const [y, m, d] = val.split('-').map(Number);
+                              const dt = new Date(y, m - 1, d);
+                              const JOURS = ['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+                              const MOIS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+                              setEvtDateStr(`${JOURS[dt.getDay()]} ${d} ${MOIS[m - 1]}`);
+                            }
+                          }}
+                        />
+                        <p className="text-white/35 text-[10px] mt-1">L'annonce sera retirée automatiquement après cette date.</p>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date au format ISO (Triage)</label>
-                        <input type="date" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtIsoDate} onChange={e => setEvtIsoDate(e.target.value)} />
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Texte affiché sur le site</label>
+                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtDateStr} onChange={e => setEvtDateStr(e.target.value)} placeholder="Ex: Dimanche 28 Juin à 09h00" />
+                        <p className="text-white/35 text-[10px] mt-1">Rempli automatiquement — personnalisez si besoin (ajoutez l'heure, ex: à 09h00).</p>
                       </div>
                     </div>
 
