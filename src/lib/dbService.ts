@@ -52,6 +52,20 @@ export interface StudyDocument {
   fileType: string;
 }
 
+export interface Partner {
+  id: string;
+  firstName: string;
+  lastName: string;
+  title?: string;
+  church?: string;
+  location?: string;
+  bio?: string;
+  youtubeUrl: string;
+  website?: string;
+  avatarUrl?: string;
+  createdAt?: string;
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 async function getAll<T>(endpoint: string): Promise<T[]> {
@@ -395,12 +409,26 @@ export async function deleteNewsletterSubscriber(id: string): Promise<void> {
   return remove('/api/newsletter', id);
 }
 
+// ─── partners ─────────────────────────────────────────────────────────────────
+
+export async function getPartners(): Promise<Partner[]> {
+  return getAll<Partner>('/api/partners');
+}
+
+export async function savePartner(p: Partner): Promise<void> {
+  return upsert('/api/partners', p.id, p);
+}
+
+export async function deletePartner(id: string): Promise<void> {
+  return remove('/api/partners', id);
+}
+
 // ─── admin counts ─────────────────────────────────────────────────────────────
 
 export interface AdminCounts {
   links: number; photos: number; events: number; testimonials: number;
   documents: number; prayers: number; donations: number; blog: number;
-  newsletter: number; projects: number; audit: number;
+  newsletter: number; projects: number; audit: number; partners: number;
 }
 
 export async function getAdminCounts(): Promise<AdminCounts> {

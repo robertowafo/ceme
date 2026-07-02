@@ -126,3 +126,17 @@ CREATE TABLE IF NOT EXISTS audit_log (
   description  TEXT NOT NULL,
   performed_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS partners (
+  id          TEXT PRIMARY KEY,
+  first_name  TEXT NOT NULL,
+  last_name   TEXT NOT NULL,
+  title       TEXT,
+  church      TEXT,
+  location    TEXT,
+  bio         TEXT,
+  youtube_url TEXT NOT NULL,
+  website     TEXT,
+  avatar_url  TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);

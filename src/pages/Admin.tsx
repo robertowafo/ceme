@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Lock,
   User as UserIcon,
+  Users,
   LogOut,
   Plus,
   Edit2,
@@ -29,6 +30,7 @@ import {
   Smartphone,
   BarChart3,
   Mail,
+  Globe,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -47,10 +49,11 @@ import {
   getAdmins, addAdmin, removeAdmin, AdminUser,
   getAuditLog, AuditEntry,
   getDonationProjects, saveDonationProject, deleteDonationProject, DonationProject,
+  getPartners, savePartner, deletePartner, Partner,
   getAdminCounts, AdminCounts,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'admins' | 'audit';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'admins' | 'audit';
 
 export function Admin() {
   const { user, isAdmin, isSuperAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
@@ -76,6 +79,16 @@ export function Admin() {
   const [projGoal, setProjGoal] = useState('');
   const [projCurrency, setProjCurrency] = useState('FCFA');
   const [projIsActive, setProjIsActive] = useState(true);
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [partnerFirstName, setPartnerFirstName] = useState('');
+  const [partnerLastName, setPartnerLastName] = useState('');
+  const [partnerTitle, setPartnerTitle] = useState('');
+  const [partnerChurch, setPartnerChurch] = useState('');
+  const [partnerLocation, setPartnerLocation] = useState('');
+  const [partnerBio, setPartnerBio] = useState('');
+  const [partnerYoutubeUrl, setPartnerYoutubeUrl] = useState('');
+  const [partnerWebsite, setPartnerWebsite] = useState('');
+  const [partnerAvatarUrl, setPartnerAvatarUrl] = useState('');
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -85,7 +98,7 @@ export function Admin() {
   const [isSavingCat, setIsSavingCat] = useState(false);
 
   // Modal / Form States
-  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, audit:0 });
+  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, partners:0, audit:0 });
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -229,6 +242,9 @@ export function Admin() {
       } else if (activeTab === 'projects') {
         const data = await getDonationProjects();
         setDonationProjects(data);
+      } else if (activeTab === 'partners') {
+        const data = await getPartners();
+        setPartners(data);
       } else if (activeTab === 'admins') {
         const data = await getAdmins();
         setAdmins(data);
@@ -289,6 +305,7 @@ export function Admin() {
     setBlogCoverImage(''); setBlogExcerpt(''); setBlogContent('');
     setBlogPublishedAt(new Date().toISOString().slice(0, 10)); setBlogIsPublished(true);
     setProjTitle(''); setProjDesc(''); setProjGoal(''); setProjCurrency('FCFA'); setProjIsActive(true);
+    setPartnerFirstName(''); setPartnerLastName(''); setPartnerTitle(''); setPartnerChurch(''); setPartnerLocation(''); setPartnerBio(''); setPartnerYoutubeUrl(''); setPartnerWebsite(''); setPartnerAvatarUrl('');
     setShowCatManager(false); setNewCatName('');
   };
 
@@ -354,6 +371,17 @@ export function Admin() {
       setProjGoal(String(proj.goalAmount));
       setProjCurrency(proj.currency);
       setProjIsActive(proj.isActive);
+    } else if (activeTab === 'partners') {
+      const p = item as Partner;
+      setPartnerFirstName(p.firstName);
+      setPartnerLastName(p.lastName);
+      setPartnerTitle(p.title || '');
+      setPartnerChurch(p.church || '');
+      setPartnerLocation(p.location || '');
+      setPartnerBio(p.bio || '');
+      setPartnerYoutubeUrl(p.youtubeUrl);
+      setPartnerWebsite(p.website || '');
+      setPartnerAvatarUrl(p.avatarUrl || '');
     }
   };
 
@@ -386,6 +414,8 @@ export function Admin() {
         await deleteNewsletterSubscriber(deleteConfirmId);
       } else if (activeTab === 'projects') {
         await deleteDonationProject(deleteConfirmId);
+      } else if (activeTab === 'partners') {
+        await deletePartner(deleteConfirmId);
       }
       showStatus('Élément supprimé avec succès !', 'success');
       loadData();
@@ -507,6 +537,22 @@ export function Admin() {
           createdAt: editingItem?.createdAt ?? new Date().toISOString(),
         };
         await saveDonationProject(payload);
+
+      } else if (activeTab === 'partners') {
+        const partnerId = editingItem ? editingItem.id : 'prt_' + Date.now();
+        const payload: Partner = {
+          id: partnerId,
+          firstName: partnerFirstName,
+          lastName: partnerLastName,
+          title: partnerTitle || undefined,
+          church: partnerChurch || undefined,
+          location: partnerLocation || undefined,
+          bio: partnerBio || undefined,
+          youtubeUrl: partnerYoutubeUrl,
+          website: partnerWebsite || undefined,
+          avatarUrl: partnerAvatarUrl || undefined,
+        };
+        await savePartner(payload);
       }
 
       showStatus('Élément sauvegardé avec succès !', 'success');
@@ -795,6 +841,20 @@ export function Admin() {
               <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.projects}</span>
             </button>
 
+            <button
+              onClick={() => setActiveTab('partners')}
+              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                activeTab === 'partners'
+                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
+                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <Users className="w-4.5 h-4.5" /> 🤝 Partenaires Grâce TV
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.partners}</span>
+            </button>
+
             <div className="border-t border-white/10 my-2 pt-2">
               <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-white/30 px-3 mb-2">
                 Sécurité & Contrôle
@@ -847,6 +907,7 @@ export function Admin() {
                   {activeTab === 'blog' && 'Gestion des Articles du Blog'}
                   {activeTab === 'newsletter' && 'Abonnés à la Newsletter'}
                   {activeTab === 'projects' && 'Projets de Collecte de Fonds'}
+                  {activeTab === 'partners' && 'Gestion des Partenaires Grâce TV'}
                   {activeTab === 'audit' && 'Registre des Actions Administratives'}
                   {activeTab === 'admins' && 'Gestion des Administrateurs'}
                 </h3>
@@ -861,12 +922,13 @@ export function Admin() {
                   {activeTab === 'blog' && 'blog_posts'}
                   {activeTab === 'newsletter' && 'newsletter_subscribers'}
                   {activeTab === 'projects' && 'donation_projects'}
+                  {activeTab === 'partners' && 'partners'}
                   {activeTab === 'audit' && 'audit_log'}
                   {activeTab === 'admins' && 'admins'}
                 </p>
               </div>
 
-              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && (
+              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -888,6 +950,14 @@ export function Admin() {
                   className="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" /> Nouveau Projet
+                </button>
+              )}
+              {activeTab === 'partners' && (
+                <button
+                  onClick={handleAddNew}
+                  className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Nouveau Partenaire
                 </button>
               )}
             </div>
@@ -1624,6 +1694,55 @@ export function Admin() {
                     )}
                   </div>
                 )}
+
+                {/* Partners View */}
+                {activeTab === 'partners' && (
+                  <div>
+                    {partners.length === 0 ? (
+                      <EmptyMessage />
+                    ) : (
+                      <div className="grid grid-cols-1 gap-4">
+                        {partners.map((p) => {
+                          const displayName = [p.title, p.firstName, p.lastName].filter(Boolean).join(' ');
+                          return (
+                            <div key={p.id} className="bg-white/5 border border-white/10 rounded-xl p-5 flex gap-4">
+                              {p.avatarUrl ? (
+                                <img src={p.avatarUrl} alt={displayName} className="w-14 h-14 rounded-xl object-cover border border-white/10 shrink-0" />
+                              ) : (
+                                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-gold/30 to-gold/10 flex items-center justify-center shrink-0 border border-white/10">
+                                  <span className="text-gold font-black text-xl">{p.lastName.charAt(0)}</span>
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-1">
+                                  <div className="min-w-0">
+                                    <h4 className="font-bold text-white text-sm truncate">{displayName}</h4>
+                                    {p.church && <p className="text-[11px] text-gold/80 font-semibold truncate">{p.church}</p>}
+                                    {p.location && (
+                                      <p className="text-[10px] text-white/40 flex items-center gap-1 mt-0.5">
+                                        <Globe className="w-3 h-3" /> {p.location}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <a href={p.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                                      className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-red-400 transition-colors" title="Ouvrir la chaîne YouTube">
+                                      <Youtube className="w-4 h-4" />
+                                    </a>
+                                    <button onClick={() => handleEdit(p)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDelete(p.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                  </div>
+                                </div>
+                                {p.bio && <p className="text-[11px] text-white/55 leading-relaxed line-clamp-2 mt-1">{p.bio}</p>}
+                                <p className="text-[10px] font-mono text-white/25 mt-1 truncate">{p.youtubeUrl}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -2048,6 +2167,59 @@ export function Admin() {
                     <div className="flex items-center gap-3">
                       <input type="checkbox" id="chkProjActive" className="w-4 h-4 accent-gold cursor-pointer" checked={projIsActive} onChange={e => setProjIsActive(e.target.checked)} />
                       <label htmlFor="chkProjActive" className="text-xs text-white/80 cursor-pointer select-none">Projet actif (visible sur la page Don)</label>
+                    </div>
+                  </div>
+                )}
+
+                {/* Partners Form */}
+                {activeTab === 'partners' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre (optionnel)</label>
+                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerTitle} onChange={e => setPartnerTitle(e.target.value)} placeholder="Ex: Pasteur, Évangéliste..." />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Prénom *</label>
+                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerFirstName} onChange={e => setPartnerFirstName(e.target.value)} placeholder="Ex: Raymon" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Nom *</label>
+                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerLastName} onChange={e => setPartnerLastName(e.target.value)} placeholder="Ex: KOFFI" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Église / Ministère (optionnel)</label>
+                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerChurch} onChange={e => setPartnerChurch(e.target.value)} placeholder="Ex: Club 700" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Localisation (optionnel)</label>
+                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerLocation} onChange={e => setPartnerLocation(e.target.value)} placeholder="Ex: Afrique francophone" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Chaîne YouTube *</label>
+                      <input type="url" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerYoutubeUrl} onChange={e => setPartnerYoutubeUrl(e.target.value)} placeholder="Ex: https://www.youtube.com/@Club700" />
+                      <p className="text-[10px] text-white/30 mt-1">URL complète de la chaîne YouTube du partenaire (avec @handle).</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Site web (optionnel)</label>
+                      <input type="url" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerWebsite} onChange={e => setPartnerWebsite(e.target.value)} placeholder="Ex: https://www.club700.com" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description / Biographie (optionnel)</label>
+                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={partnerBio} onChange={e => setPartnerBio(e.target.value)} placeholder="Décrivez brièvement le ministère ou le parcours de ce partenaire..." />
+                    </div>
+                    <div>
+                      <AdminFileUpload
+                        value={partnerAvatarUrl}
+                        onChange={setPartnerAvatarUrl}
+                        label="Photo du partenaire (optionnel)"
+                        placeholder="https://..."
+                        accept="image/*"
+                        description="Photo ou avatar du pasteur/partenaire. Si non fournie, l'initiale du nom sera affichée."
+                      />
                     </div>
                   </div>
                 )}

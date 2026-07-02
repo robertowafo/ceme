@@ -855,10 +855,113 @@ app.get('/audit-log', requireAdmin, async (c) => {
   return c.json(results)
 })
 
+// ─── partners ─────────────────────────────────────────────────────────────────
+
+app.get('/partners', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, first_name AS firstName, last_name AS lastName, title, church, location, bio,
+            youtube_url AS youtubeUrl, website, avatar_url AS avatarUrl, created_at AS createdAt
+     FROM partners ORDER BY created_at ASC`
+  ).all()
+  return c.json(results)
+})
+
+app.put('/partners/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const { firstName, lastName, title, church, location, bio, youtubeUrl, website, avatarUrl } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM partners WHERE id=?').bind(id).first()
+  await c.env.DB.prepare(
+    `INSERT INTO partners (id, first_name, last_name, title, church, location, bio, youtube_url, website, avatar_url, created_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))
+     ON CONFLICT(id) DO UPDATE SET
+       first_name=excluded.first_name, last_name=excluded.last_name, title=excluded.title,
+       church=excluded.church, location=excluded.location, bio=excluded.bio,
+       youtube_url=excluded.youtube_url, website=excluded.website, avatar_url=excluded.avatar_url`
+  ).bind(id, firstName, lastName, title ?? null, church ?? null, location ?? null, bio ?? null, youtubeUrl, website ?? null, avatarUrl ?? null).run()
+  const fullName = [title, firstName, lastName].filter(Boolean).join(' ')
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Partenaires', id, `${existing ? 'Modification' : 'Ajout'} partenaire : "${fullName}"`)
+  return c.json({ success: true })
+})
+
+app.delete('/partners/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT first_name, last_name FROM partners WHERE id=?').bind(id).first<{first_name:string, last_name:string}>()
+  await c.env.DB.prepare('DELETE FROM partners WHERE id=?').bind(id).run()
+  const name = row ? `${row.first_name} ${row.last_name}` : id
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Partenaires', id, `Suppression partenaire : "${name}"`)
+  return c.json({ success: true })
+})
+
+// ─── youtube/channel-playlists ────────────────────────────────────────────────
+
+app.get('/youtube/channel-playlists', async (c) => {
+  const channelUrl = c.req.query('channelUrl') || ''
+  const apiKey = c.env.YOUTUBE_API_KEY
+  if (!channelUrl || !apiKey) return c.json([])
+
+  const cache = caches.default
+  const cacheKey = new Request(`https://internal-cache.dev/yt-ch-pls-${encodeURIComponent(channelUrl)}`)
+  const cached = await cache.match(cacheKey)
+  if (cached) return cached
+
+  try {
+    let channelId = ''
+    const urlObj = new URL(channelUrl)
+    const pathParts = urlObj.pathname.split('/').filter(Boolean)
+
+    if (pathParts[0] === 'channel' && pathParts[1]) {
+      channelId = pathParts[1]
+    } else {
+      let handle = ''
+      if (pathParts[0]?.startsWith('@')) {
+        handle = pathParts[0].slice(1)
+      } else if (pathParts[0] === 'c' && pathParts[1]) {
+        handle = pathParts[1]
+      } else if (pathParts[0]) {
+        handle = pathParts[0]
+      }
+      if (handle) {
+        const data = await fetchJson(
+          `https://www.googleapis.com/youtube/v3/channels?part=id&forHandle=${encodeURIComponent(handle)}&key=${apiKey}`
+        )
+        channelId = data.items?.[0]?.id || ''
+        if (!channelId) {
+          const sd = await fetchJson(
+            `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(handle)}&type=channel&maxResults=1&key=${apiKey}`
+          )
+          const cid = sd.items?.[0]?.id?.channelId
+          if (cid) channelId = cid
+        }
+      }
+    }
+
+    if (!channelId) return c.json([])
+
+    const data = await fetchJson(
+      `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=50&key=${apiKey}`
+    )
+    const result = (data.items || []).map((item: any) => ({
+      id: item.id,
+      title: item.snippet.title,
+      description: item.snippet.description,
+      thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || '',
+      videoCount: item.contentDetails?.itemCount ?? 0,
+    }))
+
+    const response = new Response(JSON.stringify(result), {
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': `max-age=${CACHE_TTL}` },
+    })
+    await cache.put(cacheKey, response.clone())
+    return response
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 // ─── admin counts (all tabs in one query) ──────────────────────────────────────
 
 app.get('/admin/counts', requireAdmin, async (c) => {
-  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog] =
+  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog, partners] =
     await Promise.all([
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM recommended_links').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM gallery_photos').first<{n:number}>(),
@@ -871,6 +974,7 @@ app.get('/admin/counts', requireAdmin, async (c) => {
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM newsletter_subscribers').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM donation_projects').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM audit_log').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM partners').first<{n:number}>(),
     ])
   return c.json({
     links:        Number(links?.n        ?? 0),
@@ -884,6 +988,7 @@ app.get('/admin/counts', requireAdmin, async (c) => {
     newsletter:   Number(newsletter?.n   ?? 0),
     projects:     Number(projects?.n     ?? 0),
     audit:        Number(auditLog?.n     ?? 0),
+    partners:     Number(partners?.n     ?? 0),
   })
 })
 
