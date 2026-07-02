@@ -171,38 +171,6 @@ export function Prayer() {
         </div>
       </div>
 
-      {/* ====================================================== PRAYER SCHEDULE */}
-      <div className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-12">
-            <p className="text-gold font-bold uppercase tracking-widest text-sm mb-4">S'Unir à Nous</p>
-            <h2 className="font-serif text-4xl font-bold">Horaires de Prière</h2>
-            <p className="text-gray-400 max-w-xl mx-auto mt-4">L'Éternel aime la prière collective. Rejoignez-nous pour ces temps sacrés.</p>
-          </motion.div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              { day: 'Vendredi',  time: '19h00 – 21h00', title: 'Nuit de Prière',          desc: 'Intercession fervente, louange et combat spirituel collectif.',       tag: 'Hebdomadaire', color: 'border-l-burgundy' },
-              { day: 'Dimanche',  time: '08h30 – 10h00', title: 'Prière Avant le Culte',   desc: 'Préparer l\'atmosphère et ouvrir la réunion dans la présence de Dieu.', tag: 'Hebdomadaire', color: 'border-l-gold'     },
-              { day: 'Mercredi',  time: '06h00 – 07h00', title: 'Prière du Matin (Zoom)',  desc: 'Commencer la journée dans la présence de Dieu avec d\'autres croyants.',  tag: 'En ligne',     color: 'border-l-soft-black' },
-            ].map((s, i) => (
-              <motion.div key={i} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
-                className={`bg-[#f5f2ed] p-7 rounded-3xl border-l-4 hover:shadow-md transition-shadow ${s.color}`}>
-                <div className="flex justify-between items-start mb-4">
-                  <span className="font-bold text-soft-black text-lg">{s.day}</span>
-                  <span className="bg-white text-xs font-bold uppercase tracking-wider text-gray-400 px-2 py-1 rounded-full border border-gray-200">{s.tag}</span>
-                </div>
-                <h3 className="font-serif text-xl font-bold mb-2">{s.title}</h3>
-                <div className="flex items-center gap-2 text-burgundy mb-4">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm font-bold">{s.time}</span>
-                </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{s.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* ====================================================== FORM + PRAYER WALL */}
       <div className="py-20 bg-[#f5f2ed]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
