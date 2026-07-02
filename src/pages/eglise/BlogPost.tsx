@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, User, BookOpen, Loader2, Tag } from 'lucide-react'
 import { motion } from 'motion/react';
 import { getBlogPost, type BlogPost as BlogPostType } from '../../lib/dbService';
 import { SEO } from '../../components/SEO';
+import { blogPostingSchema, breadcrumbSchema } from '../../lib/structuredData';
 
 export function BlogPost() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +51,15 @@ export function BlogPost() {
         path={`/eglise/blog/${post.id}`}
         type="article"
         image={post.coverImage || undefined}
+        structuredData={[
+          blogPostingSchema({ id: post.id, title: post.title, excerpt: post.excerpt, publishedAt: post.publishedAt, author: post.author, coverImage: post.coverImage }),
+          breadcrumbSchema([
+            { name: 'Accueil', url: '/' },
+            { name: 'Église CEME', url: '/eglise' },
+            { name: 'Blog', url: '/eglise/blog' },
+            { name: post.title },
+          ]),
+        ]}
       />
 
       {/* Hero */}

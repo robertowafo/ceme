@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Heart, Send, ShieldCheck, Clock, Users, FileText, BookOpen, Quote, Phone, Loader2 } from 'lucide-react';
 import { submitPrayerRequest, getPublicPrayerRequests, PrayerRequestPublic } from '../../lib/dbService';
 import { SEO } from '../../components/SEO';
+import { breadcrumbSchema } from '../../lib/structuredData';
 
 const promises = [
   { ref: 'Matthieu 7:7',    text: '"Demandez, et l\'on vous donnera; cherchez, et vous trouverez; frappez, et l\'on vous ouvrira."',     bg: 'bg-burgundy' },
@@ -89,6 +90,11 @@ export function Prayer() {
         title="Demandes de prière — Chapelle de l'Éternel Mon Étendard"
         description="Confiez votre demande de prière à l'équipe d'intercession de la Chapelle de l'Éternel Mon Étendard, église porteuse de Grâce TV."
         path="/eglise/priere"
+        structuredData={breadcrumbSchema([
+          { name: 'Accueil', url: '/' },
+          { name: 'Église CEME', url: '/eglise' },
+          { name: 'Prière & Intercession' },
+        ])}
       />
 
       {/* ====================================================== HERO */}

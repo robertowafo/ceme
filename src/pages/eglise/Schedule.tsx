@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { getChurchEvents } from '../../lib/dbService';
 import { SEO } from '../../components/SEO';
+import { breadcrumbSchema } from '../../lib/structuredData';
 
 
 interface SpecialEvent {
@@ -313,6 +314,11 @@ export function Schedule() {
         title="Agenda des cultes — Chapelle de l'Éternel Mon Étendard"
         description="Horaires des cultes, soirées de prière et rencontres de la Chapelle de l'Éternel Mon Étendard à Yaoundé, église porteuse de Grâce TV."
         path="/eglise/cultes"
+        structuredData={breadcrumbSchema([
+          { name: 'Accueil', url: '/' },
+          { name: 'Église CEME', url: '/eglise' },
+          { name: 'Agenda des cultes' },
+        ])}
       />
       {/* Visual top notification banner */}
       <AnimatePresence>

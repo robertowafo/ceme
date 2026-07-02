@@ -1,6 +1,7 @@
 import { Mail, Phone, MapPin, Send, MessageCircle, Info } from 'lucide-react';
 import { motion } from 'motion/react';
 import { SEO } from '../components/SEO';
+import { localBusinessSchema } from '../lib/structuredData';
 
 export function Contact() {
   return (
@@ -9,6 +10,7 @@ export function Contact() {
         title="Contact — Grâce TV"
         description="Contactez Grâce TV et la Chapelle de l'Éternel Mon Étendard à Yaoundé. Questions, prière, partenariats — nous sommes à votre écoute."
         path="/contact"
+        structuredData={localBusinessSchema}
       />
       {/* Header Base */}
       <div className="bg-soft-black text-white py-20 mb-16 text-center px-4 relative overflow-hidden">
