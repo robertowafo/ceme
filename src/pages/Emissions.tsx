@@ -452,7 +452,7 @@ export function Emissions() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.4 }}
-                  className="relative bg-[#070b18] overflow-hidden"
+                  className="relative bg-[#070b18] overflow-hidden scroll-mt-20"
                 >
                   {/* Fond décoratif */}
                   <div className="absolute inset-0 pointer-events-none">
@@ -571,8 +571,8 @@ export function Emissions() {
                         shrink-0
                         w-full lg:w-[320px] xl:w-[360px]
                         border-t lg:border-t-0 lg:border-l border-white/5
-                        flex flex-col
-                        max-h-64 sm:max-h-80 lg:max-h-none
+                        flex flex-col overflow-hidden
+                        max-h-[300px] sm:max-h-[380px] lg:max-h-none
                       `}>
                         {/* Header liste */}
                         <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2 bg-white/[0.02] shrink-0">
@@ -583,7 +583,7 @@ export function Emissions() {
                         </div>
 
                         {/* Liste scrollable — flex-1 remplit la hauteur restante sur desktop */}
-                        <div className="flex-1 overflow-y-auto scrollbar-hide">
+                        <div className="flex-1 overflow-y-auto scrollbar-hide min-h-0">
                           {playlistVideos.map((v, idx) => {
                             const isCurrent = v.videoId === activeVideoId;
                             return (
@@ -790,7 +790,7 @@ export function Emissions() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.35 }}
-                  className="relative bg-[#070b18] overflow-hidden"
+                  className="relative bg-[#070b18] overflow-hidden scroll-mt-20"
                 >
                   <div className="absolute inset-0 pointer-events-none">
                     <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-grace-blue/20 blur-[120px]" />
@@ -954,14 +954,14 @@ export function Emissions() {
                             })()}
                           </div>
                           {/* Sidebar */}
-                          <div className="shrink-0 w-full lg:w-[320px] xl:w-[360px] border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col max-h-64 sm:max-h-80 lg:max-h-none">
+                          <div className="shrink-0 w-full lg:w-[320px] xl:w-[360px] border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col overflow-hidden max-h-[300px] sm:max-h-[380px] lg:max-h-none">
                             <div className="px-4 py-3 border-b border-white/5 flex items-center gap-2 bg-white/[0.02] shrink-0">
                               <ListVideo className="w-4 h-4 text-grace-orange" />
                               <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
                                 {partnerVideos.length} vidéos · {activePartnerPlaylist.title}
                               </span>
                             </div>
-                            <div className="flex-1 overflow-y-auto scrollbar-hide">
+                            <div className="flex-1 overflow-y-auto scrollbar-hide min-h-0">
                               {partnerVideos.map((v, idx) => {
                                 const isCurrent = v.videoId === activePartnerVideoId;
                                 return (
