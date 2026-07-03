@@ -671,12 +671,36 @@ app.get('/youtube/sermons', async (c) => {
 app.get('/youtube/video-info', async (c) => {
   let videoId = (c.req.query('urlOrId') || '').trim()
   if (!videoId) return c.json({ error: 'Paramètre urlOrId manquant' }, 400)
+  const apiKey = c.env.YOUTUBE_API_KEY
+
+  // Playlist ? (URL contenant list=… ou ID brut PL/UU/FL/OL…)
+  const listMatch = videoId.match(/[?&]list=([\w-]+)/)
+  const playlistId = listMatch ? listMatch[1] : (/^(PL|UU|FL|OL)[\w-]{10,}$/.test(videoId) ? videoId : null)
+  if (playlistId) {
+    if (!apiKey) return c.json({ error: 'Clé API YouTube absente' }, 500)
+    try {
+      const data = await fetchJson(
+        `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&id=${playlistId}&key=${apiKey}`
+      )
+      const item = data.items?.[0]
+      if (!item) return c.json({ error: 'Playlist introuvable' }, 404)
+      return c.json({
+        id: playlistId, isPlaylist: true,
+        title: item.snippet.title, preacher: item.snippet.channelTitle,
+        duration: `${item.contentDetails?.itemCount || 0} vidéos`,
+        image: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || '',
+        description: item.snippet.description || ''
+      })
+    } catch (err: any) {
+      return c.json({ error: err.message }, 500)
+    }
+  }
+
   if (videoId.length !== 11) {
     const match = videoId.match(/^.*(youtu\.be\/|v\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*)/)
     if (match?.[2]?.length === 11) videoId = match[2]
     else return c.json({ error: 'ID YouTube introuvable' }, 400)
   }
-  const apiKey = c.env.YOUTUBE_API_KEY
   try {
     if (apiKey) {
       const data = await fetchJson(

@@ -159,10 +159,14 @@ export function Admin() {
 
   const [isAdminFetchingInfo, setIsAdminFetchingInfo] = useState(false);
 
-  // Helper to extract YouTube video ID from links or returned ID
+  // Helper : extrait un ID vidéo (11 car.) OU un ID de playlist (PL…, UU…, FL…, OL…)
+  // depuis un lien YouTube ou un ID brut. Une URL contenant list=… est traitée en playlist.
   const extractYoutubeId = (url: string): string | null => {
     if (!url) return null;
     const trimmed = url.trim();
+    const listMatch = trimmed.match(/[?&]list=([\w-]+)/);
+    if (listMatch) return listMatch[1];
+    if (/^(PL|UU|FL|OL)[\w-]{10,}$/.test(trimmed)) return trimmed;
     if (trimmed.length === 11) return trimmed;
     const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
     const match = trimmed.match(regExp);
@@ -1784,8 +1788,9 @@ export function Admin() {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Lien ou ID Vidéo YouTube</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkYoutubeId} onChange={e => setLinkYoutubeId(e.target.value)} placeholder="Ex: Lb68G4-tZgM ou URL complète" />
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Lien YouTube (vidéo ou playlist)</label>
+                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkYoutubeId} onChange={e => setLinkYoutubeId(e.target.value)} placeholder="Collez le lien d'une vidéo ou d'une playlist" />
+                        <p className="text-[10px] text-white/40 mt-1">Accepte une vidéo seule ou une playlist entière — le titre se remplit automatiquement.</p>
                         {isAdminFetchingInfo && (
                           <p className="text-[10px] text-gold mt-1 animate-pulse flex items-center gap-1.5">
                             <span className="w-2 h-2 border border-gold border-t-transparent rounded-full animate-spin"></span>
@@ -1798,6 +1803,10 @@ export function Admin() {
                         <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkCategory} onChange={e => setLinkCategory(e.target.value)}>
                           <option value="Sermon">📖 Sermon d'Enseignement</option>
                           <option value="Louange">🎵 Louange & Adoration</option>
+                          <option value="Musique">🎶 Musique & Chansons</option>
+                          <option value="Film">🎬 Film</option>
+                          <option value="Enseignement">🎓 Enseignement</option>
+                          <option value="Émission">📺 Émission</option>
                           <option value="Témoignage">💬 Message de Témoignage</option>
                         </select>
                       </div>

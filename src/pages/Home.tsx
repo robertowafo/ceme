@@ -9,6 +9,7 @@ import {
 import { SEO } from '../components/SEO';
 import { tvStationSchema, webSiteSchema } from '../lib/structuredData';
 import { gsap, SplitText } from '../lib/gsap';
+import { isYtPlaylistId, ytEmbedUrl, ytThumbUrl } from '../lib/youtube';
 import { CtaShowcase } from '../components/home/CtaShowcase';
 import {
   getBlogPosts, getRecommendedLinks, getStudyDocuments,
@@ -198,12 +199,22 @@ export function Home() {
   const [posts, setPosts]         = useState<BlogPost[]>([]);
   const [docs, setDocs]           = useState<StudyDocument[]>([]);
   const [lightbox, setLightbox]   = useState<VideoContent | null>(null);
+  const [plThumbs, setPlThumbs]   = useState<Record<string, string>>({});
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
     fetch('/api/youtube/live').then(r => r.json()).then(setLive).catch(() => {});
     fetch('/api/youtube/playlists').then(r => { if (!r.ok) throw 0; return r.json(); }).then(setPlaylists).catch(() => {});
-    getRecommendedLinks().then(setLinks).catch(() => {});
+    getRecommendedLinks().then(list => {
+      setLinks(list);
+      // Vignettes des playlists recommandées (non dérivables de l'ID seul)
+      list.filter(l => isYtPlaylistId(l.youtubeId)).forEach(l => {
+        fetch(`/api/youtube/video-info?urlOrId=${encodeURIComponent(l.youtubeId)}`)
+          .then(r => r.ok ? r.json() : null)
+          .then(info => { if (info?.image) setPlThumbs(prev => ({ ...prev, [l.youtubeId]: info.image })); })
+          .catch(() => {});
+      });
+    }).catch(() => {});
     getBlogPosts().then(setPosts).catch(() => {});
     getStudyDocuments().then(setDocs).catch(() => {});
   }, []);
@@ -254,17 +265,18 @@ export function Home() {
       });
     }
     for (const l of links) {
+      const isPl = isYtPlaylistId(l.youtubeId);
       buckets[classifyCategory(l.category)].push({
         id: `rl-${l.id}`,
         title: l.title,
         description: l.description,
-        image: `https://i.ytimg.com/vi/${l.youtubeId}/hqdefault.jpg`,
-        meta: 'Vidéo',
-        embedUrl: `https://www.youtube.com/embed/${l.youtubeId}?autoplay=1&rel=0`,
+        image: isPl ? plThumbs[l.youtubeId] : (ytThumbUrl(l.youtubeId) || undefined),
+        meta: isPl ? 'Playlist' : 'Vidéo',
+        embedUrl: ytEmbedUrl(l.youtubeId),
       });
     }
     return buckets;
-  }, [playlists, links]);
+  }, [playlists, links, plThumbs]);
 
   const featuredPost = posts[0];
   const otherPosts   = posts.slice(1, 7);
@@ -459,42 +471,6 @@ export function Home() {
                 <VideoCard key={v.id} item={v} onPlay={setLightbox} />
               ))}
             </Rail>
-          </div>
-        </section>
-      )}
-
-      {/* ════════════ LOUANGE & CHANSONS (section sombre) ════════════ */}
-      {videoSections.louange.length > 0 && (
-        <section className="relative overflow-hidden bg-grace-indigo py-20 sm:py-28 text-white">
-          <div className="absolute inset-0 pointer-events-none">
-            <div className="absolute top-0 left-1/3 w-[500px] h-[500px] rounded-full bg-grace-orange/10 blur-[130px]" />
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-grace-sky/15 blur-[110px]" />
-            <div className="absolute inset-0 cross-pattern-dark opacity-20" />
-          </div>
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-14 sm:mb-20">
-              <SectionHeader
-                dark
-                icon={Music}
-                label="Louange & Chansons"
-                title="Élevez une voix"
-                accent="d'adoration."
-                desc="Concerts, cantiques et moments de worship — laissez la musique porter votre cœur dans la présence de Dieu."
-              />
-            </div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {videoSections.louange.slice(0, 6).map((v, i) => (
-                <motion.div
-                  key={v.id}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.2 }}
-                  transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <VideoCard item={v} onPlay={setLightbox} dark />
-                </motion.div>
-              ))}
-            </div>
           </div>
         </section>
       )}
@@ -699,6 +675,42 @@ export function Home() {
                       {d.fileType?.toUpperCase() || 'DOC'} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </span>
                   </Link>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ LOUANGE & CHANSONS — en clôture musicale ════════════ */}
+      {videoSections.louange.length > 0 && (
+        <section className="relative overflow-hidden bg-grace-indigo py-20 sm:py-28 text-white">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-0 left-1/3 w-[500px] h-[500px] rounded-full bg-grace-orange/10 blur-[130px]" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-grace-sky/15 blur-[110px]" />
+            <div className="absolute inset-0 cross-pattern-dark opacity-20" />
+          </div>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-20">
+              <SectionHeader
+                dark
+                icon={Music}
+                label="Louange & Chansons"
+                title="Élevez une voix"
+                accent="d'adoration."
+                desc="Concerts, cantiques et moments de worship — laissez la musique porter votre cœur dans la présence de Dieu."
+              />
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videoSections.louange.slice(0, 6).map((v, i) => (
+                <motion.div
+                  key={v.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <VideoCard item={v} onPlay={setLightbox} dark />
                 </motion.div>
               ))}
             </div>

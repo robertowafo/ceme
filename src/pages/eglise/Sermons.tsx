@@ -13,9 +13,11 @@ import {
   ExternalLink,
   Video,
   Tv,
-  Radio
+  Radio,
+  ListVideo
 } from 'lucide-react';
 import { getRecommendedLinks, RecommendedLink } from '../../lib/dbService';
+import { isYtPlaylistId, ytEmbedUrl } from '../../lib/youtube';
 import { SEO } from '../../components/SEO';
 import { breadcrumbSchema } from '../../lib/structuredData';
 
@@ -100,7 +102,7 @@ export function Sermons() {
             title: lnk.title,
             youtubeId: lnk.youtubeId,
             preacher: "Chaîne Recommandée",
-            duration: "15 min",
+            duration: isYtPlaylistId(lnk.youtubeId) ? "Playlist" : "15 min",
             category: lnk.category,
             date: "Recommandé par l'Administration",
             description: lnk.description || "Un précieux message recommandé par l'Administration pour s'édifier."
@@ -379,7 +381,7 @@ export function Sermons() {
               <div className="relative w-full aspect-video bg-black">
                 <iframe
                   className="w-full h-full border-0 absolute inset-0"
-                  src={`https://www.youtube.com/embed/${activePlayId}?autoplay=1&rel=0`}
+                  src={ytEmbedUrl(activePlayId || '')}
                   title="Lecteur Grâce TV"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
@@ -509,13 +511,19 @@ export function Sermons() {
                     <div>
                       {/* Youtube Video Thumbnail Overlay */}
                       <div className="relative aspect-video w-full bg-soft-black overflow-hidden group">
-                        <img
-                          src={`https://img.youtube.com/vi/${vid.youtubeId}/mqdefault.jpg`}
-                          alt={vid.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                          decoding="async"
-                        />
+                        {isYtPlaylistId(vid.youtubeId) ? (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-soft-black to-gray-800">
+                            <ListVideo className="w-12 h-12 text-gold/60" />
+                          </div>
+                        ) : (
+                          <img
+                            src={`https://img.youtube.com/vi/${vid.youtubeId}/mqdefault.jpg`}
+                            alt={vid.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        )}
                         <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
                           <div className="w-14 h-14 rounded-full bg-red-600 group-hover:bg-red-700 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
                             <Play className="w-6 h-6 ml-1 fill-current" />
