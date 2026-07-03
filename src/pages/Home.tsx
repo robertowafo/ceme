@@ -1,20 +1,21 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import {
-  Play, Search, X, Loader2, ListVideo, FileText, BookOpen,
-  Music, Film, GraduationCap, Church, Tv, Newspaper, LayoutGrid,
-  ArrowRight, Radio,
+  Play, X, ArrowRight, ArrowDown, ChevronLeft, ChevronRight,
+  Church, GraduationCap, Music, Film, Newspaper, FileText, Tv,
+  Radio, Sparkles, BookOpen, Volume2,
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { tvStationSchema, webSiteSchema } from '../lib/structuredData';
-import { LiveSection } from '../components/home/LiveSection';
+import { gsap, SplitText } from '../lib/gsap';
+import { CtaShowcase } from '../components/home/CtaShowcase';
 import {
   getBlogPosts, getRecommendedLinks, getStudyDocuments,
   type BlogPost, type RecommendedLink, type StudyDocument,
 } from '../lib/dbService';
 
-/* ── Types ───────────────────────────────────────────────────── */
+/* ══ Types ═════════════════════════════════════════════════════ */
 interface YTPlaylist {
   id: string;
   title: string;
@@ -23,44 +24,29 @@ interface YTPlaylist {
   videoCount: number;
 }
 
-type ContentType = 'emission' | 'sermon' | 'enseignement' | 'louange' | 'film' | 'article' | 'document';
+interface LiveData {
+  isLive: boolean;
+  videoId: string | null;
+  title?: string;
+}
 
-interface ContentItem {
+interface VideoContent {
   id: string;
-  type: ContentType;
   title: string;
   description?: string;
   image?: string;
   meta?: string;
-  date?: string;
-  /* Action : soit une vidéo à lire sur place, soit un lien interne */
-  embedUrl?: string;
-  linkTo?: string;
+  embedUrl: string;
 }
 
-/* ── Config des types de contenus ────────────────────────────── */
-const TYPE_CONFIG: Record<ContentType, { label: string; icon: React.ElementType; badge: string }> = {
-  emission:     { label: 'Émissions',     icon: Tv,            badge: 'bg-grace-blue text-white' },
-  sermon:       { label: 'Sermons',       icon: Church,        badge: 'bg-grace-orange text-white' },
-  enseignement: { label: 'Enseignements', icon: GraduationCap, badge: 'bg-purple-600 text-white' },
-  louange:      { label: 'Louange & Chansons', icon: Music,    badge: 'bg-amber-500 text-white' },
-  film:         { label: 'Films',         icon: Film,          badge: 'bg-red-600 text-white' },
-  article:      { label: 'Articles',      icon: Newspaper,     badge: 'bg-emerald-600 text-white' },
-  document:     { label: 'Documents',     icon: FileText,      badge: 'bg-slate-600 text-white' },
-};
+type SectionKey = 'sermon' | 'enseignement' | 'louange' | 'film' | 'emission';
 
-const FILTERS: { id: ContentType | 'all'; label: string; icon: React.ElementType }[] = [
-  { id: 'all', label: 'Tout', icon: LayoutGrid },
-  ...( Object.entries(TYPE_CONFIG) as [ContentType, typeof TYPE_CONFIG[ContentType]][] )
-    .map(([id, c]) => ({ id, label: c.label, icon: c.icon })),
-];
-
-/* ── Classification ──────────────────────────────────────────── */
+/* ══ Classification des playlists ══════════════════════════════ */
 function normalize(s: string) {
   return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 }
 
-function classifyPlaylist(title: string): ContentType {
+function classify(title: string): SectionKey {
   const t = normalize(title);
   if (/(louange|adoration|chant|chanson|musique|worship|concert|cantique)/.test(t)) return 'louange';
   if (/\bfilm/.test(t)) return 'film';
@@ -69,7 +55,7 @@ function classifyPlaylist(title: string): ContentType {
   return 'emission';
 }
 
-function classifyCategory(cat: string): ContentType {
+function classifyCategory(cat: string): SectionKey {
   const c = normalize(cat || '');
   if (c.includes('sermon') || c.includes('predication') || c.includes('culte')) return 'sermon';
   if (c.includes('enseignement') || c.includes('etude') || c.includes('formation')) return 'enseignement';
@@ -78,320 +64,693 @@ function classifyCategory(cat: string): ContentType {
   return 'emission';
 }
 
-/* ═══════════════════════════════════════════════════════════════ */
+/* ══ Petits composants réutilisables ═══════════════════════════ */
+const reveal = {
+  initial: { opacity: 0, y: 40 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, amount: 0.25 },
+  transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const },
+};
+
+function SectionHeader({ label, title, accent, desc, dark = false, icon: Icon }: {
+  label: string; title: string; accent: string; desc: string; dark?: boolean; icon: React.ElementType;
+}) {
+  return (
+    <div className="max-w-3xl">
+      <motion.span
+        {...reveal}
+        className={`inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] mb-5 ${dark ? 'text-grace-orange' : 'text-grace-orange'}`}
+      >
+        <Icon className={`w-4 h-4 ${dark ? 'text-grace-sky' : 'text-grace-blue'}`} /> {label}
+      </motion.span>
+      <motion.h2
+        {...reveal}
+        transition={{ ...reveal.transition, delay: 0.08 }}
+        className={`font-serif text-3xl sm:text-5xl font-extrabold leading-[1.08] ${dark ? 'text-white' : 'text-soft-black'}`}
+      >
+        {title} <span className="text-grace-orange italic">{accent}</span>
+      </motion.h2>
+      <motion.p
+        {...reveal}
+        transition={{ ...reveal.transition, delay: 0.16 }}
+        className={`font-sans text-base sm:text-lg leading-relaxed mt-5 ${dark ? 'text-white/70' : 'text-soft-black/65'}`}
+      >
+        {desc}
+      </motion.p>
+    </div>
+  );
+}
+
+/* Carte vidéo — utilisée dans les rails et grilles */
+function VideoCard({ item, onPlay, dark = false, big = false }: {
+  item: VideoContent; onPlay: (v: VideoContent) => void; dark?: boolean; big?: boolean;
+}) {
+  return (
+    <button
+      onClick={() => onPlay(item)}
+      className={`group relative text-left shrink-0 snap-start overflow-hidden rounded-2xl transition-all duration-500 hover:-translate-y-1.5 ${
+        big ? 'w-full' : 'w-[280px] sm:w-[320px]'
+      } ${dark ? 'bg-white/5 border border-white/10 hover:border-grace-orange/50' : 'bg-white border border-soft-black/8 shadow-sm hover:shadow-2xl'}`}
+    >
+      <div className={`relative overflow-hidden ${big ? 'aspect-[16/9]' : 'aspect-video'}`}>
+        {item.image ? (
+          <img
+            src={item.image} alt={item.title} loading="lazy" referrerPolicy="no-referrer"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          />
+        ) : (
+          <div className={`w-full h-full flex items-center justify-center ${dark ? 'bg-white/5' : 'bg-gray-soft'}`}>
+            <Tv className={`w-10 h-10 ${dark ? 'text-white/20' : 'text-soft-black/15'}`} />
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+        {/* Bouton play */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="w-14 h-14 rounded-full bg-grace-orange text-white flex items-center justify-center scale-0 group-hover:scale-100 rotate-45 group-hover:rotate-0 transition-all duration-300 shadow-2xl shadow-grace-orange/40">
+            <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
+          </span>
+        </div>
+        {item.meta && (
+          <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+            {item.meta}
+          </span>
+        )}
+      </div>
+      <div className="p-4">
+        <h3 className={`font-serif font-extrabold leading-snug line-clamp-2 transition-colors ${
+          big ? 'text-xl sm:text-2xl' : 'text-base'
+        } ${dark ? 'text-white group-hover:text-grace-orange' : 'text-soft-black group-hover:text-grace-blue'}`}>
+          {item.title}
+        </h3>
+        {big && item.description && (
+          <p className={`text-sm mt-2 line-clamp-2 ${dark ? 'text-white/60' : 'text-soft-black/55'}`}>{item.description}</p>
+        )}
+      </div>
+    </button>
+  );
+}
+
+/* Rail horizontal avec flèches */
+function Rail({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * 360, behavior: 'smooth' });
+  return (
+    <div className="relative">
+      <div ref={ref} className="flex gap-5 overflow-x-auto snap-x scrollbar-hide pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        {children}
+      </div>
+      <div className="hidden sm:flex gap-2 absolute -top-16 right-0">
+        <button onClick={() => scroll(-1)} aria-label="Précédent"
+          className="w-10 h-10 rounded-full border border-soft-black/15 hover:bg-soft-black hover:text-white flex items-center justify-center transition-colors">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button onClick={() => scroll(1)} aria-label="Suivant"
+          className="w-10 h-10 rounded-full border border-soft-black/15 hover:bg-soft-black hover:text-white flex items-center justify-center transition-colors">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* Bande marquee séparatrice */
+function MarqueeBand({ items, dark = false }: { items: string[]; dark?: boolean }) {
+  return (
+    <div className={`marquee-pause overflow-hidden py-5 border-y ${dark ? 'border-white/10 bg-grace-indigo' : 'border-soft-black/10 bg-white'}`}>
+      <div className="animate-marquee flex w-max items-center gap-10">
+        {[...items, ...items, ...items].map((t, i) => (
+          <span key={i} className={`font-serif text-lg font-extrabold whitespace-nowrap shrink-0 uppercase tracking-wide ${dark ? 'text-white/25' : 'text-soft-black/25'}`}>
+            {t} <span className="text-grace-orange">✦</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════ */
 export function Home() {
-  const [items, setItems]         = useState<ContentItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter]       = useState<ContentType | 'all'>('all');
-  const [search, setSearch]       = useState('');
-  const [playing, setPlaying]     = useState<ContentItem | null>(null);
-  const playerRef                 = useRef<HTMLDivElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
 
-  /* ── Agrégation de toutes les sources de contenus ── */
+  const [live, setLive]           = useState<LiveData | null>(null);
+  const [playlists, setPlaylists] = useState<YTPlaylist[]>([]);
+  const [links, setLinks]         = useState<RecommendedLink[]>([]);
+  const [posts, setPosts]         = useState<BlogPost[]>([]);
+  const [docs, setDocs]           = useState<StudyDocument[]>([]);
+  const [lightbox, setLightbox]   = useState<VideoContent | null>(null);
+
+  /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
-    async function loadAll() {
-      const [playlistsR, blogR, linksR, docsR] = await Promise.allSettled([
-        fetch('/api/youtube/playlists').then(r => { if (!r.ok) throw new Error(); return r.json() as Promise<YTPlaylist[]>; }),
-        getBlogPosts(),
-        getRecommendedLinks(),
-        getStudyDocuments(),
-      ]);
-
-      const all: ContentItem[] = [];
-
-      if (playlistsR.status === 'fulfilled') {
-        for (const pl of playlistsR.value) {
-          all.push({
-            id: `pl-${pl.id}`,
-            type: classifyPlaylist(pl.title),
-            title: pl.title,
-            description: pl.description,
-            image: pl.thumbnail,
-            meta: `${pl.videoCount} vidéo${pl.videoCount > 1 ? 's' : ''}`,
-            embedUrl: `https://www.youtube.com/embed/videoseries?list=${pl.id}&autoplay=1`,
-          });
-        }
-      }
-
-      if (linksR.status === 'fulfilled') {
-        for (const l of linksR.value as RecommendedLink[]) {
-          all.push({
-            id: `rl-${l.id}`,
-            type: classifyCategory(l.category),
-            title: l.title,
-            description: l.description,
-            image: `https://i.ytimg.com/vi/${l.youtubeId}/hqdefault.jpg`,
-            meta: 'Vidéo',
-            embedUrl: `https://www.youtube.com/embed/${l.youtubeId}?autoplay=1`,
-          });
-        }
-      }
-
-      if (blogR.status === 'fulfilled') {
-        for (const p of blogR.value as BlogPost[]) {
-          all.push({
-            id: `bp-${p.id}`,
-            type: 'article',
-            title: p.title,
-            description: p.excerpt,
-            image: p.coverImage,
-            meta: p.author,
-            date: p.publishedAt,
-            linkTo: `/eglise/blog/${p.id}`,
-          });
-        }
-      }
-
-      if (docsR.status === 'fulfilled') {
-        for (const d of docsR.value as StudyDocument[]) {
-          all.push({
-            id: `doc-${d.id}`,
-            type: 'document',
-            title: d.title,
-            description: d.description,
-            meta: d.fileType?.toUpperCase() || 'DOCUMENT',
-            linkTo: `/document/${d.id}`,
-          });
-        }
-      }
-
-      setItems(all);
-      setIsLoading(false);
-    }
-    loadAll();
+    fetch('/api/youtube/live').then(r => r.json()).then(setLive).catch(() => {});
+    fetch('/api/youtube/playlists').then(r => { if (!r.ok) throw 0; return r.json(); }).then(setPlaylists).catch(() => {});
+    getRecommendedLinks().then(setLinks).catch(() => {});
+    getBlogPosts().then(setPosts).catch(() => {});
+    getStudyDocuments().then(setDocs).catch(() => {});
   }, []);
 
-  /* ── Filtrage + recherche ── */
-  const filtered = useMemo(() => {
-    let list = items;
-    if (filter !== 'all') list = list.filter(i => i.type === filter);
-    const q = normalize(search.trim());
-    if (q) list = list.filter(i => normalize(i.title + ' ' + (i.description || '')).includes(q));
-    return list;
-  }, [items, filter, search]);
+  /* ── Animations d'entrée du hero (GSAP) ── */
+  useEffect(() => {
+    const el = heroRef.current;
+    if (!el) return;
+    const ctx = gsap.context(() => {
+      const split = new SplitText('.hero-title', { type: 'lines' });
+      gsap.set('.hero-title', { opacity: 1 });
+      gsap.from(split.lines, {
+        yPercent: 110, opacity: 0, duration: 0.9, stagger: 0.12, ease: 'power3.out', delay: 0.15,
+      });
+      gsap.from('.hero-fade', {
+        y: 30, opacity: 0, duration: 0.8, stagger: 0.12, ease: 'power2.out', delay: 0.6,
+      });
+      gsap.from('.hero-player', {
+        y: 60, opacity: 0, scale: 0.94, duration: 1.1, ease: 'power3.out', delay: 0.45,
+      });
+      gsap.to('.hero-bg', {
+        yPercent: 12, ease: 'none',
+        scrollTrigger: { trigger: el, scrub: 1.5, start: 'top top', end: 'bottom top' },
+      });
+    }, el);
+    return () => ctx.revert();
+  }, []);
 
-  const counts = useMemo(() => {
-    const c: Record<string, number> = { all: items.length };
-    for (const i of items) c[i.type] = (c[i.type] || 0) + 1;
-    return c;
-  }, [items]);
+  /* ── Verrouiller le scroll quand la lightbox est ouverte ── */
+  useEffect(() => {
+    document.body.style.overflow = lightbox ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [lightbox]);
 
-  function openPlayer(item: ContentItem) {
-    setPlaying(item);
-    setTimeout(() => playerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
-  }
+  /* ── Regroupement des contenus vidéo par section ── */
+  const videoSections = useMemo(() => {
+    const buckets: Record<SectionKey, VideoContent[]> = {
+      sermon: [], enseignement: [], louange: [], film: [], emission: [],
+    };
+    for (const pl of playlists) {
+      buckets[classify(pl.title)].push({
+        id: `pl-${pl.id}`,
+        title: pl.title,
+        description: pl.description,
+        image: pl.thumbnail,
+        meta: `${pl.videoCount} vidéo${pl.videoCount > 1 ? 's' : ''}`,
+        embedUrl: `https://www.youtube.com/embed/videoseries?list=${pl.id}&autoplay=1&rel=0`,
+      });
+    }
+    for (const l of links) {
+      buckets[classifyCategory(l.category)].push({
+        id: `rl-${l.id}`,
+        title: l.title,
+        description: l.description,
+        image: `https://i.ytimg.com/vi/${l.youtubeId}/hqdefault.jpg`,
+        meta: 'Vidéo',
+        embedUrl: `https://www.youtube.com/embed/${l.youtubeId}?autoplay=1&rel=0`,
+      });
+    }
+    return buckets;
+  }, [playlists, links]);
+
+  const featuredPost = posts[0];
+  const otherPosts   = posts.slice(1, 7);
+
+  /* URL du lecteur hero : live prioritaire, sinon dernier contenu */
+  const heroEmbed = live?.videoId
+    ? `https://www.youtube.com/embed/${live.videoId}?autoplay=1&mute=1&rel=0&playsinline=1`
+    : null;
 
   return (
-    <div className="bg-[#f5f2ed] min-h-screen">
+    <div className="bg-cream">
       <SEO
         title="Grâce TV — La Bonne Nouvelle Partout Partout"
-        description="Chaîne de télévision chrétienne basée à Yaoundé. Sermons, enseignements, louange, films, articles et documents — accédez directement à tous nos contenus."
+        description="Chaîne de télévision chrétienne basée à Yaoundé. Sermons, enseignements, louange, films, articles et documents — vivez la Bonne Nouvelle en direct."
         path="/"
         structuredData={[tvStationSchema, webSiteSchema]}
       />
 
-      {/* ── Hero compact ── */}
-      <section className="relative bg-soft-black text-white pt-32 pb-12 sm:pt-36 sm:pb-16 overflow-hidden">
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-32 left-1/4 w-[500px] h-[500px] rounded-full bg-grace-blue/20 blur-[120px]" />
-          <div className="absolute bottom-0 right-1/5 w-80 h-80 rounded-full bg-grace-orange/15 blur-[100px]" />
+      {/* ════════════ HERO CINÉMATIQUE + LECTEUR AUTO ════════════ */}
+      <section ref={heroRef} className="relative min-h-screen overflow-hidden bg-grace-blue-deep text-white flex items-center">
+        {/* Fond parallax */}
+        <div className="absolute inset-0 overflow-hidden">
+          <img
+            src="/uploads/externe.JPG"
+            alt=""
+            aria-hidden
+            className="hero-bg absolute inset-0 w-full h-full object-cover opacity-40"
+            style={{ transform: 'scale(1.15)' }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-br from-grace-blue-deep via-grace-blue-deep/90 to-grace-indigo" />
+          <div className="absolute inset-0 cross-pattern-dark opacity-25" />
+          {/* Halos animés */}
+          <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-grace-orange/15 blur-[130px] animate-pulse" style={{ animationDuration: '6s' }} />
+          <div className="absolute bottom-0 right-0 w-[600px] h-[600px] rounded-full bg-grace-sky/15 blur-[150px] animate-pulse" style={{ animationDuration: '8s' }} />
         </div>
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <span className="inline-flex items-center gap-2 bg-grace-orange/15 border border-grace-orange/30 text-grace-orange px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.2em] mb-6">
-            <Radio className="w-3.5 h-3.5" /> Grâce TV · La Bonne Nouvelle Partout Partout
-          </span>
-          <h1 className="font-serif text-4xl sm:text-6xl font-extrabold leading-tight mb-5 text-white">
-            Tous nos contenus, <span className="text-grace-orange italic">directement.</span>
-          </h1>
-          <p className="font-sans text-white/70 text-base sm:text-lg max-w-2xl mx-auto mb-8">
-            Sermons, enseignements, louange, films, articles et documents — choisissez ce qui vous édifie aujourd'hui.
-          </p>
 
-          {/* Recherche */}
-          <div className="relative max-w-xl mx-auto">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
-            <input
-              type="search"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher un contenu…"
-              className="w-full bg-white/10 border border-white/15 rounded-full pl-13 pr-5 py-4 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-grace-orange focus:bg-white/15 transition-all"
-              style={{ paddingLeft: '3.25rem' }}
-            />
+        <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 pb-20 grid lg:grid-cols-[1fr_1.1fr] gap-12 lg:gap-10 items-center">
+          {/* Colonne texte */}
+          <div>
+            <span className="hero-fade inline-flex items-center gap-2 text-grace-orange text-[11px] sm:text-xs font-semibold uppercase tracking-[0.25em] mb-6">
+              <Sparkles className="w-4 h-4" /> L'Éternel est ma bannière — Exode 17:15
+            </span>
+            <h1 className="hero-title font-serif font-extrabold leading-[1.02] text-4xl sm:text-6xl xl:text-7xl text-white" style={{ opacity: 0 }}>
+              La Bonne Nouvelle,<br />
+              <span className="text-grace-orange italic">en direct</span> chez vous.
+            </h1>
+            <p className="hero-fade font-sans text-white/75 text-base sm:text-lg max-w-md mt-7 leading-relaxed">
+              Sermons, enseignements, louange, films et écrits — Grâce TV diffuse 24h/24
+              la Parole qui transforme les vies, depuis Yaoundé vers les nations.
+            </p>
+            <div className="hero-fade flex flex-col sm:flex-row gap-4 mt-9">
+              <Link
+                to="/live"
+                className="group relative overflow-hidden inline-flex items-center justify-center gap-2.5 bg-grace-orange text-white px-8 py-4 rounded-full font-sans font-bold text-sm uppercase tracking-wider"
+              >
+                <Play className="w-4 h-4 fill-white relative z-10" />
+                <span className="relative z-10">Regarder en direct</span>
+                <span className="absolute inset-0 bg-grace-orange-dark scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300" />
+              </Link>
+              <a
+                href="#contenus"
+                className="inline-flex items-center justify-center gap-2 border border-white/30 hover:border-grace-orange hover:text-grace-orange text-white px-8 py-4 rounded-full font-sans font-bold text-sm uppercase tracking-wider transition-colors"
+              >
+                Explorer les contenus <ArrowDown className="w-4 h-4" />
+              </a>
+            </div>
           </div>
 
-          <div className="mt-6 flex items-center justify-center gap-4 text-sm">
-            <Link to="/live" className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full font-bold uppercase tracking-wider text-xs transition-colors">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-white" />
-              </span>
-              Regarder le direct
-            </Link>
-            <Link to="/a-propos" className="inline-flex items-center gap-1.5 text-white/60 hover:text-grace-orange font-bold uppercase tracking-wider text-xs transition-colors">
-              Qui sommes-nous ? <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+          {/* Colonne lecteur — le cœur du hero */}
+          <div className="hero-player relative">
+            {/* Glow ambiant derrière l'écran */}
+            <div className="absolute -inset-6 rounded-[2rem] bg-gradient-to-br from-grace-orange/30 via-transparent to-grace-sky/30 blur-2xl" />
+            <div className="relative rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-2xl shadow-black/50 bg-black">
+              {/* Barre de statut du lecteur */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-black/80 backdrop-blur border-b border-white/10">
+                <div className="flex items-center gap-2.5">
+                  {live?.isLive ? (
+                    <span className="inline-flex items-center gap-1.5 text-red-500 text-[10px] font-bold uppercase tracking-[0.2em]">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                      </span>
+                      En direct
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 text-grace-orange text-[10px] font-bold uppercase tracking-[0.2em]">
+                      <Tv className="w-3 h-3" /> Dernier contenu
+                    </span>
+                  )}
+                  <span className="text-white/40 text-[10px] uppercase tracking-widest hidden sm:block truncate max-w-[220px]">
+                    {live?.title || 'Grâce TV'}
+                  </span>
+                </div>
+                <span className="inline-flex items-center gap-1 text-white/40 text-[10px] uppercase tracking-widest">
+                  <Volume2 className="w-3 h-3" /> Son coupé
+                </span>
+              </div>
+              <div className="aspect-video">
+                {heroEmbed ? (
+                  <iframe
+                    src={heroEmbed}
+                    title={live?.title || 'Grâce TV'}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3 text-white/30">
+                    <Radio className="w-10 h-10 animate-pulse" />
+                    <p className="text-xs uppercase tracking-[0.2em]">Connexion à la chaîne…</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* Signature */}
+            <div className="hero-fade absolute -bottom-9 right-1 text-right">
+              <p className="text-white/40 text-[10px] uppercase tracking-widest">Grâce TV · depuis 2011 · Yaoundé</p>
+            </div>
           </div>
+        </div>
+
+        {/* Scroll indicator */}
+        <div className="hero-fade absolute bottom-6 left-1/2 -translate-x-1/2 hidden sm:flex flex-col items-center gap-2 text-white/40">
+          <span className="text-[10px] uppercase tracking-[0.25em]">Défiler</span>
+          <ArrowDown className="w-4 h-4 animate-bounce" />
         </div>
       </section>
 
-      {/* ── Barre de filtres (sticky) ── */}
-      <div className="sticky top-16 z-30 bg-[#f5f2ed]/95 backdrop-blur border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex gap-2 overflow-x-auto scrollbar-hide">
-          {FILTERS.map(f => {
-            const count = counts[f.id] || 0;
-            if (f.id !== 'all' && count === 0 && !isLoading) return null;
-            const active = filter === f.id;
-            return (
-              <button
-                key={f.id}
-                onClick={() => setFilter(f.id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all border ${
-                  active
-                    ? 'bg-soft-black text-white border-soft-black shadow-md'
-                    : 'bg-white text-gray-600 border-gray-200 hover:border-gold hover:text-soft-black'
-                }`}
-              >
-                <f.icon className="w-3.5 h-3.5" />
-                {f.label}
-                {!isLoading && <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20' : 'bg-gray-100'}`}>{count}</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Bande marquee */}
+      <MarqueeBand items={['Sermons & Cultes', 'Enseignements', 'Louange & Chansons', 'Films', 'Articles', 'Documents', 'En direct 24/7']} />
 
-      {/* ── Lecteur vidéo inline ── */}
-      <AnimatePresence>
-        {playing && (
-          <motion.div
-            ref={playerRef}
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.35 }}
-            className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 scroll-mt-32 overflow-hidden"
-          >
-            <div className="mt-8 bg-soft-black rounded-3xl overflow-hidden shadow-2xl">
-              <div className="flex items-center justify-between px-5 py-3">
-                <div className="flex items-center gap-2 min-w-0">
-                  <ListVideo className="w-4 h-4 text-grace-orange shrink-0" />
-                  <p className="text-white text-sm font-bold truncate">{playing.title}</p>
+      {/* ════════════ DÉCLARATION D'INTENTION ════════════ */}
+      <section id="contenus" className="bg-cream py-20 sm:py-28 scroll-mt-16">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.h2 {...reveal} className="font-serif text-3xl sm:text-5xl lg:text-6xl font-extrabold text-soft-black leading-[1.12]">
+            Chaque jour, une Parole<br />
+            <span className="text-grace-orange italic">pour chaque vie.</span>
+          </motion.h2>
+          <motion.p {...reveal} transition={{ ...reveal.transition, delay: 0.1 }} className="font-sans text-soft-black/65 text-lg max-w-2xl mx-auto mt-6 leading-relaxed">
+            Que vous cherchiez un sermon qui relève, un enseignement qui affermit, une louange
+            qui élève ou une lecture qui nourrit — tout est là, à portée de main.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* ════════════ SERMONS & CULTES ════════════ */}
+      {videoSections.sermon.length > 0 && (
+        <section className="bg-white py-20 sm:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-20">
+              <SectionHeader
+                icon={Church}
+                label="Sermons & Cultes"
+                title="La Parole prêchée"
+                accent="avec puissance."
+                desc="Revivez les cultes du dimanche et les prédications qui édifient toute la communauté — chaque message est une rencontre avec Dieu."
+              />
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8 items-start">
+              {/* Carte vedette */}
+              <motion.div {...reveal}>
+                <VideoCard item={videoSections.sermon[0]} onPlay={setLightbox} big />
+              </motion.div>
+              {/* Rail des autres */}
+              <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.12 }} className="lg:pt-2">
+                <div className="grid sm:grid-cols-2 gap-5">
+                  {videoSections.sermon.slice(1, 5).map(v => (
+                    <VideoCard key={v.id} item={v} onPlay={setLightbox} />
+                  ))}
                 </div>
-                <button
-                  onClick={() => setPlaying(null)}
-                  className="shrink-0 ml-3 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition-colors"
-                  aria-label="Fermer le lecteur"
+              </motion.div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ ENSEIGNEMENTS ════════════ */}
+      {videoSections.enseignement.length > 0 && (
+        <section className="bg-gray-soft py-20 sm:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-24">
+              <SectionHeader
+                icon={GraduationCap}
+                label="Enseignements"
+                title="Grandir dans"
+                accent="la connaissance."
+                desc="Études bibliques, École des Affaires du Royaume, formations — des enseignements profonds pour enraciner votre foi et transformer votre quotidien."
+              />
+            </div>
+            <Rail>
+              {videoSections.enseignement.map(v => (
+                <VideoCard key={v.id} item={v} onPlay={setLightbox} />
+              ))}
+            </Rail>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ LOUANGE & CHANSONS (section sombre) ════════════ */}
+      {videoSections.louange.length > 0 && (
+        <section className="relative overflow-hidden bg-grace-indigo py-20 sm:py-28 text-white">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute top-0 left-1/3 w-[500px] h-[500px] rounded-full bg-grace-orange/10 blur-[130px]" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-grace-sky/15 blur-[110px]" />
+            <div className="absolute inset-0 cross-pattern-dark opacity-20" />
+          </div>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-20">
+              <SectionHeader
+                dark
+                icon={Music}
+                label="Louange & Chansons"
+                title="Élevez une voix"
+                accent="d'adoration."
+                desc="Concerts, cantiques et moments de worship — laissez la musique porter votre cœur dans la présence de Dieu."
+              />
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {videoSections.louange.slice(0, 6).map((v, i) => (
+                <motion.div
+                  key={v.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.2 }}
+                  transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <X className="w-4 h-4" />
+                  <VideoCard item={v} onPlay={setLightbox} dark />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ FILMS ════════════ */}
+      {videoSections.film.length > 0 && (
+        <section className="bg-soft-black py-20 sm:py-28 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-24">
+              <SectionHeader
+                dark
+                icon={Film}
+                label="Films"
+                title="Des histoires qui"
+                accent="inspirent la foi."
+                desc="Des films chrétiens qui touchent, questionnent et rappellent que Dieu écrit encore de grandes histoires aujourd'hui."
+              />
+            </div>
+            <Rail>
+              {videoSections.film.map(v => (
+                <VideoCard key={v.id} item={v} onPlay={setLightbox} dark />
+              ))}
+            </Rail>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ ÉMISSIONS ════════════ */}
+      {videoSections.emission.length > 0 && (
+        <section className="bg-white py-20 sm:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-24 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+              <SectionHeader
+                icon={Tv}
+                label="Émissions"
+                title="Nos programmes"
+                accent="phares."
+                desc="Manne Matinale, Sommet d'Élévation, témoignages… retrouvez les rendez-vous réguliers qui rythment la vie de la chaîne."
+              />
+              <motion.div {...reveal}>
+                <Link to="/emissions" className="inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors whitespace-nowrap">
+                  Toutes les émissions <ArrowRight className="w-4 h-4" />
+                </Link>
+              </motion.div>
+            </div>
+            <Rail>
+              {videoSections.emission.map(v => (
+                <VideoCard key={v.id} item={v} onPlay={setLightbox} />
+              ))}
+            </Rail>
+          </div>
+        </section>
+      )}
+
+      {/* Bande marquee inversée */}
+      <MarqueeBand dark items={['Lire', 'Méditer', 'Étudier', 'Partager', 'La Parole vivante']} />
+
+      {/* ════════════ ARTICLES (éditorial) ════════════ */}
+      {posts.length > 0 && (
+        <section className="bg-cream py-20 sm:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-20 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+              <SectionHeader
+                icon={Newspaper}
+                label="Articles & Méditations"
+                title="Des mots qui"
+                accent="nourrissent l'âme."
+                desc="Dévotions, réflexions et méditations écrites par nos pasteurs et rédacteurs — prenez le temps de lire, souligner, méditer."
+              />
+              <motion.div {...reveal}>
+                <Link to="/eglise/blog" className="inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors whitespace-nowrap">
+                  Tous les articles <ArrowRight className="w-4 h-4" />
+                </Link>
+              </motion.div>
+            </div>
+
+            {/* Article vedette */}
+            {featuredPost && (
+              <motion.div {...reveal}>
+                <Link
+                  to={`/eglise/blog/${featuredPost.id}`}
+                  className="group grid md:grid-cols-2 bg-white rounded-3xl overflow-hidden border border-soft-black/8 shadow-sm hover:shadow-2xl transition-all duration-500 mb-10"
+                >
+                  <div className="relative aspect-[16/10] md:aspect-auto md:min-h-[340px] overflow-hidden">
+                    {featuredPost.coverImage ? (
+                      <img
+                        src={featuredPost.coverImage} alt={featuredPost.title} loading="lazy" referrerPolicy="no-referrer"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-grace-blue-deep flex items-center justify-center">
+                        <BookOpen className="w-14 h-14 text-white/20" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-8 sm:p-12 flex flex-col justify-center">
+                    <span className="text-grace-orange text-[11px] font-bold uppercase tracking-[0.2em] mb-4">
+                      {featuredPost.category} · À la une
+                    </span>
+                    <h3 className="font-serif text-2xl sm:text-3xl font-extrabold text-soft-black leading-tight group-hover:text-grace-blue transition-colors">
+                      {featuredPost.title}
+                    </h3>
+                    {featuredPost.excerpt && (
+                      <p className="text-soft-black/60 mt-4 leading-relaxed line-clamp-3">{featuredPost.excerpt}</p>
+                    )}
+                    <div className="flex items-center gap-3 mt-6 text-xs font-bold uppercase tracking-wider text-soft-black/45">
+                      <span>{featuredPost.author}</span>
+                      <span className="w-1 h-1 rounded-full bg-grace-orange" />
+                      <span>{new Date(featuredPost.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    </div>
+                    <span className="inline-flex items-center gap-2 text-grace-orange font-bold text-sm uppercase tracking-wider mt-7 group-hover:gap-3.5 transition-all">
+                      Lire l'article <ArrowRight className="w-4 h-4" />
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            )}
+
+            {/* Autres articles */}
+            {otherPosts.length > 0 && (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {otherPosts.map((p, i) => (
+                  <motion.div
+                    key={p.id}
+                    initial={{ opacity: 0, y: 40 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.15 }}
+                    transition={{ duration: 0.6, delay: i * 0.07, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <Link
+                      to={`/eglise/blog/${p.id}`}
+                      className="group block bg-white rounded-2xl overflow-hidden border border-soft-black/8 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 h-full"
+                    >
+                      <div className="relative aspect-[16/9] overflow-hidden">
+                        {p.coverImage ? (
+                          <img src={p.coverImage} alt={p.title} loading="lazy" referrerPolicy="no-referrer"
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-soft flex items-center justify-center">
+                            <BookOpen className="w-9 h-9 text-soft-black/15" />
+                          </div>
+                        )}
+                        <span className="absolute top-3 left-3 bg-white/90 backdrop-blur text-soft-black text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+                          {p.category}
+                        </span>
+                      </div>
+                      <div className="p-5">
+                        <h3 className="font-serif font-extrabold text-soft-black leading-snug line-clamp-2 group-hover:text-grace-blue transition-colors">
+                          {p.title}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-3 text-[11px] font-bold uppercase tracking-wider text-soft-black/40">
+                          <span>{p.author}</span>
+                          <span className="w-1 h-1 rounded-full bg-grace-orange" />
+                          <span>{new Date(p.publishedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ DOCUMENTS D'ÉTUDE ════════════ */}
+      {docs.length > 0 && (
+        <section className="bg-white py-20 sm:py-28">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-12 sm:mb-16 text-center">
+              <motion.span {...reveal} className="inline-flex items-center gap-2 text-grace-orange text-xs font-semibold uppercase tracking-[0.25em] mb-5">
+                <FileText className="w-4 h-4 text-grace-blue" /> Documents d'étude
+              </motion.span>
+              <motion.h2 {...reveal} transition={{ ...reveal.transition, delay: 0.08 }} className="font-serif text-3xl sm:text-5xl font-extrabold text-soft-black leading-tight">
+                Pour aller <span className="text-grace-orange italic">plus loin.</span>
+              </motion.h2>
+              <motion.p {...reveal} transition={{ ...reveal.transition, delay: 0.16 }} className="font-sans text-soft-black/65 max-w-xl mx-auto mt-5 leading-relaxed">
+                Supports d'étude, notes de prédication et ressources à lire et relire.
+              </motion.p>
+            </div>
+            <div className="space-y-3">
+              {docs.slice(0, 6).map((d, i) => (
+                <motion.div
+                  key={d.id}
+                  initial={{ opacity: 0, x: -30 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, delay: i * 0.06 }}
+                >
+                  <Link
+                    to={`/document/${d.id}`}
+                    className="group flex items-center gap-5 bg-gray-soft hover:bg-white border border-transparent hover:border-grace-blue/15 rounded-2xl px-5 sm:px-7 py-5 transition-all duration-300 hover:shadow-lg"
+                  >
+                    <span className="shrink-0 w-12 h-12 rounded-xl bg-grace-blue/10 group-hover:bg-grace-orange group-hover:text-white text-grace-blue flex items-center justify-center transition-colors">
+                      <FileText className="w-5 h-5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-serif font-extrabold text-soft-black truncate group-hover:text-grace-blue transition-colors">{d.title}</h3>
+                      {d.description && <p className="text-sm text-soft-black/55 truncate mt-0.5">{d.description}</p>}
+                    </div>
+                    <span className="shrink-0 hidden sm:inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-soft-black/40 group-hover:text-grace-orange transition-colors">
+                      {d.fileType?.toUpperCase() || 'DOC'} <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ CTA FINAL ════════════ */}
+      <CtaShowcase />
+
+      {/* ════════════ LIGHTBOX CINÉMA ════════════ */}
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 sm:p-8"
+            onClick={() => setLightbox(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 24 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 16, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+              className="relative w-full max-w-5xl"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-3 px-1">
+                <p className="text-white font-serif font-extrabold text-sm sm:text-lg truncate pr-4">{lightbox.title}</p>
+                <button
+                  onClick={() => setLightbox(null)}
+                  className="shrink-0 w-10 h-10 rounded-full bg-white/10 hover:bg-grace-orange text-white flex items-center justify-center transition-colors"
+                  aria-label="Fermer"
+                >
+                  <X className="w-5 h-5" />
                 </button>
               </div>
-              <div className="aspect-video">
+              <div className="aspect-video rounded-2xl overflow-hidden ring-1 ring-white/20 shadow-2xl bg-black">
                 <iframe
-                  src={playing.embedUrl}
-                  title={playing.title}
+                  src={lightbox.embedUrl}
+                  title={lightbox.title}
                   className="w-full h-full"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* ── Grille de contenus ── */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-24 gap-4 text-gray-400">
-            <Loader2 className="w-10 h-10 animate-spin text-grace-orange" />
-            <p className="text-sm">Chargement des contenus…</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center text-gray-400">
-            <BookOpen className="w-14 h-14 text-gray-300 mb-4" />
-            <p className="font-bold text-gray-500">Aucun contenu trouvé</p>
-            <p className="text-sm mt-1">Essayez un autre filtre ou une autre recherche.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filtered.map((item, idx) => {
-              const cfg = TYPE_CONFIG[item.type];
-              const isVideo = !!item.embedUrl;
-              const CardInner = (
-                <>
-                  {/* Visuel */}
-                  <div className="relative aspect-video bg-gray-100 overflow-hidden">
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt={item.title}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                        <cfg.icon className="w-12 h-12 text-gray-300" />
-                      </div>
-                    )}
-                    {isVideo && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 transition-colors">
-                        <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all shadow-xl">
-                          <Play className="w-6 h-6 text-soft-black ml-0.5" fill="currentColor" />
-                        </div>
-                      </div>
-                    )}
-                    <span className={`absolute top-3 left-3 inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${cfg.badge}`}>
-                      <cfg.icon className="w-3 h-3" /> {cfg.label}
-                    </span>
-                  </div>
-                  {/* Texte */}
-                  <div className="p-5">
-                    <h3 className="font-serif font-extrabold text-soft-black leading-snug line-clamp-2 group-hover:text-grace-blue transition-colors">
-                      {item.title}
-                    </h3>
-                    {item.description && (
-                      <p className="text-gray-500 text-sm mt-2 line-clamp-2">{item.description}</p>
-                    )}
-                    <div className="flex items-center justify-between mt-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">
-                      <span>{item.meta}</span>
-                      {item.date && (
-                        <span>{new Date(item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                      )}
-                    </div>
-                  </div>
-                </>
-              );
-
-              const cardClass = 'group bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-left';
-
-              return (
-                <motion.div
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.1 }}
-                  transition={{ duration: 0.4, delay: (idx % 4) * 0.05 }}
-                >
-                  {isVideo ? (
-                    <button onClick={() => openPlayer(item)} className={`${cardClass} w-full cursor-pointer`}>
-                      {CardInner}
-                    </button>
-                  ) : (
-                    <Link to={item.linkTo!} className={`${cardClass} block`}>
-                      {CardInner}
-                    </Link>
-                  )}
-                </motion.div>
-              );
-            })}
-          </div>
-        )}
-      </section>
-
-      {/* ── Direct / dernier contenu ── */}
-      <LiveSection />
     </div>
   );
 }
