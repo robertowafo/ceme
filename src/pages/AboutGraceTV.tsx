@@ -3,6 +3,14 @@ import { motion } from 'motion/react';
 import { BookOpenCheck, HeartHandshake, Megaphone, Radio, Church, ArrowRight, MapPin } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { founderSchema } from '../lib/structuredData';
+import { AboutSection } from '../components/home/AboutSection';
+import { ServicesSection } from '../components/home/ServicesSection';
+import { ScheduleSection } from '../components/home/ScheduleSection';
+import { TimelineSection } from '../components/home/TimelineSection';
+import { PartnersBand } from '../components/home/PartnersBand';
+import { ProcessSection } from '../components/home/ProcessSection';
+import { Testimonials } from '../components/home/Testimonials';
+import { FaqSection } from '../components/home/FaqSection';
 
 const reveal = {
   initial: { opacity: 0, y: 30 },
@@ -70,6 +78,12 @@ export function AboutGraceTV() {
         </div>
       </section>
 
+      {/* IDENTITÉ DE MARQUE (ex-accueil) */}
+      <AboutSection />
+
+      {/* DATES CLÉS (ex-accueil) */}
+      <TimelineSection />
+
       {/* NOTRE VISION */}
       <section className="relative overflow-hidden text-white py-20 sm:py-28">
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/uploads/fonds-bleu.jpg')" }} />
@@ -85,6 +99,15 @@ export function AboutGraceTV() {
           </p>
         </motion.div>
       </section>
+
+      {/* NOS PROGRAMMES (ex-accueil) */}
+      <ServicesSection />
+
+      {/* GRILLE DE DIFFUSION (ex-accueil) */}
+      <ScheduleSection />
+
+      {/* NOTRE DÉMARCHE (ex-accueil) */}
+      <ProcessSection />
 
       {/* LIGNE ÉDITORIALE */}
       <section className="py-20 sm:py-28 bg-white">
@@ -139,6 +162,15 @@ export function AboutGraceTV() {
           </motion.div>
         </div>
       </section>
+
+      {/* RAYONNEMENT & PARTENAIRES (ex-accueil) */}
+      <PartnersBand />
+
+      {/* TÉMOIGNAGES (ex-accueil) */}
+      <Testimonials />
+
+      {/* FAQ (ex-accueil) */}
+      <FaqSection />
 
       {/* ÉGLISE PORTEUSE */}
       <section className="py-20 sm:py-28 bg-white">
