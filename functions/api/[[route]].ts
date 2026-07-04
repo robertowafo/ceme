@@ -601,6 +601,57 @@ app.get('/youtube/live', async (c) => {
   }
 })
 
+// Vidéos récentes d'une chaîne partenaire arbitraire (par channelId), avec ses infos.
+app.get('/youtube/channel-videos', async (c) => {
+  const apiKey = c.env.YOUTUBE_API_KEY
+  const channelId = c.req.query('channelId')
+  const max = Math.min(parseInt(c.req.query('max') || '8', 10) || 8, 20)
+  if (!apiKey || !channelId) return c.json({ channel: null, videos: [] })
+
+  const cache = caches.default
+  const cacheKey = new Request(`https://internal-cache.dev/yt-channel-videos-${channelId}`)
+  const cached = await cache.match(cacheKey)
+  if (cached) return cached
+
+  try {
+    const chanData = await fetchJson(
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet,contentDetails&id=${channelId}&key=${apiKey}`
+    )
+    const chanItem = chanData.items?.[0]
+    if (!chanItem) return c.json({ channel: null, videos: [] })
+
+    const uploadsPlaylistId = chanItem.contentDetails?.relatedPlaylists?.uploads
+    const videosData = uploadsPlaylistId
+      ? await fetchJson(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=${max}&key=${apiKey}`)
+      : { items: [] }
+
+    const videos = (videosData.items || [])
+      .map((item: any) => ({
+        videoId: item.snippet.resourceId?.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || '',
+        publishedAt: item.snippet.publishedAt,
+      }))
+      .filter((v: any) => v.videoId)
+
+    const result = {
+      channel: {
+        title: chanItem.snippet.title,
+        description: chanItem.snippet.description || '',
+        thumbnail: chanItem.snippet.thumbnails?.high?.url || chanItem.snippet.thumbnails?.default?.url || '',
+      },
+      videos,
+    }
+    const response = new Response(JSON.stringify(result), {
+      headers: { 'Cache-Control': `max-age=${CACHE_TTL}`, 'Content-Type': 'application/json' }
+    })
+    await cache.put(cacheKey, response.clone())
+    return response
+  } catch (err: any) {
+    return c.json({ error: err.message }, 500)
+  }
+})
+
 app.get('/youtube/playlists', async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY
   if (!apiKey) return c.json([])

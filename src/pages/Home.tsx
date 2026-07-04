@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
   Play, X, ArrowRight, ArrowDown, ChevronLeft, ChevronRight,
   Church, GraduationCap, Music, Film, Newspaper, FileText, Tv,
-  Radio, Sparkles, BookOpen, Volume2, Clock,
+  Radio, Sparkles, BookOpen, Volume2, Clock, Heart, ExternalLink,
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import { tvStationSchema, webSiteSchema } from '../lib/structuredData';
@@ -41,6 +41,14 @@ interface VideoContent {
 }
 
 type SectionKey = 'sermon' | 'enseignement' | 'louange' | 'film' | 'emission';
+
+/* Chaîne partenaire mise en avant sur l'accueil */
+const PARTNER_CHANNEL_ID = 'UCYdwbjTFTQcIkbd5UQtX5EQ'; // Marie Charlotte ESSOMBA
+
+interface PartnerChannelData {
+  channel: { title: string; description: string; thumbnail: string } | null;
+  videos: { videoId: string; title: string; thumbnail: string; publishedAt: string }[];
+}
 
 /* ══ Classification ════════════════════════════════════════════ */
 function normalize(s: string) {
@@ -212,20 +220,16 @@ function Rail({ children, dark = false }: { children: React.ReactNode; dark?: bo
 }
 
 /* ══ Bande marquee ═════════════════════════════════════════════ */
-function MarqueeBand({ items, dark = false, tilt = false }: { items: string[]; dark?: boolean; tilt?: boolean }) {
+function MarqueeBand({ items, dark = false }: { items: string[]; dark?: boolean }) {
   return (
-    <div className={tilt ? 'overflow-hidden -my-4 py-4' : ''}>
-      <div
-        className={`marquee-pause overflow-hidden py-5 border-y ${dark ? 'border-white/10 bg-grace-indigo' : 'border-soft-black/10 bg-white'}`}
-        style={tilt ? { transform: 'rotate(-1.2deg) scale(1.02)' } : undefined}
-      >
-        <div className="animate-marquee flex w-max items-center gap-10">
-          {[...items, ...items, ...items].map((t, i) => (
-            <span key={i} className={`font-serif text-lg sm:text-xl font-extrabold whitespace-nowrap shrink-0 uppercase tracking-wide ${dark ? 'text-white/25' : 'text-soft-black/25'}`}>
-              {t} <span className="text-grace-orange">✦</span>
-            </span>
-          ))}
-        </div>
+    <div className={`relative marquee-pause overflow-hidden py-5 border-y ${dark ? 'border-white/10 bg-grace-indigo' : 'border-soft-black/10 bg-white'}`}>
+      <span aria-hidden className={`absolute top-0 left-0 h-full w-1.5 ${dark ? 'bg-grace-orange/40' : 'bg-grace-orange/50'}`} />
+      <div className="animate-marquee flex w-max items-center gap-10">
+        {[...items, ...items, ...items].map((t, i) => (
+          <span key={i} className={`font-serif text-lg sm:text-xl font-extrabold whitespace-nowrap shrink-0 uppercase tracking-wide ${dark ? 'text-white/25' : 'text-soft-black/25'}`}>
+            {t} <span className="text-grace-orange">✦</span>
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -270,6 +274,7 @@ export function Home() {
   const [docs, setDocs]           = useState<StudyDocument[]>([]);
   const [lightbox, setLightbox]   = useState<VideoContent | null>(null);
   const [plThumbs, setPlThumbs]   = useState<Record<string, string>>({});
+  const [partner, setPartner]     = useState<PartnerChannelData | null>(null);
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
@@ -286,6 +291,10 @@ export function Home() {
     }).catch(() => {});
     getBlogPosts().then(setPosts).catch(() => {});
     getStudyDocuments().then(setDocs).catch(() => {});
+    fetch(`/api/youtube/channel-videos?channelId=${PARTNER_CHANNEL_ID}&max=8`)
+      .then(r => { if (!r.ok) throw 0; return r.json(); })
+      .then(setPartner)
+      .catch(() => {});
   }, []);
 
   /* ── Animations d'entrée du hero (GSAP) ── */
@@ -349,6 +358,14 @@ export function Home() {
 
   const featuredPost = posts[0];
   const otherPosts   = posts.slice(1, 7);
+
+  const partnerVideos: VideoContent[] = useMemo(() => (partner?.videos || []).map(v => ({
+    id: `mc-${v.videoId}`,
+    title: v.title,
+    image: v.thumbnail,
+    meta: 'Vidéo',
+    embedUrl: ytEmbedUrl(v.videoId),
+  })), [partner]);
 
   const heroEmbed = live?.videoId
     ? `https://www.youtube.com/embed/${live.videoId}?autoplay=1&mute=1&rel=0&playsinline=1`
@@ -472,8 +489,8 @@ export function Home() {
         </div>
       </section>
 
-      {/* Bande marquee inclinée */}
-      <MarqueeBand tilt items={['Sermons & Cultes', 'Enseignements', 'Films', 'Émissions', 'Articles', 'Documents', 'Louange & Chansons', 'En direct 24/7']} />
+      {/* Bande marquee */}
+      <MarqueeBand items={['Sermons & Cultes', 'Enseignements', 'Films', 'Émissions', 'Articles', 'Documents', 'Louange & Chansons', 'En direct 24/7']} />
 
       {/* ════════════ DÉCLARATION D'INTENTION ════════════ */}
       <section id="contenus" className="relative bg-cream py-24 sm:py-32 scroll-mt-16 overflow-hidden">
@@ -504,14 +521,6 @@ export function Home() {
       {/* ════════════ 01 · SERMONS & CULTES ════════════ */}
       {videoSections.sermon.length > 0 && (
         <section className="relative bg-white py-24 sm:py-32 overflow-hidden">
-          {/* Légende verticale */}
-          <span
-            aria-hidden
-            className="hidden xl:block absolute right-8 top-1/2 -translate-y-1/2 font-serif font-extrabold text-6xl tracking-widest select-none"
-            style={{ writingMode: 'vertical-rl', WebkitTextStroke: '1px rgba(23,99,176,0.12)', color: 'transparent' }}
-          >
-            PRÉDICATION
-          </span>
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-16 sm:mb-24">
               <SectionHeader
@@ -569,9 +578,15 @@ export function Home() {
 
       {/* ════════════ 03 · FILMS (pellicule cinéma) ════════════ */}
       {videoSections.film.length > 0 && (
-        <section className="relative bg-soft-black py-16 sm:py-20 text-white overflow-hidden">
+        <section className="relative overflow-hidden bg-grace-blue-deep text-white">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-b from-grace-blue-deep via-grace-indigo to-grace-blue-deep" />
+            <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full bg-grace-orange/10 blur-[140px]" />
+            <div className="absolute bottom-0 left-1/4 w-96 h-96 rounded-full bg-grace-sky/10 blur-[110px]" />
+            <div className="absolute inset-0 cross-pattern-dark opacity-15" />
+          </div>
           <FilmStrip />
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
             <div className="mb-16 sm:mb-28">
               <SectionHeader
                 dark
@@ -596,13 +611,6 @@ export function Home() {
       {/* ════════════ 04 · ÉMISSIONS ════════════ */}
       {videoSections.emission.length > 0 && (
         <section className="relative bg-white py-24 sm:py-32 overflow-hidden">
-          <span
-            aria-hidden
-            className="hidden xl:block absolute left-8 top-1/2 -translate-y-1/2 font-serif font-extrabold text-6xl tracking-widest select-none"
-            style={{ writingMode: 'vertical-rl', WebkitTextStroke: '1px rgba(242,101,34,0.14)', color: 'transparent' }}
-          >
-            GRÂCE TV
-          </span>
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-16 sm:mb-28 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
               <SectionHeader
@@ -803,7 +811,55 @@ export function Home() {
         </section>
       )}
 
-      {/* ════════════ 07 · LOUANGE & CHANSONS — clôture musicale ════════════ */}
+      {/* ════════════ 07 · CHAÎNE PARTENAIRE À L'HONNEUR ════════════ */}
+      {partnerVideos.length > 0 && (
+        <section className="relative bg-cream py-24 sm:py-32 overflow-hidden">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-[1fr_1.4fr] gap-12 lg:gap-16 items-start">
+              {/* Colonne présentation */}
+              <div className="relative lg:sticky lg:top-28">
+                <SectionHeader
+                  num="07"
+                  icon={Heart}
+                  label="Chaîne partenaire"
+                  title="La voix de"
+                  accent={partner?.channel?.title || 'notre invitée'}
+                  desc={
+                    partner?.channel?.description
+                      ? partner.channel.description.slice(0, 200).trim() + (partner.channel.description.length > 200 ? '…' : '')
+                      : "Une voix précieuse de notre communauté, dont Grâce TV est heureuse de relayer les messages et les vidéos."
+                  }
+                />
+                <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.2 }} className="flex items-center gap-4 mt-8">
+                  {partner?.channel?.thumbnail && (
+                    <img
+                      src={partner.channel.thumbnail} alt={partner.channel.title} referrerPolicy="no-referrer"
+                      className="w-14 h-14 rounded-full object-cover ring-2 ring-grace-orange/30"
+                    />
+                  )}
+                  <a
+                    href={`https://www.youtube.com/channel/${PARTNER_CHANNEL_ID}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="group inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors"
+                  >
+                    Voir la chaîne <ExternalLink className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                  </a>
+                </motion.div>
+              </div>
+              {/* Rail vidéos */}
+              <div>
+                <Rail>
+                  {partnerVideos.map((v, i) => (
+                    <VideoCard key={v.id} item={v} onPlay={setLightbox} index={i} />
+                  ))}
+                </Rail>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ 08 · LOUANGE & CHANSONS — clôture musicale ════════════ */}
       {videoSections.louange.length > 0 && (
         <section className="relative overflow-hidden bg-grace-indigo py-24 sm:py-32 text-white">
           <div className="absolute inset-0 pointer-events-none">
@@ -828,7 +884,7 @@ export function Home() {
             <div className="mb-16 sm:mb-24 flex flex-col sm:flex-row sm:items-end justify-between gap-8">
               <SectionHeader
                 dark
-                num="07"
+                num="08"
                 icon={Music}
                 label="Louange & Chansons"
                 title="Élevez une voix"
