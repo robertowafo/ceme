@@ -50,10 +50,9 @@ export function Footer() {
           <div>
             <h3 className="font-sans text-white text-sm font-bold uppercase tracking-wider mb-5">Restons connectés</h3>
             <div className="flex gap-3 mb-6">
-              {/* TODO: remplacer href="#" par les vraies URLs réseaux */}
-              <a href="#" aria-label="YouTube Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Youtube className="w-4 h-4" /></a>
-              <a href="#" aria-label="Facebook Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Facebook className="w-4 h-4" /></a>
-              <a href="#" aria-label="Instagram Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Instagram className="w-4 h-4" /></a>
+              <a href="https://www.youtube.com/@gracetelevision-hc4tv" target="_blank" rel="noopener noreferrer" aria-label="YouTube Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Youtube className="w-4 h-4" /></a>
+              <a href="https://web.facebook.com/DrAlphonseEssomba?rdid=1dN6E5BKmUndUYJD&share_url=https%3A%2F%2Fweb.facebook.com%2Fshare%2F194eJM2s6G%2F%3F_rdc%3D1%26_rdr#" target="_blank" rel="noopener noreferrer" aria-label="Facebook Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Facebook className="w-4 h-4" /></a>
+              <a href="https://www.instagram.com/chapelledeleternelmonetendard?igsh=MTdpem1nMm9tMW4wZg%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Instagram className="w-4 h-4" /></a>
             </div>
             <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
               <input

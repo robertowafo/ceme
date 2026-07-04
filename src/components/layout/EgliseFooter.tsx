@@ -20,9 +20,9 @@ export function EgliseFooter() {
               dédiée à la présence de Dieu et à l'élévation des vies.
             </p>
             <div className="flex gap-3">
-              <a href="#" aria-label="Facebook CEME" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold hover:text-soft-black transition-colors"><Facebook className="w-4 h-4" /></a>
-              <a href="#" aria-label="YouTube CEME" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold hover:text-soft-black transition-colors"><Youtube className="w-4 h-4" /></a>
-              <a href="#" aria-label="Instagram CEME" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold hover:text-soft-black transition-colors"><Instagram className="w-4 h-4" /></a>
+              <a href="https://web.facebook.com/DrAlphonseEssomba?rdid=1dN6E5BKmUndUYJD&share_url=https%3A%2F%2Fweb.facebook.com%2Fshare%2F194eJM2s6G%2F%3F_rdc%3D1%26_rdr#" target="_blank" rel="noopener noreferrer" aria-label="Facebook CEME" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold hover:text-soft-black transition-colors"><Facebook className="w-4 h-4" /></a>
+              <a href="https://www.youtube.com/@gracetelevision-hc4tv" target="_blank" rel="noopener noreferrer" aria-label="YouTube CEME" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold hover:text-soft-black transition-colors"><Youtube className="w-4 h-4" /></a>
+              <a href="https://www.instagram.com/chapelledeleternelmonetendard?igsh=MTdpem1nMm9tMW4wZg%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram CEME" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-gold hover:text-soft-black transition-colors"><Instagram className="w-4 h-4" /></a>
             </div>
           </div>
 

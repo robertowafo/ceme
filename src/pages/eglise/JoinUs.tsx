@@ -147,8 +147,12 @@ export function JoinUs() {
                </div>
  
                <div className="relative z-10 mt-12 pt-8 border-t border-white/20 flex gap-4">
-                 {['Facebook', 'YouTube', 'Instagram'].map((s) => (
-                   <a key={s} href="#" className="text-white/40 hover:text-gold text-sm font-bold uppercase tracking-wider transition-colors">{s}</a>
+                 {[
+                   { s: 'Facebook', url: 'https://web.facebook.com/DrAlphonseEssomba?rdid=1dN6E5BKmUndUYJD&share_url=https%3A%2F%2Fweb.facebook.com%2Fshare%2F194eJM2s6G%2F%3F_rdc%3D1%26_rdr#' },
+                   { s: 'YouTube', url: 'https://www.youtube.com/@gracetelevision-hc4tv' },
+                   { s: 'Instagram', url: 'https://www.instagram.com/chapelledeleternelmonetendard?igsh=MTdpem1nMm9tMW4wZg%3D%3D&utm_source=qr' },
+                 ].map(({ s, url }) => (
+                   <a key={s} href={url} target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-gold text-sm font-bold uppercase tracking-wider transition-colors">{s}</a>
                  ))}
                </div>
              </div>
