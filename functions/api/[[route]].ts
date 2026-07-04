@@ -565,22 +565,37 @@ function formatDateStr(isoStr: string): string {
 app.get('/youtube/live', async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY
   if (!apiKey) return c.json({ isLive: false, videoId: null })
+
+  const cache = caches.default
+  const cacheKey = new Request('https://internal-cache.dev/yt-live')
+  const cached = await cache.match(cacheKey)
+  if (cached) return cached
+
   try {
     const { channelId } = await resolveChannelId(apiKey)
     const data = await fetchJson(
       `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&eventType=live&key=${apiKey}`
     )
+    let result: any
     if (data.items?.length > 0) {
       const item = data.items[0]
-      return c.json({ isLive: true, videoId: item.id.videoId, title: item.snippet.title, channelId })
+      result = { isLive: true, videoId: item.id.videoId, title: item.snippet.title, channelId }
+    } else {
+      const recentData = await fetchJson(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&order=date&maxResults=1&key=${apiKey}`
+      )
+      const item = recentData.items?.[0]
+      result = item
+        ? { isLive: false, videoId: item.id.videoId, title: item.snippet.title, description: item.snippet.description, publishedAt: item.snippet.publishedAt, channelId }
+        : { isLive: false, videoId: null, channelId }
     }
-    const recentData = await fetchJson(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&order=date&maxResults=1&key=${apiKey}`
-    )
-    const item = recentData.items?.[0]
-    return c.json(item
-      ? { isLive: false, videoId: item.id.videoId, title: item.snippet.title, description: item.snippet.description, publishedAt: item.snippet.publishedAt, channelId }
-      : { isLive: false, videoId: null, channelId })
+    // TTL court : reste réactif si un direct démarre, tout en évitant de
+    // ré-interroger l'API YouTube (2-3 appels en cascade) à chaque visite.
+    const response = new Response(JSON.stringify(result), {
+      headers: { 'Cache-Control': 'max-age=45', 'Content-Type': 'application/json' }
+    })
+    await cache.put(cacheKey, response.clone())
+    return response
   } catch (err: any) {
     return c.json({ error: err.message }, 500)
   }
