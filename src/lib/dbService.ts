@@ -1,4 +1,4 @@
-import { apiFetch, authHeaders } from './auth';
+import { apiFetch } from './auth';
 
 // ─── Interfaces (inchangées pour compatibilité) ────────────────────────────────
 
@@ -236,7 +236,8 @@ export async function submitDonation(data: {
 
 export async function getAllDonations(): Promise<Donation[]> {
   const res = await fetch('/api/donations', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
@@ -244,7 +245,8 @@ export async function getAllDonations(): Promise<Donation[]> {
 
 export async function getDonationStats(): Promise<DonationStats> {
   const res = await fetch('/api/donations/stats', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
@@ -300,7 +302,8 @@ export async function getPublicPrayerRequests(): Promise<PrayerRequestPublic[]> 
 
 export async function getAllPrayerRequests(): Promise<PrayerRequest[]> {
   const res = await fetch('/api/prayer-requests', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() }
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' }
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
@@ -359,7 +362,8 @@ export async function getBlogPost(id: string): Promise<BlogPost> {
 
 export async function getAllBlogPosts(): Promise<BlogPost[]> {
   const res = await fetch('/api/blog-posts/all', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() }
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' }
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
@@ -399,7 +403,8 @@ export async function subscribeNewsletter(email: string): Promise<void> {
 
 export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
   const res = await fetch('/api/newsletter', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
@@ -433,7 +438,8 @@ export interface AdminCounts {
 
 export async function getAdminCounts(): Promise<AdminCounts> {
   const res = await fetch('/api/admin/counts', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
@@ -449,7 +455,8 @@ export interface AdminUser {
 
 export async function getAdmins(): Promise<AdminUser[]> {
   const res = await fetch('/api/admins', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();
@@ -488,7 +495,8 @@ export interface AuditEntry {
 
 export async function getAuditLog(): Promise<AuditEntry[]> {
   const res = await fetch('/api/audit-log', {
-    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   return res.json();

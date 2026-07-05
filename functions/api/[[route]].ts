@@ -2,8 +2,17 @@
 
 import { Hono } from 'hono'
 import { handle } from 'hono/cloudflare-pages'
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import { SignJWT, jwtVerify } from 'jose'
 import type { Context, Next } from 'hono'
+
+const SESSION_COOKIE = 'session'
+
+// Cookie « Secure » uniquement en HTTPS (prod) — sinon le dev local en http://
+// ne recevrait jamais le cookie de retour.
+function isHttps(c: Context<any>): boolean {
+  return new URL(c.req.url).protocol === 'https:'
+}
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -54,18 +63,18 @@ async function verifySession(token: string, secret: string): Promise<JwtPayload 
 const app = new Hono<HonoApp>().basePath('/api')
 
 const requireAdmin = async (c: Context<HonoApp>, next: Next) => {
-  const auth = c.req.header('Authorization')
-  if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Non authentifié' }, 401)
-  const payload = await verifySession(auth.slice(7), c.env.JWT_SECRET)
+  const token = getCookie(c, SESSION_COOKIE)
+  if (!token) return c.json({ error: 'Non authentifié' }, 401)
+  const payload = await verifySession(token, c.env.JWT_SECRET)
   if (!payload?.isAdmin) return c.json({ error: "Accès réservé à l'administrateur" }, 403)
   c.set('user', payload)
   await next()
 }
 
 const requireSuperAdmin = async (c: Context<HonoApp>, next: Next) => {
-  const auth = c.req.header('Authorization')
-  if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Non authentifié' }, 401)
-  const payload = await verifySession(auth.slice(7), c.env.JWT_SECRET)
+  const token = getCookie(c, SESSION_COOKIE)
+  if (!token) return c.json({ error: 'Non authentifié' }, 401)
+  const payload = await verifySession(token, c.env.JWT_SECRET)
   if (!payload?.isSuperAdmin) return c.json({ error: 'Accès réservé au super-administrateur' }, 403)
   c.set('user', payload)
   await next()
@@ -106,16 +115,31 @@ app.post('/auth/google', async (c) => {
       { sub: info.sub, email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin },
       c.env.JWT_SECRET
     )
-    return c.json({ token, user: { email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin } })
+    // Le JWT ne part plus jamais dans le corps JSON : il vit uniquement dans un
+    // cookie HttpOnly, inaccessible au JavaScript (protège contre le vol de
+    // session via une éventuelle faille XSS ailleurs sur le site).
+    setCookie(c, SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: isHttps(c),
+      sameSite: 'Strict',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 7,
+    })
+    return c.json({ user: { email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin } })
   } catch {
     return c.json({ error: "Erreur d'authentification" }, 500)
   }
 })
 
+app.post('/auth/logout', async (c) => {
+  deleteCookie(c, SESSION_COOKIE, { path: '/' })
+  return c.json({ success: true })
+})
+
 app.get('/auth/me', async (c) => {
-  const auth = c.req.header('Authorization')
-  if (!auth?.startsWith('Bearer ')) return c.json({ error: 'Non authentifié' }, 401)
-  const payload = await verifySession(auth.slice(7), c.env.JWT_SECRET)
+  const token = getCookie(c, SESSION_COOKIE)
+  if (!token) return c.json({ error: 'Non authentifié' }, 401)
+  const payload = await verifySession(token, c.env.JWT_SECRET)
   if (!payload) return c.json({ error: 'Session expirée' }, 401)
   return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: payload.isAdmin, isSuperAdmin: payload.isSuperAdmin } })
 })

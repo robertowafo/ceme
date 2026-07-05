@@ -26,25 +26,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restaurer la session depuis localStorage au démarrage
+  // Restaurer la session au démarrage — le cookie HttpOnly est envoyé
+  // automatiquement par le navigateur, il n'y a rien à lire côté JS.
   useEffect(() => {
-    const token = localStorage.getItem('session_token');
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+    fetch('/api/auth/me', { credentials: 'same-origin' })
       .then(r => r.ok ? r.json() : null)
       .then((data: { user: AppUser } | null) => {
         if (data?.user) {
           setUser(data.user);
           setIsAdmin(data.user.isAdmin ?? false);
           setIsSuperAdmin(data.user.isSuperAdmin ?? false);
-        } else {
-          localStorage.removeItem('session_token');
         }
       })
-      .catch(() => localStorage.removeItem('session_token'))
+      .catch(() => {})
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -54,12 +48,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const res = await fetch('/api/auth/google', {
           method: 'POST',
+          credentials: 'same-origin',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ accessToken: tokenResponse.access_token })
         });
         if (!res.ok) throw new Error('Échec de l\'authentification');
-        const data = await res.json() as { token: string; user: AppUser };
-        localStorage.setItem('session_token', data.token);
+        const data = await res.json() as { user: AppUser };
         setUser(data.user);
         setIsAdmin(data.user.isAdmin ?? false);
         setIsSuperAdmin(data.user.isSuperAdmin ?? false);
@@ -82,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('session_token');
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     setUser(null);
     setIsAdmin(false);
     setIsSuperAdmin(false);

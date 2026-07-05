@@ -51,10 +51,9 @@ export function AdminFileUpload({
     formData.append('file', file);
 
     try {
-      const token = localStorage.getItem('session_token');
       const response = await fetch('/api/upload', {
         method: 'POST',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: 'same-origin',
         body: formData,
       });
 
