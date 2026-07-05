@@ -34,7 +34,7 @@ export function Navbar() {
       <div
         className={`mx-auto transition-all duration-500 ${
           solid
-            ? 'max-w-3xl bg-white/95 backdrop-blur-md border border-grace-blue/10 rounded-full shadow-xl'
+            ? `max-w-3xl bg-white/95 backdrop-blur-md border border-grace-blue/10 shadow-xl ${isMobileMenuOpen ? 'rounded-3xl' : 'rounded-full'}`
             : 'max-w-7xl bg-transparent'
         }`}
       >

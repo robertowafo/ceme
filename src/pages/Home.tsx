@@ -832,29 +832,14 @@ export function Home() {
                 <div key={p.id} className="grid lg:grid-cols-[1fr_1.4fr] gap-12 lg:gap-16 items-start">
                   {/* Colonne présentation */}
                   <div className="relative lg:sticky lg:top-28">
-                    {pIdx === 0 ? (
-                      <SectionHeader
-                        num="07"
-                        icon={Heart}
-                        label="Chaîne partenaire"
-                        title="La voix de"
-                        accent={name}
-                        desc={p.bio || `Une voix précieuse de notre communauté${p.church ? ` (${p.church})` : ''}, dont Grâce TV est heureuse de relayer les messages et les vidéos.`}
-                      />
-                    ) : (
-                      <>
-                        <motion.span {...reveal} className="inline-flex items-center gap-2.5 text-grace-orange text-xs font-semibold uppercase tracking-[0.28em] mb-5">
-                          <span className="h-px w-10 bg-grace-orange/60" />
-                          <Heart className="w-4 h-4 text-grace-blue" /> Chaîne partenaire
-                        </motion.span>
-                        <motion.h3 {...reveal} transition={{ ...reveal.transition, delay: 0.08 }} className="font-serif text-3xl sm:text-4xl font-extrabold leading-[1.05] text-soft-black">
-                          La voix de <span className="text-grace-orange italic">{name}</span>
-                        </motion.h3>
-                        <motion.p {...reveal} transition={{ ...reveal.transition, delay: 0.16 }} className="font-sans text-base leading-relaxed mt-5 text-soft-black/65">
-                          {p.bio || `Une voix précieuse de notre communauté${p.church ? ` (${p.church})` : ''}, dont Grâce TV est heureuse de relayer les messages et les vidéos.`}
-                        </motion.p>
-                      </>
-                    )}
+                    <SectionHeader
+                      num="07"
+                      icon={Heart}
+                      label="Chaîne partenaire"
+                      title="La voix de"
+                      accent={name}
+                      desc={p.bio || `Une voix précieuse de notre communauté${p.church ? ` (${p.church})` : ''}, dont Grâce TV est heureuse de relayer les messages et les vidéos.`}
+                    />
                     <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.2 }} className="flex items-center gap-4 mt-8">
                       {p.avatarUrl && (
                         <img

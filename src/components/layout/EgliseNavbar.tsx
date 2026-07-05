@@ -21,7 +21,7 @@ export function EgliseNavbar() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4 sm:pt-5">
-      <div className="mx-auto max-w-6xl bg-white/95 backdrop-blur-md border border-soft-black/10 rounded-full shadow-xl">
+      <div className={`mx-auto max-w-6xl bg-white/95 backdrop-blur-md border border-soft-black/10 shadow-xl transition-all duration-300 ${isMobileMenuOpen ? 'rounded-3xl' : 'rounded-full'}`}>
         <div className="px-4 sm:px-6 py-2 flex justify-between items-center gap-4">
           <Link to="/eglise" className="flex items-center gap-2 group shrink-0" aria-label="Accueil de l'église CEME">
             <img src="/uploads/logo ceme.png" alt="Logo CEME" className="h-10 sm:h-11 object-contain" referrerPolicy="no-referrer" />
