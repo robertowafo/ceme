@@ -50,7 +50,10 @@ export function SEO({ title, description, image = DEFAULT_IMAGE, path, type = 'w
         <script
           key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          // Échappe "<" pour empêcher toute évasion de la balise <script> si un champ
+          // dynamique (ex. titre d'article) contient "</script>" — sans quoi ce serait
+          // une injection HTML/JS stockée exécutée sur la page publique.
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, '\\u003c') }}
         />
       ))}
     </>

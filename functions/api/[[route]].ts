@@ -471,13 +471,26 @@ app.delete('/prayer-requests/:id', requireAdmin, async (c) => {
 
 // ─── Upload (Cloudflare R2) ────────────────────────────────────────────────────
 
+// Types acceptés : images (galerie/couvertures/avatars) + documents d'étude.
+// Aucun HTML/SVG/exécutable — l'attribut "accept" des <input> est un simple
+// filtre côté client, la vraie validation doit se faire côté serveur.
+const ALLOWED_UPLOAD_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
+  'application/pdf': 'pdf',
+  'application/msword': 'doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
+  'application/epub+zip': 'epub',
+}
+
 app.post('/upload', requireAdmin, async (c) => {
   const formData = await c.req.formData()
   const file = formData.get('file') as File | null
   if (!file) return c.json({ error: 'Aucun fichier fourni' }, 400)
   if (file.size > 20 * 1024 * 1024) return c.json({ error: 'Fichier trop lourd (20 Mo max)' }, 400)
 
-  const ext = file.name.split('.').pop() || 'bin'
+  const ext = ALLOWED_UPLOAD_TYPES[file.type]
+  if (!ext) return c.json({ error: 'Type de fichier non autorisé' }, 400)
+
   const key = `uploads/${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`
 
   await c.env.BUCKET.put(key, file.stream(), {
