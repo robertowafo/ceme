@@ -12,8 +12,8 @@ import { gsap, SplitText } from '../lib/gsap';
 import { isYtPlaylistId, ytEmbedUrl, ytThumbUrl } from '../lib/youtube';
 import { CtaShowcase } from '../components/home/CtaShowcase';
 import {
-  getBlogPosts, getRecommendedLinks, getStudyDocuments,
-  type BlogPost, type RecommendedLink, type StudyDocument,
+  getBlogPosts, getRecommendedLinks, getStudyDocuments, getPartners,
+  type BlogPost, type RecommendedLink, type StudyDocument, type Partner,
 } from '../lib/dbService';
 
 /* ══ Types ═════════════════════════════════════════════════════ */
@@ -42,12 +42,8 @@ interface VideoContent {
 
 type SectionKey = 'sermon' | 'enseignement' | 'louange' | 'film' | 'emission';
 
-/* Chaîne partenaire mise en avant sur l'accueil */
-const PARTNER_CHANNEL_ID = 'UCYdwbjTFTQcIkbd5UQtX5EQ'; // Marie Charlotte ESSOMBA
-
-interface PartnerChannelData {
-  channel: { title: string; description: string; thumbnail: string } | null;
-  videos: { videoId: string; title: string; thumbnail: string; publishedAt: string }[];
+function partnerDisplayName(p: Partner) {
+  return [p.title, p.firstName, p.lastName].filter(Boolean).join(' ');
 }
 
 /* ══ Classification ════════════════════════════════════════════ */
@@ -274,7 +270,8 @@ export function Home() {
   const [docs, setDocs]           = useState<StudyDocument[]>([]);
   const [lightbox, setLightbox]   = useState<VideoContent | null>(null);
   const [plThumbs, setPlThumbs]   = useState<Record<string, string>>({});
-  const [partner, setPartner]     = useState<PartnerChannelData | null>(null);
+  const [partners, setPartners]   = useState<Partner[]>([]);
+  const [partnerVideosMap, setPartnerVideosMap] = useState<Record<string, VideoContent[]>>({});
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
@@ -291,10 +288,34 @@ export function Home() {
     }).catch(() => {});
     getBlogPosts().then(setPosts).catch(() => {});
     getStudyDocuments().then(setDocs).catch(() => {});
-    fetch(`/api/youtube/channel-videos?channelId=${PARTNER_CHANNEL_ID}&max=8`)
-      .then(r => { if (!r.ok) throw 0; return r.json(); })
-      .then(setPartner)
-      .catch(() => {});
+
+    // Chaînes partenaires gérées depuis le dashboard admin (comme dans Emissions).
+    // Pour chaque partenaire : on récupère ses playlists YouTube, on prend la plus
+    // fournie, puis ses vidéos — au lieu de pointer un channelId en dur qui peut
+    // remonter des vidéos dont l'intégration a été désactivée par leur propriétaire.
+    getPartners().then(async (list) => {
+      setPartners(list);
+      for (const p of list) {
+        try {
+          const plRes = await fetch(`/api/youtube/channel-playlists?channelUrl=${encodeURIComponent(p.youtubeUrl)}`);
+          if (!plRes.ok) continue;
+          const playlists: YTPlaylist[] = await plRes.json();
+          if (!Array.isArray(playlists) || playlists.length === 0) continue;
+          const best = playlists.reduce((a, b) => (b.videoCount > a.videoCount ? b : a), playlists[0]);
+          const viRes = await fetch(`/api/playlist-items?playlistId=${encodeURIComponent(best.id)}`);
+          if (!viRes.ok) continue;
+          const items: { videoId: string; title: string; thumbnail: string }[] = await viRes.json();
+          const videos: VideoContent[] = items.slice(0, 12).map(v => ({
+            id: `pv-${v.videoId}`,
+            title: v.title,
+            image: v.thumbnail,
+            meta: 'Vidéo',
+            embedUrl: ytEmbedUrl(v.videoId),
+          }));
+          setPartnerVideosMap(prev => ({ ...prev, [p.id]: videos }));
+        } catch { /* ignore ce partenaire */ }
+      }
+    }).catch(() => {});
   }, []);
 
   /* ── Animations d'entrée du hero (GSAP) ── */
@@ -359,13 +380,7 @@ export function Home() {
   const featuredPost = posts[0];
   const otherPosts   = posts.slice(1, 7);
 
-  const partnerVideos: VideoContent[] = useMemo(() => (partner?.videos || []).map(v => ({
-    id: `mc-${v.videoId}`,
-    title: v.title,
-    image: v.thumbnail,
-    meta: 'Vidéo',
-    embedUrl: ytEmbedUrl(v.videoId),
-  })), [partner]);
+  const spotlightPartners = partners.filter(p => (partnerVideosMap[p.id]?.length || 0) > 0);
 
   const heroEmbed = live?.videoId
     ? `https://www.youtube.com/embed/${live.videoId}?autoplay=1&mute=1&rel=0&playsinline=1`
@@ -811,50 +826,67 @@ export function Home() {
         </section>
       )}
 
-      {/* ════════════ 07 · CHAÎNE PARTENAIRE À L'HONNEUR ════════════ */}
-      {partnerVideos.length > 0 && (
+      {/* ════════════ 07 · CHAÎNES PARTENAIRES À L'HONNEUR ════════════ */}
+      {spotlightPartners.length > 0 && (
         <section className="relative bg-cream py-24 sm:py-32 overflow-hidden">
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid lg:grid-cols-[1fr_1.4fr] gap-12 lg:gap-16 items-start">
-              {/* Colonne présentation */}
-              <div className="relative lg:sticky lg:top-28">
-                <SectionHeader
-                  num="07"
-                  icon={Heart}
-                  label="Chaîne partenaire"
-                  title="La voix de"
-                  accent={partner?.channel?.title || 'notre invitée'}
-                  desc={
-                    partner?.channel?.description
-                      ? partner.channel.description.slice(0, 200).trim() + (partner.channel.description.length > 200 ? '…' : '')
-                      : "Une voix précieuse de notre communauté, dont Grâce TV est heureuse de relayer les messages et les vidéos."
-                  }
-                />
-                <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.2 }} className="flex items-center gap-4 mt-8">
-                  {partner?.channel?.thumbnail && (
-                    <img
-                      src={partner.channel.thumbnail} alt={partner.channel.title} referrerPolicy="no-referrer"
-                      className="w-14 h-14 rounded-full object-cover ring-2 ring-grace-orange/30"
-                    />
-                  )}
-                  <a
-                    href={`https://www.youtube.com/channel/${PARTNER_CHANNEL_ID}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="group inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors"
-                  >
-                    Voir la chaîne <ExternalLink className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                  </a>
-                </motion.div>
-              </div>
-              {/* Rail vidéos */}
-              <div>
-                <Rail>
-                  {partnerVideos.map((v, i) => (
-                    <VideoCard key={v.id} item={v} onPlay={setLightbox} index={i} />
-                  ))}
-                </Rail>
-              </div>
-            </div>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20 sm:space-y-28">
+            {spotlightPartners.map((p, pIdx) => {
+              const name = partnerDisplayName(p);
+              const videos = partnerVideosMap[p.id] || [];
+              return (
+                <div key={p.id} className="grid lg:grid-cols-[1fr_1.4fr] gap-12 lg:gap-16 items-start">
+                  {/* Colonne présentation */}
+                  <div className="relative lg:sticky lg:top-28">
+                    {pIdx === 0 ? (
+                      <SectionHeader
+                        num="07"
+                        icon={Heart}
+                        label="Chaîne partenaire"
+                        title="La voix de"
+                        accent={name}
+                        desc={p.bio || `Une voix précieuse de notre communauté${p.church ? ` (${p.church})` : ''}, dont Grâce TV est heureuse de relayer les messages et les vidéos.`}
+                      />
+                    ) : (
+                      <>
+                        <motion.span {...reveal} className="inline-flex items-center gap-2.5 text-grace-orange text-xs font-semibold uppercase tracking-[0.28em] mb-5">
+                          <span className="h-px w-10 bg-grace-orange/60" />
+                          <Heart className="w-4 h-4 text-grace-blue" /> Chaîne partenaire
+                        </motion.span>
+                        <motion.h3 {...reveal} transition={{ ...reveal.transition, delay: 0.08 }} className="font-serif text-3xl sm:text-4xl font-extrabold leading-[1.05] text-soft-black">
+                          La voix de <span className="text-grace-orange italic">{name}</span>
+                        </motion.h3>
+                        <motion.p {...reveal} transition={{ ...reveal.transition, delay: 0.16 }} className="font-sans text-base leading-relaxed mt-5 text-soft-black/65">
+                          {p.bio || `Une voix précieuse de notre communauté${p.church ? ` (${p.church})` : ''}, dont Grâce TV est heureuse de relayer les messages et les vidéos.`}
+                        </motion.p>
+                      </>
+                    )}
+                    <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.2 }} className="flex items-center gap-4 mt-8">
+                      {p.avatarUrl && (
+                        <img
+                          src={p.avatarUrl} alt={name} referrerPolicy="no-referrer"
+                          className="w-14 h-14 rounded-full object-cover ring-2 ring-grace-orange/30"
+                        />
+                      )}
+                      <a
+                        href={p.youtubeUrl}
+                        target="_blank" rel="noopener noreferrer"
+                        className="group inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors"
+                      >
+                        Voir la chaîne <ExternalLink className="w-4 h-4 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                      </a>
+                    </motion.div>
+                  </div>
+                  {/* Rail vidéos */}
+                  <div>
+                    <Rail>
+                      {videos.map((v, i) => (
+                        <VideoCard key={v.id} item={v} onPlay={setLightbox} index={i} />
+                      ))}
+                    </Rail>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
