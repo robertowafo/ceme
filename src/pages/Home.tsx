@@ -10,6 +10,7 @@ import { SEO } from '../components/SEO';
 import { tvStationSchema, webSiteSchema } from '../lib/structuredData';
 import { gsap, SplitText } from '../lib/gsap';
 import { isYtPlaylistId, ytEmbedUrl, ytThumbUrl } from '../lib/youtube';
+import { fetchLiveStatus, type LiveData } from '../lib/liveStatus';
 import { CtaShowcase } from '../components/home/CtaShowcase';
 import {
   getBlogPosts, getRecommendedLinks, getStudyDocuments, getPartners,
@@ -23,12 +24,6 @@ interface YTPlaylist {
   description: string;
   thumbnail: string;
   videoCount: number;
-}
-
-interface LiveData {
-  isLive: boolean;
-  videoId: string | null;
-  title?: string;
 }
 
 interface VideoContent {
@@ -275,7 +270,7 @@ export function Home() {
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
-    fetch('/api/youtube/live').then(r => r.json()).then(setLive).catch(() => {});
+    fetchLiveStatus().then(data => { if (data) setLive(data); });
     fetch('/api/youtube/playlists').then(r => { if (!r.ok) throw 0; return r.json(); }).then(setPlaylists).catch(() => {});
     getRecommendedLinks().then(list => {
       setLinks(list);

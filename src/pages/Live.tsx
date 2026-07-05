@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Heart, Share2, CalendarClock, Radio, Play, WifiOff, Settings, Link2, Check, X, MonitorPlay } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
+import { fetchLiveStatus } from '../lib/liveStatus';
 
 function parsePreacher(title: string): string {
   const t = title.toUpperCase();
@@ -78,17 +79,12 @@ export function Live() {
   useEffect(() => {
     async function checkLiveStatus() {
       setIsLoading(true);
-      try {
-        const res = await fetch('/api/youtube/live');
-        if (res.ok) {
-          const data = await res.json();
-          setLiveData(data);
-        }
-      } catch (err) {
-        console.error("Error loaded live stream status:", err);
-      } finally {
-        setIsLoading(false);
-      }
+      // Réessaie automatiquement en cas de raté transitoire (API YouTube lente,
+      // démarrage à froid) — évite d'afficher "hors ligne" à tort et de devoir
+      // actualiser la page manuellement pour voir le vrai statut.
+      const data = await fetchLiveStatus();
+      if (data) setLiveData(data);
+      setIsLoading(false);
     }
     checkLiveStatus();
   }, []);
