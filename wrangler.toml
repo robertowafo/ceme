@@ -11,6 +11,10 @@ database_id = "9bda7f77-4ca9-41b5-b6fc-3cc2a6b681cb"
 binding = "BUCKET"
 bucket_name = "ceme-uploads"
 
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "838240a697fc4f7a8fc82369d7e278c8"
+
 [vars]
 BUCKET_URL = "https://pub-c37922ba74c24a92800f56cb50638443.r2.dev"
 

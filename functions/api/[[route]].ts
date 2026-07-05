@@ -23,6 +23,7 @@ type Bindings = {
   JWT_SECRET: string
   ADMIN_EMAIL: string
   YOUTUBE_API_KEY: string
+  RATE_LIMIT: KVNamespace
 }
 
 type Variables = { user: JwtPayload }
@@ -78,6 +79,39 @@ const requireSuperAdmin = async (c: Context<HonoApp>, next: Next) => {
   if (!payload?.isSuperAdmin) return c.json({ error: 'Accès réservé au super-administrateur' }, 403)
   c.set('user', payload)
   await next()
+}
+
+// ─── Limitation de débit (anti-spam formulaires publics) ──────────────────────
+// Compteur à fenêtre glissante fixe, stocké dans Workers KV, clé par IP + route.
+// Pas parfaitement atomique sous forte concurrence (get+put), mais largement
+// suffisant pour bloquer un script qui flood un formulaire public — ce n'est
+// pas un rempart anti-DDoS, juste un frein au spam/abus basique.
+async function checkRateLimit(
+  kv: KVNamespace,
+  key: string,
+  limit: number,
+  windowSeconds: number
+): Promise<boolean> {
+  const now = Date.now()
+  const raw = await kv.get(key)
+  let data = raw ? (JSON.parse(raw) as { count: number; resetAt: number }) : null
+  if (!data || now > data.resetAt) {
+    data = { count: 0, resetAt: now + windowSeconds * 1000 }
+  }
+  data.count++
+  await kv.put(key, JSON.stringify(data), { expirationTtl: windowSeconds })
+  return data.count <= limit
+}
+
+function rateLimit(name: string, limit: number, windowSeconds: number) {
+  return async (c: Context<HonoApp>, next: Next) => {
+    const ip = c.req.header('CF-Connecting-IP') || c.req.header('x-forwarded-for') || 'unknown'
+    const allowed = await checkRateLimit(c.env.RATE_LIMIT, `rl:${name}:${ip}`, limit, windowSeconds)
+    if (!allowed) {
+      return c.json({ error: 'Trop de requêtes envoyées depuis cette adresse. Merci de réessayer un peu plus tard.' }, 429)
+    }
+    await next()
+  }
 }
 
 async function audit(
@@ -375,7 +409,7 @@ app.delete('/donation-projects/:id', requireAdmin, async (c) => {
 
 // ─── donations ────────────────────────────────────────────────────────────────
 
-app.post('/donations', async (c) => {
+app.post('/donations', rateLimit('donations', 5, 600), async (c) => {
   const { donorName, phone, amount, currency, contribType, paymentMethod, reference, projectId } = await c.req.json()
   if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
     return c.json({ error: 'Montant invalide' }, 400)
@@ -451,7 +485,7 @@ app.delete('/donations/:id', requireAdmin, async (c) => {
 
 // ─── prayer_requests ───────────────────────────────────────────────────────────
 
-app.post('/prayer-requests', async (c) => {
+app.post('/prayer-requests', rateLimit('prayer-requests', 5, 600), async (c) => {
   const { name, phone, message, type, isPublic } = await c.req.json()
   if (!message?.trim()) return c.json({ error: 'Le message est requis' }, 400)
   const id = 'prq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
@@ -860,7 +894,7 @@ app.delete('/blog-posts/:id', requireAdmin, async (c) => {
 
 // ─── newsletter_subscribers ────────────────────────────────────────────────────
 
-app.post('/newsletter', async (c) => {
+app.post('/newsletter', rateLimit('newsletter', 5, 600), async (c) => {
   const { email } = await c.req.json()
   if (!email?.trim() || !email.includes('@')) return c.json({ error: 'Adresse email invalide' }, 400)
   const id = 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
