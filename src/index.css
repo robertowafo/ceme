@@ -1,16 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Poppins:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800&display=swap');
 @import "tailwindcss";
-
-@font-face {
-  font-family: 'CabinetGrotesk-Extrabold';
-  src: url('../fonts/CabinetGrotesk-Extrabold.woff2') format('woff2'),
-       url('../fonts/CabinetGrotesk-Extrabold.woff') format('woff'),
-       url('../fonts/CabinetGrotesk-Extrabold.ttf') format('truetype');
-  font-weight: 800;
-  font-display: swap;
-  font-style: normal;
-}
 
 .roboto-text {
   font-family: "Roboto", sans-serif;
@@ -41,7 +29,7 @@
   --color-gray-soft: #F5F5F7;        /* Fond sections alternées */
   --color-text-dark: #1A1A2E;
 
-  --font-serif: "CabinetGrotesk-Extrabold", "Cabinet Grotesk", "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-serif: "Cabinet Grotesk", "Playfair Display", ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-sans: "Roboto", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
   /* Polices Grâce TV — grands titres en Playfair (serif élégant), tout le reste en Inter */

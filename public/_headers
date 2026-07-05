@@ -1,0 +1,17 @@
+# Assets Vite (noms de fichiers hashés — invalidés automatiquement à chaque build)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Polices auto-hébergées (changent rarement)
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Photos et médias uploadés (peuvent être remplacés par l'admin — cache modéré)
+/uploads/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# Favicons / logos
+/favicon*
+  Cache-Control: public, max-age=604800
+/logo-*.png
+  Cache-Control: public, max-age=604800
