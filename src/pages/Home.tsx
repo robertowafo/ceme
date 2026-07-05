@@ -829,9 +829,9 @@ export function Home() {
               const name = partnerDisplayName(p);
               const videos = partnerVideosMap[p.id] || [];
               return (
-                <div key={p.id} className="grid lg:grid-cols-[1fr_1.4fr] gap-12 lg:gap-16 items-start">
+                <div key={p.id} className="grid grid-cols-1 lg:grid-cols-[1fr_1.4fr] gap-12 lg:gap-16 items-start min-w-0">
                   {/* Colonne présentation */}
-                  <div className="relative lg:sticky lg:top-28">
+                  <div className="relative lg:sticky lg:top-28 min-w-0">
                     <SectionHeader
                       num="07"
                       icon={Heart}
@@ -857,7 +857,7 @@ export function Home() {
                     </motion.div>
                   </div>
                   {/* Rail vidéos */}
-                  <div>
+                  <div className="min-w-0">
                     <Rail>
                       {videos.map((v, i) => (
                         <VideoCard key={v.id} item={v} onPlay={setLightbox} index={i} />
