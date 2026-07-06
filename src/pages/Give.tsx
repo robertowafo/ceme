@@ -350,7 +350,7 @@ export function Give() {
                       </div>
                       {paymentMethod === 'OM' && (
                         <p className="text-[11px] text-[#FF6600] font-medium mt-2 bg-[#FF6600]/5 p-2.5 rounded-lg border border-[#FF6600]/20">
-                          Envoyez votre don sur le compte OM de la chapelle : <strong className="font-mono text-xs">+237 680 82 19 53</strong>
+                          Envoyez votre don sur le compte OM de la chapelle : <strong className="font-mono text-xs">+237 656 67 73 54</strong>
                         </p>
                       )}
                     </div>
@@ -392,7 +392,7 @@ export function Give() {
                     <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-left text-xs text-amber-800 space-y-1.5">
                       <p className="font-bold text-amber-900 mb-2">Prochaines étapes :</p>
                       {paymentMethod === 'OM' ? (
-                        <p>• Envoyez <strong>{getFinalAmountDisplay()}</strong> via Orange Money au <strong className="font-mono">+237 680 82 19 53</strong> (Chapelle CEME)</p>
+                        <p>• Envoyez <strong>{getFinalAmountDisplay()}</strong> via Orange Money au <strong className="font-mono">+237 656 67 73 54</strong> (Chapelle CEME)</p>
                       ) : (
                         <p>• Effectuez votre virement selon les coordonnées bancaires affichées ci-dessous</p>
                       )}
@@ -448,8 +448,8 @@ export function Give() {
                   <div className="flex-1">
                     <h3 className="font-bold mb-1">Virement Bancaire</h3>
                     <div className="bg-white p-4 rounded-xl text-sm font-mono text-gray-700 mt-3 border border-gray-200">
-                      <p className="mb-2"><span className="font-bold text-soft-black uppercase tracking-wider text-[10px]">Titulaire</span><br />Chapelle E.M.E</p>
-                      <p><span className="font-bold text-soft-black uppercase tracking-wider text-[10px]">IBAN</span><br />FR76 1234 5678 9012 3456 7890 123</p>
+                      <p className="mb-2"><span className="font-bold text-soft-black uppercase tracking-wider text-[10px]">Banque</span><br />Régionale Banque</p>
+                      <p><span className="font-bold text-soft-black uppercase tracking-wider text-[10px]">Numéro de compte</span><br />3721493440112</p>
                     </div>
                   </div>
                 </div>
@@ -457,7 +457,7 @@ export function Give() {
                   <div className="bg-gray-100 p-3 rounded-full text-soft-black group-hover:bg-grace-orange group-hover:text-white transition-colors shrink-0"><Smartphone className="w-5 h-5" /></div>
                   <div>
                     <h3 className="font-bold mb-1">Mobile Money</h3>
-                    <p className="text-[#FF6600] font-bold text-sm">Orange Money : +237 680 82 19 53</p>
+                    <p className="text-[#FF6600] font-bold text-sm">Orange Money : +237 656 67 73 54</p>
                     <p className="text-gray-500 text-xs mt-0.5">Chapelle CEME - Transferts directs en tout temps.</p>
                   </div>
                 </div>
