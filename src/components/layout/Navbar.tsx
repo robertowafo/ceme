@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Clapperboard, Info, Church, Mail, Play } from 'lucide-react';
+import { Menu, X, Clapperboard, Info, Church, Mail, Play, HeartHandshake } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const navLinks = [
   { path: '/emissions', label: 'Émissions', icon: Clapperboard },
   { path: '/a-propos', label: 'À propos', icon: Info },
   { path: '/eglise', label: 'Église CEME', icon: Church },
+  { path: '/soutenir-grace-tv', label: 'Dons', icon: HeartHandshake },
   { path: '/contact', label: 'Contact', icon: Mail },
 ];
 

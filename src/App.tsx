@@ -26,6 +26,7 @@ const CommentNousRegarder = lazy(() => import('./pages/CommentNousRegarder').the
 const Partenaires = lazy(() => import('./pages/Partenaires').then((m) => ({ default: m.Partenaires })));
 const AboutGraceTV = lazy(() => import('./pages/AboutGraceTV').then((m) => ({ default: m.AboutGraceTV })));
 const Give = lazy(() => import('./pages/Give').then((m) => ({ default: m.Give })));
+const SupportGraceTV = lazy(() => import('./pages/SupportGraceTV').then((m) => ({ default: m.SupportGraceTV })));
 const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.Contact })));
 const DocumentReader = lazy(() => import('./pages/DocumentReader').then((m) => ({ default: m.DocumentReader })));
 
@@ -70,6 +71,7 @@ export default function App() {
               <Route path="partenaires" element={<Partenaires />} />
               <Route path="a-propos" element={<AboutGraceTV />} />
               <Route path="faire-un-don" element={<Give />} />
+              <Route path="soutenir-grace-tv" element={<SupportGraceTV />} />
               <Route path="contact" element={<Contact />} />
               <Route path="admin" element={<Admin />} />
 

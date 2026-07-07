@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Menu, X, Tv, Home, Calendar, BookOpen, Heart, MapPin, Users, Info } from 'lucide-react';
+import { Menu, X, Tv, Home, Calendar, BookOpen, Heart, MapPin, Users, Info, HeartHandshake } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 const navLinks = [
@@ -9,6 +9,7 @@ const navLinks = [
   { path: '/eglise/sermons', label: 'Sermons', icon: BookOpen },
   { path: '/eglise/priere', label: 'Prière', icon: Heart },
   { path: '/eglise/blog', label: 'Blog', icon: BookOpen },
+  { path: '/faire-un-don', label: 'Dons', icon: HeartHandshake },
   { path: '/eglise/nous-rejoindre', label: 'Nous rejoindre', icon: MapPin },
   { path: '/eglise/a-propos', label: 'À propos', icon: Info },
 ];
