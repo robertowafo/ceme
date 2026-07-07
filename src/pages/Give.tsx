@@ -17,7 +17,7 @@ export function Give() {
   const [customAmount, setCustomAmount] = useState('');
   const [donorName, setDonorName] = useState('');
   const [donorPhone, setDonorPhone] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'OM' | 'Card'>('OM');
+  const [paymentMethod, setPaymentMethod] = useState<'OM' | 'MTN' | 'Card'>('OM');
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [projects, setProjects] = useState<DonationProject[]>([]);
 
@@ -328,11 +328,11 @@ export function Give() {
                     {/* Payment method */}
                     <div>
                       <label className="block text-xs font-bold uppercase tracking-wider text-gray-800 mb-3">4. Moyen de paiement prévu</label>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-3 gap-3">
                         <button
                           type="button"
                           onClick={() => setPaymentMethod('OM')}
-                          className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                          className={`py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 border transition-all cursor-pointer ${
                             paymentMethod === 'OM' ? 'bg-[#FF6600]/10 border-[#FF6600] text-[#FF6600]' : 'bg-white border-gray-300 text-gray-600 hover:border-[#FF6600]'
                           }`}
                         >
@@ -340,17 +340,31 @@ export function Give() {
                         </button>
                         <button
                           type="button"
+                          onClick={() => setPaymentMethod('MTN')}
+                          className={`py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 border transition-all cursor-pointer ${
+                            paymentMethod === 'MTN' ? 'bg-[#FFCC00]/15 border-[#FFCC00] text-[#8a7000]' : 'bg-white border-gray-300 text-gray-600 hover:border-[#FFCC00]'
+                          }`}
+                        >
+                          <Smartphone className="w-4 h-4" /> MTN MoMo
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setPaymentMethod('Card')}
-                          className={`py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 border transition-all cursor-pointer ${
+                          className={`py-3 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 sm:gap-2 border transition-all cursor-pointer ${
                             paymentMethod === 'Card' ? 'bg-grace-blue/10 border-grace-blue text-grace-blue' : 'bg-white border-gray-300 text-gray-600 hover:border-grace-blue'
                           }`}
                         >
-                          <CreditCard className="w-4 h-4" /> Virement / Autre
+                          <CreditCard className="w-4 h-4" /> Virement
                         </button>
                       </div>
                       {paymentMethod === 'OM' && (
                         <p className="text-[11px] text-[#FF6600] font-medium mt-2 bg-[#FF6600]/5 p-2.5 rounded-lg border border-[#FF6600]/20">
                           Envoyez votre don sur le compte OM de la chapelle : <strong className="font-mono text-xs">+237 656 67 73 54</strong>
+                        </p>
+                      )}
+                      {paymentMethod === 'MTN' && (
+                        <p className="text-[11px] text-[#8a7000] font-medium mt-2 bg-[#FFCC00]/10 p-2.5 rounded-lg border border-[#FFCC00]/30">
+                          Envoyez votre don sur le compte MTN MoMo de la chapelle : <strong className="font-mono text-xs">+237 680 82 19 53</strong>
                         </p>
                       )}
                     </div>
@@ -393,6 +407,8 @@ export function Give() {
                       <p className="font-bold text-amber-900 mb-2">Prochaines étapes :</p>
                       {paymentMethod === 'OM' ? (
                         <p>• Envoyez <strong>{getFinalAmountDisplay()}</strong> via Orange Money au <strong className="font-mono">+237 656 67 73 54</strong> (Chapelle CEME)</p>
+                      ) : paymentMethod === 'MTN' ? (
+                        <p>• Envoyez <strong>{getFinalAmountDisplay()}</strong> via MTN MoMo au <strong className="font-mono">+237 680 82 19 53</strong> (Chapelle CEME)</p>
                       ) : (
                         <p>• Effectuez votre virement selon les coordonnées bancaires affichées ci-dessous</p>
                       )}
@@ -404,7 +420,7 @@ export function Give() {
                       <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Référence :</span> <span className="font-mono">{donationRef}</span></p>
                       <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Type :</span> {contribType}{selectedProject ? ` — ${selectedProject.title}` : ''}</p>
                       <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Montant :</span> {getFinalAmountDisplay()}</p>
-                      <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Moyen :</span> {paymentMethod === 'OM' ? 'Orange Money' : 'Virement / Autre'}</p>
+                      <p className="text-gray-700"><span className="text-gray-400 font-bold w-24 inline-block">Moyen :</span> {paymentMethod === 'OM' ? 'Orange Money' : paymentMethod === 'MTN' ? 'MTN MoMo' : 'Virement / Autre'}</p>
                     </div>
 
                     <button
@@ -458,6 +474,7 @@ export function Give() {
                   <div>
                     <h3 className="font-bold mb-1">Mobile Money</h3>
                     <p className="text-[#FF6600] font-bold text-sm">Orange Money : +237 656 67 73 54</p>
+                    <p className="text-[#8a7000] font-bold text-sm mt-0.5">MTN MoMo : +237 680 82 19 53</p>
                     <p className="text-gray-500 text-xs mt-0.5">Chapelle CEME - Transferts directs en tout temps.</p>
                   </div>
                 </div>
