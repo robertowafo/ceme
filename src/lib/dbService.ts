@@ -428,12 +428,110 @@ export async function deletePartner(id: string): Promise<void> {
   return remove('/api/partners', id);
 }
 
+// ─── library_books ──────────────────────────────────────────────────────────────
+
+export interface LibraryBook {
+  id: string;
+  title: string;
+  author: string;
+  category?: string;
+  description?: string;
+  createdAt?: string;
+}
+
+export async function getLibraryBooks(): Promise<LibraryBook[]> {
+  return getAll<LibraryBook>('/api/library-books');
+}
+
+export async function saveLibraryBook(b: LibraryBook): Promise<void> {
+  return upsert('/api/library-books', b.id, b);
+}
+
+export async function deleteLibraryBook(id: string): Promise<void> {
+  return remove('/api/library-books', id);
+}
+
+// ─── book_orders ────────────────────────────────────────────────────────────────
+
+export interface BookOrder {
+  id: string;
+  bookId?: string;
+  bookTitle: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  submittedAt: string;
+}
+
+export async function submitBookOrder(data: { bookId?: string; bookTitle: string; name: string; phone?: string; email?: string }): Promise<void> {
+  const res = await fetch('/api/book-orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function getBookOrders(): Promise<BookOrder[]> {
+  const res = await fetch('/api/book-orders', {
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function deleteBookOrder(id: string): Promise<void> {
+  return remove('/api/book-orders', id);
+}
+
+// ─── contact_messages ───────────────────────────────────────────────────────────
+
+export interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  submittedAt: string;
+}
+
+export async function submitContactMessage(data: { name: string; email: string; phone?: string; subject?: string; message: string }): Promise<void> {
+  const res = await fetch('/api/contact-messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function getContactMessages(): Promise<ContactMessage[]> {
+  const res = await fetch('/api/contact-messages', {
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function deleteContactMessage(id: string): Promise<void> {
+  return remove('/api/contact-messages', id);
+}
+
 // ─── admin counts ─────────────────────────────────────────────────────────────
 
 export interface AdminCounts {
   links: number; photos: number; events: number; testimonials: number;
   documents: number; prayers: number; donations: number; blog: number;
   newsletter: number; projects: number; audit: number; partners: number;
+  books: number; bookOrders: number; contactMessages: number;
 }
 
 export async function getAdminCounts(): Promise<AdminCounts> {

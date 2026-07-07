@@ -1,7 +1,28 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Youtube, Instagram, MapPin, Mail, Phone } from 'lucide-react';
+import { Facebook, Youtube, Instagram, MapPin, Mail, Phone, Check } from 'lucide-react';
+import { subscribeNewsletter } from '../../lib/dbService';
 
 export function Footer() {
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setStatus('sending');
+    setErrorMsg('');
+    try {
+      await subscribeNewsletter(email.trim());
+      setStatus('done');
+      setEmail('');
+    } catch (err: any) {
+      setStatus('error');
+      setErrorMsg(err?.message || 'Une erreur est survenue.');
+    }
+  };
+
   return (
     <footer className="bg-grace-blue-deep text-white/70 border-t-2 border-grace-orange/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-10">
@@ -54,17 +75,31 @@ export function Footer() {
               <a href="https://web.facebook.com/DrAlphonseEssomba?rdid=1dN6E5BKmUndUYJD&share_url=https%3A%2F%2Fweb.facebook.com%2Fshare%2F194eJM2s6G%2F%3F_rdc%3D1%26_rdr#" target="_blank" rel="noopener noreferrer" aria-label="Facebook Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Facebook className="w-4 h-4" /></a>
               <a href="https://www.instagram.com/chapelledeleternelmonetendard?igsh=MTdpem1nMm9tMW4wZg%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" aria-label="Instagram Grâce TV" className="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center hover:bg-grace-orange hover:text-white transition-colors"><Instagram className="w-4 h-4" /></a>
             </div>
-            <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
-              <input
-                type="email"
-                placeholder="Votre adresse email"
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-grace-orange transition-colors"
-                style={{ backdropFilter: 'blur(7px)' }}
-              />
-              <button className="w-full bg-grace-orange hover:bg-grace-orange-dark text-white font-bold rounded-xl px-4 py-2.5 text-sm transition-colors uppercase tracking-wider">
-                S'inscrire
-              </button>
-            </form>
+            {status === 'done' ? (
+              <p className="flex items-center gap-2 text-emerald-400 text-sm font-bold bg-emerald-400/10 border border-emerald-400/20 rounded-xl px-4 py-3">
+                <Check className="w-4 h-4 shrink-0" /> Inscription confirmée, merci !
+              </p>
+            ) : (
+              <form className="space-y-3" onSubmit={handleSubscribe}>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Votre adresse email"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-grace-orange transition-colors"
+                  style={{ backdropFilter: 'blur(7px)' }}
+                />
+                <button
+                  type="submit"
+                  disabled={status === 'sending'}
+                  className="w-full bg-grace-orange hover:bg-grace-orange-dark text-white font-bold rounded-xl px-4 py-2.5 text-sm transition-colors uppercase tracking-wider disabled:opacity-60"
+                >
+                  {status === 'sending' ? 'Envoi...' : "S'inscrire"}
+                </button>
+                {status === 'error' && <p className="text-red-400 text-xs">{errorMsg}</p>}
+              </form>
+            )}
           </div>
         </div>
 

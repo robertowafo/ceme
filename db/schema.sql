@@ -140,3 +140,32 @@ CREATE TABLE IF NOT EXISTS partners (
   avatar_url  TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS library_books (
+  id          TEXT PRIMARY KEY,
+  title       TEXT NOT NULL,
+  author      TEXT NOT NULL,
+  category    TEXT,
+  description TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS book_orders (
+  id           TEXT PRIMARY KEY,
+  book_id      TEXT,
+  book_title   TEXT NOT NULL,
+  name         TEXT NOT NULL,
+  phone        TEXT,
+  email        TEXT,
+  submitted_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS contact_messages (
+  id           TEXT PRIMARY KEY,
+  name         TEXT NOT NULL,
+  email        TEXT NOT NULL,
+  phone        TEXT,
+  subject      TEXT,
+  message      TEXT NOT NULL,
+  submitted_at TEXT NOT NULL
+);

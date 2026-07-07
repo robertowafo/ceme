@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { MapPin, Phone, Mail, Clock, Car, Bus, Heart, Star, Users, BookOpen, Smile, Coffee, ChevronRight, CheckCircle } from 'lucide-react';
+import { MapPin, Phone, Mail, Clock, Car, Bus, Star, Smile, Coffee, ChevronRight, CheckCircle } from 'lucide-react';
 import { SEO } from '../../components/SEO';
 
 const steps = [
@@ -7,13 +7,6 @@ const steps = [
   { icon: Smile,    title: "Vous Êtes Accueillis",    desc: "Notre équipe d'accueil vous remettra un livret de bienvenue. Les enfants seront orientés vers l'École du Dimanche pendant que vous profitez du culte." },
   { icon: Star,     title: "Le Culte Commence",       desc: "30 minutes de louange fervente et authentique, puis un message biblique profond mais pratique d'environ 40 minutes. Vous n'avez pas à lever la main ou à venir devant." },
   { icon: Coffee,   title: "Un Café Ensemble",        desc: "Après le culte, rejoignez-nous pour un moment de convivialité autour d'un café. Notre équipe pastorale est disponible pour toute question ou conversation." },
-];
-
-const groups = [
-  { icon: Users,    title: 'Cellules de Maison',      desc: 'Chaque jeudi soir, petits groupes dans différents quartiers pour partager la Parole, prier et vivre la communion fraternelle.',    tag: 'Jeudi 19h30'  },
-  { icon: Heart,    title: 'Groupe des Femmes',       desc: 'Rencontres mensuelles pour la communion, le soutien mutuel et des enseignements sur la vie de foi au féminin.',                       tag: '1er Samedi'    },
-  { icon: Star,     title: 'Impact Jeunesse',         desc: 'Pour les 15-25 ans. Rencontres hebdomadaires, camps et projets missionnaires pour une génération en feu.',                           tag: 'Samedi 15h00'  },
-  { icon: BookOpen, title: 'École Biblique',          desc: 'Formation doctrinale pour tout croyant désirant approfondir sa connaissance des Écritures. Cours du soir accessibles à tous.',       tag: 'Mardi 18h30'  },
 ];
 
 const faqs = [
@@ -240,75 +233,6 @@ export function JoinUs() {
            </div>
          </div>
        </div>
-
-      {/* ======================================================
-          INTEGRATION GROUPS
-      ====================================================== */}
-      <div className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <p className="text-gold font-bold uppercase tracking-widest text-sm mb-4">S'Intégrer</p>
-            <h2 className="font-serif text-4xl font-bold">Trouver Votre Communauté</h2>
-            <p className="text-gray-400 max-w-xl mx-auto mt-4">
-              Le culte du dimanche est le début. Votre vraie intégration commence dans un groupe à taille humaine.
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-7">
-            {groups.map((grp, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-[#f5f2ed] rounded-3xl p-7 border border-transparent hover:border-gold/20 transition-all group cursor-pointer hover:shadow-lg"
-              >
-                <div className="flex justify-between items-start mb-6">
-                  <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center group-hover:bg-gold transition-colors">
-                    <grp.icon className="w-6 h-6 text-gold group-hover:text-soft-black transition-colors" />
-                  </div>
-                  <span className="bg-white text-xs font-bold uppercase tracking-wider text-gray-400 px-2 py-1 rounded-full border border-gray-200">{grp.tag}</span>
-                </div>
-                <h3 className="font-serif text-xl font-bold mb-3">{grp.title}</h3>
-                <p className="text-gray-600 text-sm leading-relaxed">{grp.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            className="mt-12 bg-soft-black text-white rounded-3xl p-10 text-center relative overflow-hidden"
-          >
-            <div className="absolute inset-0 cross-pattern opacity-20" />
-            <div className="relative z-10">
-              <h3 className="font-serif text-3xl font-bold mb-4">Le Parcours "Les Fondations"</h3>
-              <p className="text-white/65 max-w-2xl mx-auto mb-8 leading-relaxed">
-                Vous êtes nouveau ? Rejoignez notre parcours d'intégration en 4 séances — pour découvrir l'église, notre vision, nos valeurs, et comment trouver votre place dans la famille.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center mb-8">
-                {['Qui sommes-nous ?', 'Notre Vision & Foi', 'Les Dons Spirituels', 'Trouver Ma Place'].map((step, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-gold text-soft-black text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</div>
-                    <span className="text-white/70 text-sm whitespace-nowrap">{step}</span>
-                    {i < 3 && <ChevronRight className="w-4 h-4 text-white/20 hidden sm:block" />}
-                  </div>
-                ))}
-              </div>
-              <button className="bg-gold hover:bg-yellow-400 text-soft-black px-8 py-4 rounded-full font-bold uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(201,168,76,0.3)]">
-                M'inscrire au Parcours
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
 
       {/* ======================================================
           FAQ

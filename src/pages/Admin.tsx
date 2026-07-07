@@ -31,6 +31,8 @@ import {
   BarChart3,
   Mail,
   Globe,
+  BookOpen,
+  MessageSquare,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -51,10 +53,13 @@ import {
   getAuditLog, AuditEntry,
   getDonationProjects, saveDonationProject, deleteDonationProject, DonationProject,
   getPartners, savePartner, deletePartner, Partner,
+  getLibraryBooks, saveLibraryBook, deleteLibraryBook, LibraryBook,
+  getBookOrders, deleteBookOrder, BookOrder,
+  getContactMessages, deleteContactMessage, ContactMessage,
   getAdminCounts, AdminCounts,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'admins' | 'audit';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'books' | 'contactMessages' | 'admins' | 'audit';
 
 export function Admin() {
   const { user, isAdmin, isSuperAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
@@ -90,6 +95,13 @@ export function Admin() {
   const [partnerYoutubeUrl, setPartnerYoutubeUrl] = useState('');
   const [partnerWebsite, setPartnerWebsite] = useState('');
   const [partnerAvatarUrl, setPartnerAvatarUrl] = useState('');
+  const [books, setBooks] = useState<LibraryBook[]>([]);
+  const [bookTitle, setBookTitle] = useState('');
+  const [bookAuthor, setBookAuthor] = useState('');
+  const [bookCategory, setBookCategory] = useState('');
+  const [bookDesc, setBookDesc] = useState('');
+  const [bookOrders, setBookOrders] = useState<BookOrder[]>([]);
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -99,7 +111,7 @@ export function Admin() {
   const [isSavingCat, setIsSavingCat] = useState(false);
 
   // Modal / Form States
-  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, partners:0, audit:0 });
+  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, partners:0, audit:0, books:0, bookOrders:0, contactMessages:0 });
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -252,6 +264,13 @@ export function Admin() {
       } else if (activeTab === 'partners') {
         const data = await getPartners();
         setPartners(data);
+      } else if (activeTab === 'books') {
+        const [data, orders] = await Promise.all([getLibraryBooks(), getBookOrders()]);
+        setBooks(data);
+        setBookOrders(orders);
+      } else if (activeTab === 'contactMessages') {
+        const data = await getContactMessages();
+        setContactMessages(data);
       } else if (activeTab === 'admins') {
         const data = await getAdmins();
         setAdmins(data);
@@ -313,6 +332,7 @@ export function Admin() {
     setBlogPublishedAt(new Date().toISOString().slice(0, 10)); setBlogIsPublished(true);
     setProjTitle(''); setProjDesc(''); setProjGoal(''); setProjCurrency('FCFA'); setProjIsActive(true);
     setPartnerFirstName(''); setPartnerLastName(''); setPartnerTitle(''); setPartnerChurch(''); setPartnerLocation(''); setPartnerBio(''); setPartnerYoutubeUrl(''); setPartnerWebsite(''); setPartnerAvatarUrl('');
+    setBookTitle(''); setBookAuthor(''); setBookCategory(''); setBookDesc('');
     setShowCatManager(false); setNewCatName('');
   };
 
@@ -389,6 +409,12 @@ export function Admin() {
       setPartnerYoutubeUrl(p.youtubeUrl);
       setPartnerWebsite(p.website || '');
       setPartnerAvatarUrl(p.avatarUrl || '');
+    } else if (activeTab === 'books') {
+      const b = item as LibraryBook;
+      setBookTitle(b.title);
+      setBookAuthor(b.author);
+      setBookCategory(b.category || '');
+      setBookDesc(b.description || '');
     }
   };
 
@@ -423,6 +449,10 @@ export function Admin() {
         await deleteDonationProject(deleteConfirmId);
       } else if (activeTab === 'partners') {
         await deletePartner(deleteConfirmId);
+      } else if (activeTab === 'books') {
+        await deleteLibraryBook(deleteConfirmId);
+      } else if (activeTab === 'contactMessages') {
+        await deleteContactMessage(deleteConfirmId);
       }
       showStatus('Élément supprimé avec succès !', 'success');
       loadData();
@@ -444,6 +474,18 @@ export function Admin() {
     } finally {
       setIsLoadingData(false);
       setDeleteConfirmId(null);
+    }
+  };
+
+  // Suppression rapide d'une commande de livre (liste secondaire de l'onglet Bibliothèque)
+  const handleDeleteOrder = async (id: string) => {
+    if (!window.confirm('Supprimer définitivement cette commande ?')) return;
+    try {
+      await deleteBookOrder(id);
+      showStatus('Commande supprimée.', 'success');
+      loadData();
+    } catch (err: any) {
+      showStatus('Erreur lors de la suppression de la commande.', 'error');
     }
   };
 
@@ -560,6 +602,16 @@ export function Admin() {
           avatarUrl: partnerAvatarUrl || undefined,
         };
         await savePartner(payload);
+      } else if (activeTab === 'books') {
+        const bookId = editingItem ? editingItem.id : 'bk_' + Date.now();
+        const payload: LibraryBook = {
+          id: bookId,
+          title: bookTitle,
+          author: bookAuthor,
+          category: bookCategory || undefined,
+          description: bookDesc || undefined,
+        };
+        await saveLibraryBook(payload);
       }
 
       showStatus('Élément sauvegardé avec succès !', 'success');
@@ -835,6 +887,20 @@ export function Admin() {
             </button>
 
             <button
+              onClick={() => setActiveTab('contactMessages')}
+              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                activeTab === 'contactMessages'
+                  ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-900/30'
+                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <MessageSquare className="w-4.5 h-4.5" /> ✉️ Messages de Contact
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.contactMessages}</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('projects')}
               className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
                 activeTab === 'projects'
@@ -860,6 +926,20 @@ export function Admin() {
                 <Users className="w-4.5 h-4.5" /> 🤝 Partenaires Grâce TV
               </span>
               <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.partners}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('books')}
+              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                activeTab === 'books'
+                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
+                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <BookOpen className="w-4.5 h-4.5" /> 📚 Bibliothèque
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.books}</span>
             </button>
 
             <div className="border-t border-white/10 my-2 pt-2">
@@ -915,6 +995,8 @@ export function Admin() {
                   {activeTab === 'newsletter' && 'Abonnés à la Newsletter'}
                   {activeTab === 'projects' && 'Projets de Collecte de Fonds'}
                   {activeTab === 'partners' && 'Gestion des Partenaires Grâce TV'}
+                  {activeTab === 'books' && 'Gestion de la Bibliothèque & Commandes'}
+                  {activeTab === 'contactMessages' && 'Messages reçus via le formulaire de Contact'}
                   {activeTab === 'audit' && 'Registre des Actions Administratives'}
                   {activeTab === 'admins' && 'Gestion des Administrateurs'}
                 </h3>
@@ -930,12 +1012,14 @@ export function Admin() {
                   {activeTab === 'newsletter' && 'newsletter_subscribers'}
                   {activeTab === 'projects' && 'donation_projects'}
                   {activeTab === 'partners' && 'partners'}
+                  {activeTab === 'books' && 'library_books'}
+                  {activeTab === 'contactMessages' && 'contact_messages'}
                   {activeTab === 'audit' && 'audit_log'}
                   {activeTab === 'admins' && 'admins'}
                 </p>
               </div>
 
-              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && (
+              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && activeTab !== 'books' && activeTab !== 'contactMessages' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -965,6 +1049,14 @@ export function Admin() {
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" /> Nouveau Partenaire
+                </button>
+              )}
+              {activeTab === 'books' && (
+                <button
+                  onClick={handleAddNew}
+                  className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" /> Nouvel Ouvrage
                 </button>
               )}
             </div>
@@ -1750,6 +1842,124 @@ export function Admin() {
                     )}
                   </div>
                 )}
+
+                {/* Books + Book Orders View */}
+                {activeTab === 'books' && (
+                  <div className="space-y-10">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">Ouvrages disponibles</h4>
+                      {books.length === 0 ? (
+                        <EmptyMessage />
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {books.map((b) => (
+                            <div key={b.id} className="bg-white/5 border border-white/10 rounded-xl p-5">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="min-w-0">
+                                  {b.category && <span className="text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/10 px-2 py-0.5 rounded-full">{b.category}</span>}
+                                  <h4 className="font-bold text-white text-sm mt-1.5">{b.title}</h4>
+                                  <p className="text-[11px] text-white/40">De {b.author}</p>
+                                </div>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button onClick={() => handleEdit(b)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                  <button onClick={() => handleDelete(b.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                </div>
+                              </div>
+                              {b.description && <p className="text-[11px] text-white/55 leading-relaxed line-clamp-2 mt-1">{b.description}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-white/40 mb-4">
+                        Commandes reçues ({bookOrders.length}) — pour suivi et remise des ouvrages
+                      </h4>
+                      {bookOrders.length === 0 ? (
+                        <EmptyMessage />
+                      ) : (
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
+                                <th className="pb-3 pr-4">Ouvrage</th>
+                                <th className="pb-3 pr-4">Nom</th>
+                                <th className="pb-3 pr-4">Téléphone</th>
+                                <th className="pb-3 pr-4">Date</th>
+                                <th className="pb-3 text-right">Action</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {bookOrders.map((o) => (
+                                <tr key={o.id} className="border-b border-white/5 hover:bg-white/[0.02] align-top">
+                                  <td className="py-4 pr-4 font-semibold text-white">{o.bookTitle}</td>
+                                  <td className="py-4 pr-4 text-white/75">{o.name}</td>
+                                  <td className="py-4 pr-4 font-mono text-gold/80">
+                                    {o.phone || <span className="text-white/20 italic font-normal">—</span>}
+                                  </td>
+                                  <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                    {new Date(o.submittedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </td>
+                                  <td className="py-4 text-right">
+                                    <button onClick={() => handleDeleteOrder(o.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors" title="Supprimer cette commande">
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Contact Messages View */}
+                {activeTab === 'contactMessages' && (
+                  <div className="overflow-x-auto">
+                    {contactMessages.length === 0 ? (
+                      <EmptyMessage />
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
+                            <th className="pb-3 pr-4">Nom</th>
+                            <th className="pb-3 pr-4">Email / Téléphone</th>
+                            <th className="pb-3 pr-4">Sujet</th>
+                            <th className="pb-3 pr-4">Message</th>
+                            <th className="pb-3 pr-4">Date</th>
+                            <th className="pb-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {contactMessages.map((m) => (
+                            <tr key={m.id} className="border-b border-white/5 hover:bg-white/[0.02] align-top">
+                              <td className="py-4 pr-4 font-semibold text-white whitespace-nowrap">{m.name}</td>
+                              <td className="py-4 pr-4 text-white/60">
+                                <p>{m.email}</p>
+                                {m.phone && <p className="font-mono text-gold/80 mt-0.5">{m.phone}</p>}
+                              </td>
+                              <td className="py-4 pr-4 text-white/75">{m.subject || '—'}</td>
+                              <td className="py-4 pr-4 text-white/75 max-w-sm">
+                                <p className="line-clamp-3 leading-relaxed">{m.message}</p>
+                              </td>
+                              <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                {new Date(m.submittedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td className="py-4 text-right">
+                                <button onClick={() => handleDelete(m.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors" title="Supprimer ce message">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -2250,6 +2460,30 @@ export function Admin() {
                         accept="image/*"
                         description="Photo ou avatar du pasteur/partenaire. Si non fournie, l'initiale du nom sera affichée."
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Library Book Form Fields */}
+                {activeTab === 'books' && (
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre *</label>
+                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookTitle} onChange={e => setBookTitle(e.target.value)} placeholder="Ex: La Puissance de la Prière Fervente" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Auteur *</label>
+                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookAuthor} onChange={e => setBookAuthor(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie (optionnel)</label>
+                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookCategory} onChange={e => setBookCategory(e.target.value)} placeholder="Ex: Prière & Intercession" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description (optionnel)</label>
+                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={bookDesc} onChange={e => setBookDesc(e.target.value)} placeholder="Résumé de l'ouvrage..." />
                     </div>
                   </div>
                 )}

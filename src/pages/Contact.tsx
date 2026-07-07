@@ -1,9 +1,32 @@
-import { Mail, Phone, MapPin, Send, MessageCircle, Info } from 'lucide-react';
+import { useState } from 'react';
+import { Mail, Phone, MapPin, Send, MessageCircle, Info, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
 import { SEO } from '../components/SEO';
 import { localBusinessSchema } from '../lib/structuredData';
+import { submitContactMessage } from '../lib/dbService';
 
 export function Contact() {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [subject, setSubject] = useState('Information générale');
+  const [message, setMessage] = useState('');
+  const [status, setStatus] = useState<'idle' | 'sending' | 'done' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus('sending');
+    setErrorMsg('');
+    try {
+      await submitContactMessage({ name, email, phone: phone || undefined, subject, message });
+      setStatus('done');
+    } catch (err: any) {
+      setStatus('error');
+      setErrorMsg(err?.message || 'Une erreur est survenue. Veuillez réessayer.');
+    }
+  };
+
   return (
     <div className="pt-24 pb-20 bg-white min-h-screen">
       <SEO
@@ -33,45 +56,69 @@ export function Contact() {
             <div className="bg-white border border-gray-200 p-8 md:p-12 rounded-[2.5rem] shadow-sm">
               <h2 className="font-serif text-3xl font-bold mb-2">Envoyez-nous un message</h2>
               <p className="text-gray-500 text-sm mb-8">Nous traitons les messages sous 48h ouvrées. Pour les urgences pastorales, privilégiez le téléphone.</p>
-              
-              <form className="space-y-6" onSubmit={e => e.preventDefault()}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Nom Complet</label>
-                    <input type="text" placeholder="Jean Dupont" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
+
+              {status === 'done' ? (
+                <div className="flex flex-col items-center text-center py-10 gap-4">
+                  <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                    <CheckCircle className="w-9 h-9" />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Adresse Email</label>
-                    <input type="email" placeholder="jean@exemple.com" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
-                  </div>
+                  <h3 className="font-serif text-2xl font-bold text-soft-black">Message envoyé !</h3>
+                  <p className="text-gray-500 text-sm max-w-sm">Merci {name}, votre message a bien été reçu. Notre équipe reviendra vers vous sous 48h ouvrées.</p>
+                  <button
+                    onClick={() => { setStatus('idle'); setName(''); setEmail(''); setPhone(''); setSubject('Information générale'); setMessage(''); }}
+                    className="text-xs font-bold uppercase tracking-wider text-gray-400 hover:text-soft-black transition-colors"
+                  >
+                    Envoyer un autre message
+                  </button>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Téléphone</label>
-                    <input type="tel" placeholder="+237 600 00 00 00" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all"/>
+              ) : (
+                <form className="space-y-6" onSubmit={handleSubmit}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Nom Complet</label>
+                      <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jean Dupont" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Adresse Email</label>
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jean@exemple.com" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Sujet de votre demande</label>
-                    <select className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold appearance-none text-gray-700 cursor-pointer transition-all">
-                      <option>Information générale</option>
-                      <option>Demande d'entretien pastoral</option>
-                      <option>Visite à l'hôpital ou domicile</option>
-                      <option>S'engager comme bénévole</option>
-                      <option>Baptêmes ou Mariages</option>
-                    </select>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Téléphone</label>
+                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+237 600 00 00 00" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all"/>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Sujet de votre demande</label>
+                      <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold appearance-none text-gray-700 cursor-pointer transition-all">
+                        <option>Information générale</option>
+                        <option>Demande d'entretien pastoral</option>
+                        <option>Visite à l'hôpital ou domicile</option>
+                        <option>S'engager comme bénévole</option>
+                        <option>Baptêmes ou Mariages</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Votre Message</label>
-                  <textarea rows={6} placeholder="Comment pouvons-nous vous aider ?" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-gold resize-none transition-all" required></textarea>
-                </div>
-                
-                <button className="bg-soft-black text-white hover:bg-grace-orange hover:text-soft-black px-10 py-5 rounded-xl font-bold uppercase tracking-widest transition-all hover:-translate-y-1 hover:shadow-xl w-full flex items-center justify-center gap-3">
-                  <Send className="w-5 h-5"/> Envoyer le message
-                </button>
-              </form>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Votre Message</label>
+                    <textarea rows={6} value={message} onChange={e => setMessage(e.target.value)} placeholder="Comment pouvons-nous vous aider ?" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-gold resize-none transition-all" required></textarea>
+                  </div>
+
+                  {status === 'error' && (
+                    <p className="text-xs text-red-600 font-bold bg-red-50 p-3 rounded-xl border border-red-200">⚠️ {errorMsg}</p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={status === 'sending'}
+                    className="bg-soft-black text-white hover:bg-grace-orange hover:text-soft-black px-10 py-5 rounded-xl font-bold uppercase tracking-widest transition-all hover:-translate-y-1 hover:shadow-xl w-full flex items-center justify-center gap-3 disabled:opacity-60 disabled:hover:translate-y-0"
+                  >
+                    <Send className="w-5 h-5"/> {status === 'sending' ? 'Envoi en cours...' : 'Envoyer le message'}
+                  </button>
+                </form>
+              )}
             </div>
           </div>
 

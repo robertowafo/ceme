@@ -1009,6 +1009,94 @@ app.delete('/partners/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
+// ─── library_books ──────────────────────────────────────────────────────────────
+
+app.get('/library-books', async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, title, author, category, description, created_at AS createdAt
+     FROM library_books ORDER BY created_at ASC`
+  ).all()
+  return c.json(results)
+})
+
+app.put('/library-books/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const { title, author, category, description } = await c.req.json()
+  const existing = await c.env.DB.prepare('SELECT id FROM library_books WHERE id=?').bind(id).first()
+  await c.env.DB.prepare(
+    `INSERT INTO library_books (id, title, author, category, description, created_at)
+     VALUES (?,?,?,?,?,datetime('now'))
+     ON CONFLICT(id) DO UPDATE SET
+       title=excluded.title, author=excluded.author, category=excluded.category, description=excluded.description`
+  ).bind(id, title, author, category ?? null, description ?? null).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Bibliothèque', id, `${existing ? 'Modification' : 'Ajout'} ouvrage : "${title}"`)
+  return c.json({ success: true })
+})
+
+app.delete('/library-books/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT title FROM library_books WHERE id=?').bind(id).first<{title:string}>()
+  await c.env.DB.prepare('DELETE FROM library_books WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Bibliothèque', id, `Suppression ouvrage : "${row?.title ?? id}"`)
+  return c.json({ success: true })
+})
+
+// ─── book_orders ────────────────────────────────────────────────────────────────
+
+app.post('/book-orders', rateLimit('book-orders', 5, 600), async (c) => {
+  const { bookId, bookTitle, name, phone, email } = await c.req.json()
+  if (!bookTitle?.trim() || !name?.trim()) return c.json({ error: 'Nom et ouvrage requis' }, 400)
+  const id = 'bko_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+  await c.env.DB.prepare(
+    'INSERT INTO book_orders (id, book_id, book_title, name, phone, email, submitted_at) VALUES (?,?,?,?,?,?,?)'
+  ).bind(id, bookId ?? null, bookTitle.trim(), name.trim(), phone?.trim() || null, email?.trim() || null, new Date().toISOString()).run()
+  return c.json({ success: true, id })
+})
+
+app.get('/book-orders', requireAdmin, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, book_id AS bookId, book_title AS bookTitle, name, phone, email, submitted_at AS submittedAt
+     FROM book_orders ORDER BY submitted_at DESC`
+  ).all()
+  return c.json(results)
+})
+
+app.delete('/book-orders/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT name, book_title FROM book_orders WHERE id=?').bind(id).first<{name:string,book_title:string}>()
+  await c.env.DB.prepare('DELETE FROM book_orders WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Commandes Livres', id, `Suppression commande de "${row?.book_title ?? '?'}" par ${row?.name ?? id}`)
+  return c.json({ success: true })
+})
+
+// ─── contact_messages ───────────────────────────────────────────────────────────
+
+app.post('/contact-messages', rateLimit('contact-messages', 5, 600), async (c) => {
+  const { name, email, phone, subject, message } = await c.req.json()
+  if (!name?.trim() || !email?.trim() || !message?.trim()) return c.json({ error: 'Nom, email et message sont requis' }, 400)
+  const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+  await c.env.DB.prepare(
+    'INSERT INTO contact_messages (id, name, email, phone, subject, message, submitted_at) VALUES (?,?,?,?,?,?,?)'
+  ).bind(id, name.trim(), email.trim(), phone?.trim() || null, subject?.trim() || null, message.trim(), new Date().toISOString()).run()
+  return c.json({ success: true, id })
+})
+
+app.get('/contact-messages', requireAdmin, async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, name, email, phone, subject, message, submitted_at AS submittedAt
+     FROM contact_messages ORDER BY submitted_at DESC`
+  ).all()
+  return c.json(results)
+})
+
+app.delete('/contact-messages/:id', requireAdmin, async (c) => {
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT name FROM contact_messages WHERE id=?').bind(id).first<{name:string}>()
+  await c.env.DB.prepare('DELETE FROM contact_messages WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Messages Contact', id, `Suppression message de : "${row?.name ?? id}"`)
+  return c.json({ success: true })
+})
+
 // ─── youtube/channel-playlists ────────────────────────────────────────────────
 
 app.get('/youtube/channel-playlists', async (c) => {
@@ -1078,7 +1166,7 @@ app.get('/youtube/channel-playlists', async (c) => {
 // ─── admin counts (all tabs in one query) ──────────────────────────────────────
 
 app.get('/admin/counts', requireAdmin, async (c) => {
-  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog, partners] =
+  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog, partners, books, bookOrders, contactMessages] =
     await Promise.all([
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM recommended_links').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM gallery_photos').first<{n:number}>(),
@@ -1092,6 +1180,9 @@ app.get('/admin/counts', requireAdmin, async (c) => {
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM donation_projects').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM audit_log').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM partners').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM library_books').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM book_orders').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM contact_messages').first<{n:number}>(),
     ])
   return c.json({
     links:        Number(links?.n        ?? 0),
@@ -1106,6 +1197,9 @@ app.get('/admin/counts', requireAdmin, async (c) => {
     projects:     Number(projects?.n     ?? 0),
     audit:        Number(auditLog?.n     ?? 0),
     partners:     Number(partners?.n     ?? 0),
+    books:        Number(books?.n        ?? 0),
+    bookOrders:   Number(bookOrders?.n   ?? 0),
+    contactMessages: Number(contactMessages?.n ?? 0),
   })
 })
 

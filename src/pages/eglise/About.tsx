@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'motion/react';
 import { Target, Shield, Flame, BookOpen, Heart, Users, Compass, ChevronRight, CheckCircle, Star, Book, Quote, Camera, ZoomIn, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { TestimonialCross } from '../../components/TestimonialCross';
-import { getGalleryPhotos, getStudyDocuments } from '../../lib/dbService';
+import { getGalleryPhotos, getStudyDocuments, getLibraryBooks, submitBookOrder, type LibraryBook } from '../../lib/dbService';
 import { SEO } from '../../components/SEO';
 
 
@@ -154,6 +154,12 @@ export function About() {
   const [photosList, setPhotosList] = useState<any[]>(galleryImages);
   const [studyDocs, setStudyDocs] = useState<any[]>([]);
   const [lightboxItem, setLightboxItem] = useState<any | null>(null);
+  const [books, setBooks] = useState<LibraryBook[]>([]);
+  const [orderingBook, setOrderingBook] = useState<LibraryBook | null>(null);
+  const [orderName, setOrderName] = useState('');
+  const [orderPhone, setOrderPhone] = useState('');
+  const [orderStatus, setOrderStatus] = useState<'idle' | 'sending' | 'error'>('idle');
+  const [orderErrorMsg, setOrderErrorMsg] = useState('');
 
   const sectionRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({
@@ -178,6 +184,28 @@ export function About() {
   useEffect(() => {
     getStudyDocuments().then(setStudyDocs).catch(() => setStudyDocs([]));
   }, []);
+
+  useEffect(() => {
+    getLibraryBooks().then(setBooks).catch(() => setBooks([]));
+  }, []);
+
+  const handleOrderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderingBook) return;
+    setOrderStatus('sending');
+    setOrderErrorMsg('');
+    try {
+      await submitBookOrder({ bookId: orderingBook.id, bookTitle: orderingBook.title, name: orderName, phone: orderPhone || undefined });
+      setReservedBook(orderingBook.title);
+      setOrderingBook(null);
+      setOrderName('');
+      setOrderPhone('');
+      setOrderStatus('idle');
+    } catch (err: any) {
+      setOrderStatus('error');
+      setOrderErrorMsg(err?.message || 'Une erreur est survenue. Veuillez réessayer.');
+    }
+  };
 
 
   return (
@@ -530,57 +558,43 @@ export function About() {
           </motion.div>
 
           {/* Book Catalog Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            {[
-              {
-                title: "La Puissance de la Prière Fervente",
-                author: "Rev. Dr. Alphonse ESSOMBA BOUNOUNGOU",
-                category: "Prière & Intercession",
-                desc: "Un guide approfondi pour cultiver une vie de prière fervente et expérimenter la manifestation de la gloire divine dans votre quotidien."
-              },
-              {
-                title: "Enracinés dans la Parole",
-                author: "Maman Marie Charlotte ESSOMBA & Enseignants CEME",
-                category: "Théologie & Croissance",
-                desc: "Série d'enseignements et d'études théologiques appliquées sur les fondamentaux de la vie chrétienne pour consolider vos bases de foi."
-              },
-              {
-                title: "Marcher sous le Direction du Saint-Esprit",
-                author: "Ministères de l'Éternel",
-                category: "Vie Chrétienne",
-                desc: "Comprendre et vivre la plénitude spirituelle, s'ouvrir à l'écoute de Dieu et marcher fidèlement en accord avec Ses dons spirituels."
-              }
-            ].map((book, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 border border-gray-150 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mb-6 group-hover:bg-gold transition-colors">
-                    <Book className="w-6 h-6 text-gold group-hover:text-soft-black" />
-                  </div>
-                  <span className="text-xs font-bold uppercase tracking-wider text-burgundy bg-burgundy/10 px-3 py-1 rounded-full">{book.category}</span>
-                  <h3 className="font-serif text-2xl font-bold mt-4 mb-2 text-soft-black leading-tight">{book.title}</h3>
-                  <p className="text-gray-400 text-xs mb-4 font-medium">De {book.author}</p>
-                  <p className="text-gray-600 text-sm leading-relaxed mb-6">{book.desc}</p>
-                </div>
-                
-                <button
-                  onClick={() => setReservedBook(book.title)}
-                  className="w-full bg-soft-black hover:bg-gold text-white hover:text-soft-black text-xs font-bold uppercase tracking-widest py-3.5 rounded-full transition-colors cursor-pointer text-center"
+          {books.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+              {books.map((book) => (
+                <motion.div
+                  key={book.id}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="bg-white rounded-3xl p-8 border border-gray-150 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group"
                 >
-                  Emprunter l'ouvrage
-                </button>
-              </motion.div>
-            ))}
-          </div>
+                  <div>
+                    <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mb-6 group-hover:bg-gold transition-colors">
+                      <Book className="w-6 h-6 text-gold group-hover:text-soft-black" />
+                    </div>
+                    {book.category && (
+                      <span className="text-xs font-bold uppercase tracking-wider text-burgundy bg-burgundy/10 px-3 py-1 rounded-full">{book.category}</span>
+                    )}
+                    <h3 className="font-serif text-2xl font-bold mt-4 mb-2 text-soft-black leading-tight">{book.title}</h3>
+                    <p className="text-gray-400 text-xs mb-4 font-medium">De {book.author}</p>
+                    {book.description && (
+                      <p className="text-gray-600 text-sm leading-relaxed mb-6">{book.description}</p>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => setOrderingBook(book)}
+                    className="w-full bg-soft-black hover:bg-gold text-white hover:text-soft-black text-xs font-bold uppercase tracking-widest py-3.5 rounded-full transition-colors cursor-pointer text-center"
+                  >
+                    Commander l'ouvrage
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+          )}
 
           <p className="text-center text-xs text-gray-500 max-w-lg mx-auto leading-relaxed">
-            Notre espace de lecture physique comprend plus de 150 autres ouvrages de théologie, d'histoire chrétienne et de récits édifiants. N'hésitez pas à nous visiter avant ou après chaque culte !
+            Notre espace de lecture physique comprend d'autres ouvrages de théologie, d'histoire chrétienne et de récits édifiants. N'hésitez pas à nous visiter avant ou après chaque culte !
           </p>
         </div>
       </div>
@@ -789,6 +803,57 @@ export function About() {
       </AnimatePresence>
 
       {/* ======================================================
+          COMMANDE D'OUVRAGE — FORMULAIRE
+      ====================================================== */}
+      <AnimatePresence>
+        {orderingBook && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full border border-gold/30 shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-gold via-burgundy to-gold" />
+              <h3 className="font-serif text-2xl font-bold text-soft-black mb-2">Commander l'ouvrage</h3>
+              <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                <strong className="text-burgundy">"{orderingBook.title}"</strong> — laissez-nous vos coordonnées, notre équipe vous contactera pour la remise de l'ouvrage.
+              </p>
+              <form onSubmit={handleOrderSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Nom complet</label>
+                  <input type="text" required value={orderName} onChange={e => setOrderName(e.target.value)} placeholder="Jean Dupont" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Téléphone</label>
+                  <input type="tel" value={orderPhone} onChange={e => setOrderPhone(e.target.value)} placeholder="+237 6XX XXX XXX" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
+                </div>
+                {orderStatus === 'error' && (
+                  <p className="text-xs text-red-600 font-bold bg-red-50 p-3 rounded-xl border border-red-200">⚠️ {orderErrorMsg}</p>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setOrderingBook(null); setOrderName(''); setOrderPhone(''); setOrderStatus('idle'); }}
+                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-soft-black font-bold uppercase tracking-widest py-3 rounded-full transition-colors cursor-pointer text-xs"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={orderStatus === 'sending'}
+                    className="flex-1 bg-soft-black hover:bg-gold text-white hover:text-soft-black font-bold uppercase tracking-widest py-3 rounded-full transition-colors cursor-pointer text-xs disabled:opacity-60"
+                  >
+                    {orderStatus === 'sending' ? 'Envoi...' : 'Confirmer'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================
           RESERVATION FEEDBACK MODAL
       ====================================================== */}
       <AnimatePresence>
@@ -804,9 +869,9 @@ export function About() {
               <div className="w-16 h-16 rounded-full bg-gold/15 text-gold flex items-center justify-center mx-auto mb-6">
                 <CheckCircle className="w-8 h-8" />
               </div>
-              <h3 className="font-serif text-2xl font-bold text-soft-black mb-3">Ouvrage réservé !</h3>
+              <h3 className="font-serif text-2xl font-bold text-soft-black mb-3">Commande envoyée !</h3>
               <p className="text-sm text-gray-500 mb-6 leading-relaxed">
-                Vous avez réservé <strong className="text-burgundy">"{reservedBook}"</strong>. Veuillez vous rapprocher de l'accueil de notre bibliothèque lors du prochain culte de dimanche pour récupérer votre livre.
+                Votre commande de <strong className="text-burgundy">"{reservedBook}"</strong> a bien été enregistrée. Notre équipe vous contactera prochainement pour organiser la remise de l'ouvrage.
               </p>
               <button
                 onClick={() => setReservedBook(null)}
