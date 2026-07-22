@@ -33,6 +33,7 @@ import {
   Globe,
   BookOpen,
   MessageSquare,
+  KeyRound,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -49,7 +50,7 @@ import {
   getAllBlogPosts, saveBlogPost, deleteBlogPost, BlogPost,
   getBlogCategories, saveBlogCategory, deleteBlogCategory, BlogCategory,
   getNewsletterSubscribers, deleteNewsletterSubscriber, NewsletterSubscriber,
-  getAdmins, addAdmin, removeAdmin, AdminUser,
+  getAdmins, addAdmin, removeAdmin, AdminUser, setAdminPassword, changeMyPassword,
   getAuditLog, AuditEntry,
   getDonationProjects, saveDonationProject, deleteDonationProject, DonationProject,
   getPartners, savePartner, deletePartner, Partner,
@@ -62,7 +63,7 @@ import {
 type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'books' | 'contactMessages' | 'admins' | 'audit';
 
 export function Admin() {
-  const { user, isAdmin, isSuperAdmin, isLoading: isAuthLoading, loginWithGoogle, logout } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isLoading: isAuthLoading, loginWithGoogle, loginWithPassword, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('links');
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
@@ -105,7 +106,25 @@ export function Admin() {
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
   const [isAddingAdmin, setIsAddingAdmin] = useState(false);
+  const [resetPasswordFor, setResetPasswordFor] = useState<string | null>(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  // Login screen — email + mot de passe (alternative à Google)
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  // Modale "Mon mot de passe" (accessible à tout admin connecté)
+  const [showMyPasswordModal, setShowMyPasswordModal] = useState(false);
+  const [myCurrentPassword, setMyCurrentPassword] = useState('');
+  const [myNewPassword, setMyNewPassword] = useState('');
+  const [myNewPasswordConfirm, setMyNewPasswordConfirm] = useState('');
+  const [isSavingMyPassword, setIsSavingMyPassword] = useState(false);
+  const [myPasswordError, setMyPasswordError] = useState('');
   const [showCatManager, setShowCatManager] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [isSavingCat, setIsSavingCat] = useState(false);
@@ -684,12 +703,65 @@ export function Admin() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={loginWithGoogle}
-                className="w-full bg-gold hover:bg-gold/90 text-soft-black font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl transition-all shadow-lg text-xs flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <GoogleIcon className="w-4 h-4" /> Se connecter avec Google
-              </button>
+              <div className="w-full">
+                <button
+                  onClick={loginWithGoogle}
+                  className="w-full bg-gold hover:bg-gold/90 text-soft-black font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl transition-all shadow-lg text-xs flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <GoogleIcon className="w-4 h-4" /> Se connecter avec Google
+                </button>
+
+                <div className="flex items-center gap-3 my-5">
+                  <div className="flex-1 h-px bg-white/10" />
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest font-bold">ou</span>
+                  <div className="flex-1 h-px bg-white/10" />
+                </div>
+
+                <form
+                  className="w-full space-y-3 text-left"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (!loginEmail.trim() || !loginPassword) return;
+                    setIsLoggingIn(true);
+                    setLoginError('');
+                    try {
+                      await loginWithPassword(loginEmail.trim(), loginPassword);
+                      setLoginPassword('');
+                    } catch (err: any) {
+                      setLoginError(err?.message || 'Identifiants invalides.');
+                    } finally {
+                      setIsLoggingIn(false);
+                    }
+                  }}
+                >
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={e => setLoginEmail(e.target.value)}
+                    placeholder="Adresse email"
+                    autoComplete="username"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                  />
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={e => setLoginPassword(e.target.value)}
+                    placeholder="Mot de passe"
+                    autoComplete="current-password"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                  />
+                  {loginError && (
+                    <p className="text-[10px] text-red-400 font-bold">{loginError}</p>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={!loginEmail.trim() || !loginPassword || isLoggingIn}
+                    className="w-full bg-white/5 hover:bg-white/10 border border-white/15 text-white font-bold uppercase tracking-wider px-6 py-3 rounded-xl transition-all text-xs flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40"
+                  >
+                    <KeyRound className="w-4 h-4 text-gold" /> {isLoggingIn ? 'Connexion...' : 'Se connecter'}
+                  </button>
+                </form>
+              </div>
             )}
 
             <span className="text-[10px] text-white/40 mt-8">
@@ -743,13 +815,122 @@ export function Admin() {
             </p>
           </div>
 
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest bg-white/5 hover:bg-white/10 border border-white/15 px-4 py-2.5 rounded-xl cursor-pointer text-white/80 hover:text-white transition-all self-start md:self-auto"
-          >
-            <LogOut className="w-4 h-4 text-burgundy" /> Se déconnecter
-          </button>
+          <div className="flex items-center gap-3 self-start md:self-auto">
+            <button
+              onClick={() => {
+                setMyPasswordError('');
+                setMyCurrentPassword('');
+                setMyNewPassword('');
+                setMyNewPasswordConfirm('');
+                setShowMyPasswordModal(true);
+              }}
+              className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest bg-white/5 hover:bg-white/10 border border-white/15 px-4 py-2.5 rounded-xl cursor-pointer text-white/80 hover:text-white transition-all"
+            >
+              <KeyRound className="w-4 h-4 text-gold" /> Mon mot de passe
+            </button>
+            <button
+              onClick={logout}
+              className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest bg-white/5 hover:bg-white/10 border border-white/15 px-4 py-2.5 rounded-xl cursor-pointer text-white/80 hover:text-white transition-all"
+            >
+              <LogOut className="w-4 h-4 text-burgundy" /> Se déconnecter
+            </button>
+          </div>
         </div>
+
+        {/* Modale "Mon mot de passe" */}
+        <AnimatePresence>
+          {showMyPasswordModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center px-4"
+              onClick={() => setShowMyPasswordModal(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                onClick={e => e.stopPropagation()}
+                className="w-full max-w-sm bg-stone-900 border border-white/10 rounded-2xl p-6 shadow-2xl"
+              >
+                <h3 className="font-serif text-lg font-bold text-white mb-1">Mon mot de passe</h3>
+                <p className="text-[11px] text-white/50 mb-5">
+                  Permet de vous connecter avec votre email sans passer par Google.
+                </p>
+                <form
+                  className="space-y-3"
+                  onSubmit={async (e) => {
+                    e.preventDefault();
+                    if (myNewPassword.length < 8) {
+                      setMyPasswordError('Le nouveau mot de passe doit contenir au moins 8 caractères.');
+                      return;
+                    }
+                    if (myNewPassword !== myNewPasswordConfirm) {
+                      setMyPasswordError('La confirmation ne correspond pas.');
+                      return;
+                    }
+                    setIsSavingMyPassword(true);
+                    setMyPasswordError('');
+                    try {
+                      await changeMyPassword(myNewPassword, myCurrentPassword || undefined);
+                      setShowMyPasswordModal(false);
+                      showStatus('Mot de passe mis à jour.', 'success');
+                    } catch (err: any) {
+                      setMyPasswordError(err?.message || 'Erreur lors de la mise à jour.');
+                    } finally {
+                      setIsSavingMyPassword(false);
+                    }
+                  }}
+                >
+                  <input
+                    type="password"
+                    value={myCurrentPassword}
+                    onChange={e => setMyCurrentPassword(e.target.value)}
+                    placeholder="Mot de passe actuel (si déjà défini)"
+                    autoComplete="current-password"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                  />
+                  <input
+                    type="password"
+                    value={myNewPassword}
+                    onChange={e => setMyNewPassword(e.target.value)}
+                    placeholder="Nouveau mot de passe (8 car. min.)"
+                    autoComplete="new-password"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                  />
+                  <input
+                    type="password"
+                    value={myNewPasswordConfirm}
+                    onChange={e => setMyNewPasswordConfirm(e.target.value)}
+                    placeholder="Confirmer le nouveau mot de passe"
+                    autoComplete="new-password"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                  />
+                  {myPasswordError && (
+                    <p className="text-[10px] text-red-400 font-bold">{myPasswordError}</p>
+                  )}
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowMyPasswordModal(false)}
+                      className="flex-1 bg-white/5 hover:bg-white/10 border border-white/15 text-white/80 font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl text-xs transition-colors"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingMyPassword}
+                      className="flex-1 bg-gold hover:bg-gold/90 text-soft-black font-bold uppercase tracking-wider px-4 py-2.5 rounded-xl text-xs transition-colors disabled:opacity-40"
+                    >
+                      {isSavingMyPassword ? 'Enregistrement...' : 'Enregistrer'}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Main Workspace Frame */}
         <div className="flex flex-col lg:flex-row gap-8">
@@ -1660,7 +1841,7 @@ export function Admin() {
                     {/* Add admin form */}
                     <div className="bg-black/30 border border-white/10 rounded-xl p-5">
                       <h4 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-4">Ajouter un administrateur</h4>
-                      <div className="flex gap-3">
+                      <div className="flex flex-col sm:flex-row gap-3">
                         <input
                           type="email"
                           value={newAdminEmail}
@@ -1668,14 +1849,22 @@ export function Admin() {
                           placeholder="adresse@email.com"
                           className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
                         />
+                        <input
+                          type="text"
+                          value={newAdminPassword}
+                          onChange={e => setNewAdminPassword(e.target.value)}
+                          placeholder="Mot de passe (optionnel, 8 car. min.)"
+                          className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
+                        />
                         <button
-                          disabled={!newAdminEmail.trim() || isAddingAdmin}
+                          disabled={!newAdminEmail.trim() || isAddingAdmin || (newAdminPassword.length > 0 && newAdminPassword.length < 8)}
                           onClick={async () => {
                             if (!newAdminEmail.trim()) return;
                             setIsAddingAdmin(true);
                             try {
-                              await addAdmin(newAdminEmail.trim());
+                              await addAdmin(newAdminEmail.trim(), newAdminPassword.trim() || undefined);
                               setNewAdminEmail('');
+                              setNewAdminPassword('');
                               const updated = await getAdmins();
                               setAdmins(updated);
                               showStatus('Administrateur ajouté avec succès.', 'success');
@@ -1685,12 +1874,14 @@ export function Admin() {
                               setIsAddingAdmin(false);
                             }
                           }}
-                          className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold disabled:opacity-40 transition-colors flex items-center gap-1.5"
+                          className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5 shrink-0"
                         >
                           <Plus className="w-4 h-4" /> {isAddingAdmin ? 'Ajout...' : 'Ajouter'}
                         </button>
                       </div>
-                      <p className="text-[10px] text-white/30 mt-2">L'utilisateur devra se connecter avec ce compte Google pour accéder au dashboard.</p>
+                      <p className="text-[10px] text-white/30 mt-2">
+                        L'admin peut se connecter avec un compte Google correspondant à cet email, ou avec le mot de passe défini ici (vous pouvez aussi lui en définir un plus tard, ci-dessous).
+                      </p>
                     </div>
 
                     {/* Admins list */}
@@ -1705,36 +1896,101 @@ export function Admin() {
                             <th className="pb-3 pr-4">Email</th>
                             <th className="pb-3 pr-4">Ajouté par</th>
                             <th className="pb-3 pr-4">Date d'ajout</th>
+                            <th className="pb-3 pr-4">Mot de passe</th>
                             <th className="pb-3 text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {admins.map((admin) => (
-                            <tr key={admin.email} className="border-b border-white/5 hover:bg-white/[0.02]">
-                              <td className="py-4 pr-4 font-mono text-sky-400">{admin.email}</td>
-                              <td className="py-4 pr-4 text-white/50 font-mono text-[10px]">{admin.addedBy}</td>
-                              <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
-                                {new Date(admin.addedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                              </td>
-                              <td className="py-4 text-right">
-                                <button
-                                  onClick={async () => {
-                                    if (!confirm(`Révoquer l'accès de ${admin.email} ?`)) return;
-                                    try {
-                                      await removeAdmin(admin.email);
-                                      setAdmins(prev => prev.filter(a => a.email !== admin.email));
-                                      showStatus('Administrateur supprimé.', 'success');
-                                    } catch (err: any) {
-                                      showStatus(err?.message || 'Erreur lors de la suppression.', 'error');
-                                    }
-                                  }}
-                                  className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"
-                                  title="Révoquer l'accès"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              </td>
-                            </tr>
+                            <React.Fragment key={admin.email}>
+                              <tr className="border-b border-white/5 hover:bg-white/[0.02]">
+                                <td className="py-4 pr-4 font-mono text-sky-400">{admin.email}</td>
+                                <td className="py-4 pr-4 text-white/50 font-mono text-[10px]">{admin.addedBy}</td>
+                                <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                  {new Date(admin.addedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                </td>
+                                <td className="py-4 pr-4">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${admin.hasPassword ? 'bg-emerald-500/10 text-emerald-400' : 'bg-white/5 text-white/40'}`}>
+                                    {admin.hasPassword ? 'Défini' : 'Non défini'}
+                                  </span>
+                                </td>
+                                <td className="py-4 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button
+                                      onClick={() => {
+                                        setResetPasswordFor(prev => prev === admin.email ? null : admin.email);
+                                        setResetPasswordValue('');
+                                      }}
+                                      className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"
+                                      title="Définir / réinitialiser le mot de passe"
+                                    >
+                                      <KeyRound className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={async () => {
+                                        if (!confirm(`Révoquer l'accès de ${admin.email} ?`)) return;
+                                        try {
+                                          await removeAdmin(admin.email);
+                                          setAdmins(prev => prev.filter(a => a.email !== admin.email));
+                                          showStatus('Administrateur supprimé.', 'success');
+                                        } catch (err: any) {
+                                          showStatus(err?.message || 'Erreur lors de la suppression.', 'error');
+                                        }
+                                      }}
+                                      className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"
+                                      title="Révoquer l'accès"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                              {resetPasswordFor === admin.email && (
+                                <tr className="border-b border-white/5 bg-black/20">
+                                  <td colSpan={5} className="py-3 px-4">
+                                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                                      <input
+                                        type="text"
+                                        autoFocus
+                                        value={resetPasswordValue}
+                                        onChange={e => setResetPasswordValue(e.target.value)}
+                                        placeholder="Nouveau mot de passe (8 car. min.)"
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold w-full sm:w-auto"
+                                      />
+                                      <div className="flex gap-2 shrink-0">
+                                        <button
+                                          disabled={resetPasswordValue.length < 8 || isResettingPassword}
+                                          onClick={async () => {
+                                            setIsResettingPassword(true);
+                                            try {
+                                              await setAdminPassword(admin.email, resetPasswordValue);
+                                              setResetPasswordFor(null);
+                                              setResetPasswordValue('');
+                                              const updated = await getAdmins();
+                                              setAdmins(updated);
+                                              showStatus('Mot de passe défini.', 'success');
+                                            } catch (err: any) {
+                                              showStatus(err?.message || 'Erreur lors de la mise à jour.', 'error');
+                                            } finally {
+                                              setIsResettingPassword(false);
+                                            }
+                                          }}
+                                          className="bg-gold hover:bg-gold/90 text-soft-black px-3 py-2 rounded-lg text-[10px] font-bold disabled:opacity-40 transition-colors"
+                                        >
+                                          {isResettingPassword ? '...' : 'Enregistrer'}
+                                        </button>
+                                        <button
+                                          onClick={() => { setResetPasswordFor(null); setResetPasswordValue(''); }}
+                                          className="bg-white/5 hover:bg-white/10 border border-white/15 text-white/70 px-3 py-2 rounded-lg text-[10px] font-bold transition-colors"
+                                        >
+                                          Annuler
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
                           ))}
                         </tbody>
                       </table>

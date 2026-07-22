@@ -112,9 +112,10 @@ CREATE TABLE IF NOT EXISTS newsletter_subscribers (
 );
 
 CREATE TABLE IF NOT EXISTS admins (
-  email    TEXT PRIMARY KEY,
-  added_by TEXT NOT NULL,
-  added_at TEXT NOT NULL
+  email         TEXT PRIMARY KEY,
+  added_by      TEXT NOT NULL,
+  added_at      TEXT NOT NULL,
+  password_hash TEXT
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (

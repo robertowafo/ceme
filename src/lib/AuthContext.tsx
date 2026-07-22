@@ -15,6 +15,7 @@ interface AuthContextType {
   isSuperAdmin: boolean;
   isLoading: boolean;
   loginWithGoogle: () => void;
+  loginWithPassword: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -75,6 +76,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     googleLogin();
   };
 
+  const loginWithPassword = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json() as { user?: AppUser; error?: string };
+      if (!res.ok || !data.user) throw new Error(data.error || 'Échec de la connexion');
+      setUser(data.user);
+      setIsAdmin(data.user.isAdmin ?? false);
+      setIsSuperAdmin(data.user.isSuperAdmin ?? false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = () => {
     fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     setUser(null);
@@ -83,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isSuperAdmin, isLoading, loginWithGoogle, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, isSuperAdmin, isLoading, loginWithGoogle, loginWithPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

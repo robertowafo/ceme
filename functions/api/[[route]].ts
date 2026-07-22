@@ -59,6 +59,37 @@ async function verifySession(token: string, secret: string): Promise<JwtPayload 
   }
 }
 
+// ─── Mots de passe (PBKDF2 via Web Crypto, dispo nativement dans les Workers) ──
+// Format stocké : "pbkdf2:<iterations>:<sel base64>:<hash base64>"
+
+async function hashPassword(password: string): Promise<string> {
+  const iterations = 100_000
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, key, 256)
+  const saltB64 = btoa(String.fromCharCode(...salt))
+  const hashB64 = btoa(String.fromCharCode(...new Uint8Array(bits)))
+  return `pbkdf2:${iterations}:${saltB64}:${hashB64}`
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  let diff = 0
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i)
+  return diff === 0
+}
+
+async function verifyPassword(password: string, stored: string): Promise<boolean> {
+  const parts = stored.split(':')
+  if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false
+  const iterations = parseInt(parts[1], 10)
+  const salt = Uint8Array.from(atob(parts[2]), ch => ch.charCodeAt(0))
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits'])
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations, hash: 'SHA-256' }, key, 256)
+  const computedB64 = btoa(String.fromCharCode(...new Uint8Array(bits)))
+  return timingSafeEqual(computedB64, parts[3])
+}
+
 // ─── App + middleware ──────────────────────────────────────────────────────────
 
 const app = new Hono<HonoApp>().basePath('/api')
@@ -167,6 +198,60 @@ app.post('/auth/google', async (c) => {
 
 app.post('/auth/logout', async (c) => {
   deleteCookie(c, SESSION_COOKIE, { path: '/' })
+  return c.json({ success: true })
+})
+
+// Connexion email + mot de passe — alternative à Google pour les admins avec un
+// email professionnel ou un autre fournisseur. Limité pour freiner le bruteforce.
+app.post('/auth/login', rateLimit('auth-login', 10, 10 * 60), async (c) => {
+  const { email, password } = await c.req.json()
+  if (!email?.trim() || !password) return c.json({ error: 'Email et mot de passe requis' }, 400)
+  const normalized = email.trim().toLowerCase()
+  const row = await c.env.DB.prepare('SELECT password_hash FROM admins WHERE email=?')
+    .bind(normalized).first<{ password_hash: string | null }>()
+  if (!row?.password_hash || !(await verifyPassword(password, row.password_hash))) {
+    return c.json({ error: 'Identifiants invalides' }, 401)
+  }
+  const isSuperAdmin = normalized === c.env.ADMIN_EMAIL.toLowerCase()
+  const name = normalized.split('@')[0]
+  const token = await signSession(
+    { sub: normalized, email: normalized, name, picture: '', isAdmin: true, isSuperAdmin },
+    c.env.JWT_SECRET
+  )
+  setCookie(c, SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: isHttps(c),
+    sameSite: 'Strict',
+    path: '/',
+    maxAge: 60 * 60 * 24 * 7,
+  })
+  return c.json({ user: { email: normalized, name, picture: '', isAdmin: true, isSuperAdmin } })
+})
+
+// Changement de son propre mot de passe. Si aucun mot de passe n'existe encore
+// pour ce compte (premier réglage, notamment pour le super-admin qui n'a pas
+// forcément de ligne dans `admins`), currentPassword n'est pas requis.
+app.put('/auth/password', requireAdmin, async (c) => {
+  const { currentPassword, newPassword } = await c.req.json()
+  if (!newPassword || newPassword.length < 8) {
+    return c.json({ error: 'Le nouveau mot de passe doit contenir au moins 8 caractères' }, 400)
+  }
+  const email = c.get('user').email.toLowerCase()
+  const row = await c.env.DB.prepare('SELECT password_hash FROM admins WHERE email=?')
+    .bind(email).first<{ password_hash: string | null }>()
+  if (row?.password_hash) {
+    if (!currentPassword || !(await verifyPassword(currentPassword, row.password_hash))) {
+      return c.json({ error: 'Mot de passe actuel incorrect' }, 403)
+    }
+  }
+  const hash = await hashPassword(newPassword)
+  if (row) {
+    await c.env.DB.prepare('UPDATE admins SET password_hash=? WHERE email=?').bind(hash, email).run()
+  } else {
+    await c.env.DB.prepare(
+      'INSERT INTO admins (email, added_by, added_at, password_hash) VALUES (?,?,?,?)'
+    ).bind(email, 'auto', new Date().toISOString(), hash).run()
+  }
   return c.json({ success: true })
 })
 
@@ -930,20 +1015,24 @@ app.delete('/newsletter/:id', requireAdmin, async (c) => {
 
 app.get('/admins', requireSuperAdmin, async (c) => {
   const { results } = await c.env.DB.prepare(
-    'SELECT email, added_by AS addedBy, added_at AS addedAt FROM admins ORDER BY added_at DESC'
+    'SELECT email, added_by AS addedBy, added_at AS addedAt, (password_hash IS NOT NULL) AS hasPassword FROM admins ORDER BY added_at DESC'
   ).all()
   return c.json(results)
 })
 
 app.post('/admins', requireSuperAdmin, async (c) => {
-  const { email } = await c.req.json()
+  const { email, password } = await c.req.json()
   if (!email?.trim() || !email.includes('@')) return c.json({ error: 'Email invalide' }, 400)
+  if (password && password.length < 8) {
+    return c.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, 400)
+  }
   const normalized = email.trim().toLowerCase()
   if (normalized === c.env.ADMIN_EMAIL.toLowerCase()) return c.json({ error: 'Cet email est déjà le super-administrateur' }, 409)
+  const hash = password ? await hashPassword(password) : null
   try {
     await c.env.DB.prepare(
-      'INSERT INTO admins (email, added_by, added_at) VALUES (?,?,?)'
-    ).bind(normalized, c.get('user').email, new Date().toISOString()).run()
+      'INSERT INTO admins (email, added_by, added_at, password_hash) VALUES (?,?,?,?)'
+    ).bind(normalized, c.get('user').email, new Date().toISOString(), hash).run()
   } catch (e: any) {
     if (e?.message?.includes('UNIQUE') || e?.message?.includes('unique')) {
       return c.json({ error: 'Cet email est déjà administrateur' }, 409)
@@ -958,6 +1047,29 @@ app.delete('/admins/:email', requireSuperAdmin, async (c) => {
   const email = decodeURIComponent(c.req.param('email'))
   await c.env.DB.prepare('DELETE FROM admins WHERE email=?').bind(email).run()
   await audit(c.env.DB, c.get('user').email, 'Suppression', 'Administrateurs', email, `Révocation administrateur : "${email}"`)
+  return c.json({ success: true })
+})
+
+// Le super-admin définit/réinitialise le mot de passe d'un admin (y compris le
+// sien — son email n'a pas forcément de ligne dans `admins`, d'où l'upsert).
+app.put('/admins/:email/password', requireSuperAdmin, async (c) => {
+  const email = decodeURIComponent(c.req.param('email')).trim().toLowerCase()
+  const { password } = await c.req.json()
+  if (!password || password.length < 8) {
+    return c.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, 400)
+  }
+  const isSelf = email === c.env.ADMIN_EMAIL.toLowerCase()
+  const existing = await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(email).first()
+  if (!existing && !isSelf) return c.json({ error: 'Administrateur introuvable' }, 404)
+  const hash = await hashPassword(password)
+  if (existing) {
+    await c.env.DB.prepare('UPDATE admins SET password_hash=? WHERE email=?').bind(hash, email).run()
+  } else {
+    await c.env.DB.prepare(
+      'INSERT INTO admins (email, added_by, added_at, password_hash) VALUES (?,?,?,?)'
+    ).bind(email, c.get('user').email, new Date().toISOString(), hash).run()
+  }
+  await audit(c.env.DB, c.get('user').email, 'Modification', 'Administrateurs', email, `Mot de passe défini pour : "${email}"`)
   return c.json({ success: true })
 })
 

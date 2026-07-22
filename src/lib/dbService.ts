@@ -549,6 +549,7 @@ export interface AdminUser {
   email: string;
   addedBy: string;
   addedAt: string;
+  hasPassword: boolean;
 }
 
 export async function getAdmins(): Promise<AdminUser[]> {
@@ -557,13 +558,14 @@ export async function getAdmins(): Promise<AdminUser[]> {
     headers: { 'Content-Type': 'application/json' },
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
-  return res.json();
+  const rows = await res.json();
+  return rows.map((r: any) => ({ ...r, hasPassword: !!r.hasPassword }));
 }
 
-export async function addAdmin(email: string): Promise<void> {
+export async function addAdmin(email: string, password?: string): Promise<void> {
   const res = await apiFetch('/api/admins', {
     method: 'POST',
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, password: password || undefined }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
@@ -573,6 +575,28 @@ export async function addAdmin(email: string): Promise<void> {
 
 export async function removeAdmin(email: string): Promise<void> {
   const res = await apiFetch(`/api/admins/${encodeURIComponent(email)}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function setAdminPassword(email: string, password: string): Promise<void> {
+  const res = await apiFetch(`/api/admins/${encodeURIComponent(email)}/password`, {
+    method: 'PUT',
+    body: JSON.stringify({ password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function changeMyPassword(newPassword: string, currentPassword?: string): Promise<void> {
+  const res = await apiFetch('/api/auth/password', {
+    method: 'PUT',
+    body: JSON.stringify({ newPassword, currentPassword: currentPassword || undefined }),
+  });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Erreur serveur');
