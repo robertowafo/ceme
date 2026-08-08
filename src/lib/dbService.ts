@@ -68,10 +68,26 @@ export interface Partner {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
-async function getAll<T>(endpoint: string): Promise<T[]> {
-  const res = await fetch(endpoint);
-  if (!res.ok) throw new Error(`Erreur ${res.status} sur ${endpoint}`);
-  return res.json();
+// Les lectures peuvent échouer de façon transitoire (cold-start du Worker,
+// hoquet momentané de la connexion D1) — un 5xx ou une erreur réseau isolés
+// remontaient sinon en « Erreur 500 » et laissaient l'onglet vide jusqu'à ce
+// que l'utilisateur re-clique. On réessaie donc quelques fois avec un léger
+// backoff ; le 2e essai touche presque toujours un Worker déjà chaud.
+async function getAll<T>(endpoint: string, attempts = 3): Promise<T[]> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(endpoint, { credentials: 'same-origin' });
+      if (res.ok) return res.json();
+      // 5xx = probablement transitoire → on réessaie ; 4xx = erreur réelle → on abandonne.
+      if (res.status < 500) throw new Error(`Erreur ${res.status} sur ${endpoint}`);
+      lastErr = new Error(`Erreur ${res.status} sur ${endpoint}`);
+    } catch (err) {
+      lastErr = err;
+    }
+    if (i < attempts - 1) await new Promise(r => setTimeout(r, 400 * (i + 1)));
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(`Erreur sur ${endpoint}`);
 }
 
 async function upsert(endpoint: string, id: string, body: object): Promise<void> {
