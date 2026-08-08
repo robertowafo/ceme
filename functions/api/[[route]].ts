@@ -263,12 +263,31 @@ app.get('/auth/me', async (c) => {
   return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: payload.isAdmin, isSuperAdmin: payload.isSuperAdmin } })
 })
 
+// D1 peut lever une erreur transitoire au démarrage à froid du Worker
+// (« Network connection lost », « internal error ») — sans réessai, ce hoquet
+// remonte en 500 brut et l'onglet du dashboard s'affiche vide alors que la
+// donnée est intacte. On réexécute la requête quelques fois avec un léger
+// backoff avant de laisser remonter une vraie erreur.
+async function d1All<T = Record<string, unknown>>(stmt: D1PreparedStatement): Promise<T[]> {
+  let lastErr: unknown
+  for (let i = 0; i < 3; i++) {
+    try {
+      const { results } = await stmt.all<T>()
+      return results ?? []
+    } catch (err) {
+      lastErr = err
+      if (i < 2) await new Promise(r => setTimeout(r, 150 * (i + 1)))
+    }
+  }
+  throw lastErr
+}
+
 // ─── recommended_links ─────────────────────────────────────────────────────────
 
 app.get('/recommended-links', async (c) => {
-  const { results } = await c.env.DB.prepare(
+  const results = await d1All(c.env.DB.prepare(
     'SELECT id, title, youtube_id AS youtubeId, description, category FROM recommended_links ORDER BY id ASC'
-  ).all()
+  ))
   return c.json(results)
 })
 
@@ -326,12 +345,12 @@ app.delete('/gallery-photos/:id', requireAdmin, async (c) => {
 // ─── church_events ─────────────────────────────────────────────────────────────
 
 app.get('/church-events', async (c) => {
-  const { results } = await c.env.DB.prepare(
+  const results = await d1All<any>(c.env.DB.prepare(
     `SELECT id, title, type, date_str AS dateStr, iso_date AS isoDate,
             location, preacher, note AS desc, badge, badge_color AS badgeColor,
             image, is_popular AS isPopular
      FROM church_events WHERE iso_date >= date('now') ORDER BY iso_date ASC`
-  ).all<any>()
+  ))
   return c.json(results.map((r: any) => ({ ...r, isPopular: r.isPopular === 1 })))
 })
 
