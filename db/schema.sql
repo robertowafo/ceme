@@ -115,7 +115,10 @@ CREATE TABLE IF NOT EXISTS admins (
   email         TEXT PRIMARY KEY,
   added_by      TEXT NOT NULL,
   added_at      TEXT NOT NULL,
-  password_hash TEXT
+  password_hash TEXT,
+  -- Sections accessibles à cet admin (tableau JSON de clés, ex. '["donations","prayers"]').
+  -- NULL ou vide = aucun accès. Le super-administrateur (ADMIN_EMAIL) a tout, hors table.
+  sections      TEXT
 );
 
 CREATE TABLE IF NOT EXISTS audit_log (

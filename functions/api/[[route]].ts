@@ -112,6 +112,53 @@ const requireSuperAdmin = async (c: Context<HonoApp>, next: Next) => {
   await next()
 }
 
+// ─── Contrôle d'accès par section (RBAC) ────────────────────────────────────────
+// Chaque admin (hors super-admin) ne peut agir que sur les sections qui lui ont
+// été attribuées par le super-admin, stockées en JSON dans `admins.sections`.
+// 'audit' (Registre) et 'admins' (Gestion) restent exclusifs au super-admin et
+// ne figurent donc PAS ici. Doit rester synchronisé avec le registre SECTIONS
+// du frontend (src/pages/Admin.tsx).
+const ASSIGNABLE_SECTIONS = [
+  'links', 'photos', 'events', 'testimonials', 'documents', 'prayers',
+  'donations', 'blog', 'newsletter', 'contactMessages', 'projects', 'partners', 'books',
+] as const
+
+// Lit les sections autorisées d'un admin depuis la base — source de vérité,
+// toujours à jour (un changement de droits s'applique sans re-login). Renvoie []
+// en cas d'erreur (ex. colonne pas encore migrée) plutôt que de casser en 500.
+async function getAdminSections(db: D1Database, email: string): Promise<string[]> {
+  try {
+    const row = await db.prepare('SELECT sections FROM admins WHERE email=?')
+      .bind(email.toLowerCase()).first<{ sections: string | null }>()
+    if (!row?.sections) return []
+    const arr = JSON.parse(row.sections)
+    return Array.isArray(arr) ? arr.filter((s: unknown): s is string => typeof s === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+// Sections renvoyées au client pour piloter l'affichage de la sidebar.
+// Le super-admin les a toutes ; l'affichage de 'audit'/'admins' côté client
+// reste piloté par le drapeau isSuperAdmin, pas par cette liste.
+function sectionsForUser(isSuperAdmin: boolean, dbSections: string[]): string[] {
+  return isSuperAdmin ? [...ASSIGNABLE_SECTIONS] : dbSections
+}
+
+// Middleware paramétré : le super-admin passe partout ; sinon la section doit
+// figurer dans les droits de l'admin.
+const requireSection = (section: string) => async (c: Context<HonoApp>, next: Next) => {
+  const token = getCookie(c, SESSION_COOKIE)
+  if (!token) return c.json({ error: 'Non authentifié' }, 401)
+  const payload = await verifySession(token, c.env.JWT_SECRET)
+  if (!payload?.isAdmin) return c.json({ error: "Accès réservé à l'administrateur" }, 403)
+  c.set('user', payload)
+  if (payload.isSuperAdmin) return await next()
+  const allowed = await getAdminSections(c.env.DB, payload.email)
+  if (!allowed.includes(section)) return c.json({ error: "Vous n'avez pas accès à cette section" }, 403)
+  await next()
+}
+
 // ─── Limitation de débit (anti-spam formulaires publics) ──────────────────────
 // Compteur à fenêtre glissante fixe, stocké dans Workers KV, clé par IP + route.
 // Pas parfaitement atomique sous forte concurrence (get+put), mais largement
@@ -190,7 +237,8 @@ app.post('/auth/google', async (c) => {
       path: '/',
       maxAge: 60 * 60 * 24 * 7,
     })
-    return c.json({ user: { email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin } })
+    const sections = sectionsForUser(isSuperAdmin, isAdminFromDB ? await getAdminSections(c.env.DB, info.email) : [])
+    return c.json({ user: { email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin, sections } })
   } catch {
     return c.json({ error: "Erreur d'authentification" }, 500)
   }
@@ -225,7 +273,8 @@ app.post('/auth/login', rateLimit('auth-login', 10, 10 * 60), async (c) => {
     path: '/',
     maxAge: 60 * 60 * 24 * 7,
   })
-  return c.json({ user: { email: normalized, name, picture: '', isAdmin: true, isSuperAdmin } })
+  const sections = sectionsForUser(isSuperAdmin, isSuperAdmin ? [] : await getAdminSections(c.env.DB, normalized))
+  return c.json({ user: { email: normalized, name, picture: '', isAdmin: true, isSuperAdmin, sections } })
 })
 
 // Changement de son propre mot de passe. Si aucun mot de passe n'existe encore
@@ -260,7 +309,8 @@ app.get('/auth/me', async (c) => {
   if (!token) return c.json({ error: 'Non authentifié' }, 401)
   const payload = await verifySession(token, c.env.JWT_SECRET)
   if (!payload) return c.json({ error: 'Session expirée' }, 401)
-  return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: payload.isAdmin, isSuperAdmin: payload.isSuperAdmin } })
+  const sections = sectionsForUser(payload.isSuperAdmin, payload.isSuperAdmin ? [] : await getAdminSections(c.env.DB, payload.email))
+  return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: payload.isAdmin, isSuperAdmin: payload.isSuperAdmin, sections } })
 })
 
 // D1 peut lever une erreur transitoire au démarrage à froid du Worker
@@ -291,7 +341,7 @@ app.get('/recommended-links', async (c) => {
   return c.json(results)
 })
 
-app.put('/recommended-links/:id', requireAdmin, async (c) => {
+app.put('/recommended-links/:id', requireSection('links'), async (c) => {
   const id = c.req.param('id')
   const { title, youtubeId, description, category } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM recommended_links WHERE id=?').bind(id).first()
@@ -304,7 +354,7 @@ app.put('/recommended-links/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/recommended-links/:id', requireAdmin, async (c) => {
+app.delete('/recommended-links/:id', requireSection('links'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT title FROM recommended_links WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM recommended_links WHERE id=?').bind(id).run()
@@ -321,7 +371,7 @@ app.get('/gallery-photos', async (c) => {
   return c.json(results)
 })
 
-app.put('/gallery-photos/:id', requireAdmin, async (c) => {
+app.put('/gallery-photos/:id', requireSection('photos'), async (c) => {
   const id = c.req.param('id')
   const { category, title, location, url, desc } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM gallery_photos WHERE id=?').bind(id).first()
@@ -334,7 +384,7 @@ app.put('/gallery-photos/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/gallery-photos/:id', requireAdmin, async (c) => {
+app.delete('/gallery-photos/:id', requireSection('photos'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT title FROM gallery_photos WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM gallery_photos WHERE id=?').bind(id).run()
@@ -354,14 +404,14 @@ app.get('/church-events', async (c) => {
   return c.json(results.map((r: any) => ({ ...r, isPopular: r.isPopular === 1 })))
 })
 
-app.post('/admin/events/cleanup', requireAdmin, async (c) => {
+app.post('/admin/events/cleanup', requireSection('events'), async (c) => {
   const result = await c.env.DB.prepare(
     `DELETE FROM church_events WHERE iso_date < date('now')`
   ).run()
   return c.json({ deleted: result.meta.changes ?? 0 })
 })
 
-app.put('/church-events/:id', requireAdmin, async (c) => {
+app.put('/church-events/:id', requireSection('events'), async (c) => {
   const id = c.req.param('id')
   const { title, type, dateStr, isoDate, location, preacher, desc, badge, badgeColor, image, isPopular } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM church_events WHERE id=?').bind(id).first()
@@ -376,7 +426,7 @@ app.put('/church-events/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/church-events/:id', requireAdmin, async (c) => {
+app.delete('/church-events/:id', requireSection('events'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT title FROM church_events WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM church_events WHERE id=?').bind(id).run()
@@ -393,7 +443,7 @@ app.get('/testimonials', async (c) => {
   return c.json(results)
 })
 
-app.put('/testimonials/:id', requireAdmin, async (c) => {
+app.put('/testimonials/:id', requireSection('testimonials'), async (c) => {
   const id = c.req.param('id')
   const { author, since, text, img, category } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM testimonials WHERE id=?').bind(id).first()
@@ -406,7 +456,7 @@ app.put('/testimonials/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/testimonials/:id', requireAdmin, async (c) => {
+app.delete('/testimonials/:id', requireSection('testimonials'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT author FROM testimonials WHERE id=?').bind(id).first<{author:string}>()
   await c.env.DB.prepare('DELETE FROM testimonials WHERE id=?').bind(id).run()
@@ -423,7 +473,7 @@ app.get('/study-documents', async (c) => {
   return c.json(results)
 })
 
-app.put('/study-documents/:id', requireAdmin, async (c) => {
+app.put('/study-documents/:id', requireSection('documents'), async (c) => {
   const id = c.req.param('id')
   const { title, description, url, category, fileType } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM study_documents WHERE id=?').bind(id).first()
@@ -436,7 +486,7 @@ app.put('/study-documents/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/study-documents/:id', requireAdmin, async (c) => {
+app.delete('/study-documents/:id', requireSection('documents'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT title FROM study_documents WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM study_documents WHERE id=?').bind(id).run()
@@ -486,7 +536,7 @@ app.get('/donation-projects', async (c) => {
   return c.json(results.map((r: any) => ({ ...r, isActive: r.isActive === 1 })))
 })
 
-app.put('/donation-projects/:id', requireAdmin, async (c) => {
+app.put('/donation-projects/:id', requireSection('projects'), async (c) => {
   const id = c.req.param('id')
   const { title, description, goalAmount, currency, isActive } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM donation_projects WHERE id=?').bind(id).first()
@@ -503,7 +553,7 @@ app.put('/donation-projects/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/donation-projects/:id', requireAdmin, async (c) => {
+app.delete('/donation-projects/:id', requireSection('projects'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT title FROM donation_projects WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM donation_projects WHERE id=?').bind(id).run()
@@ -537,7 +587,7 @@ app.post('/donations', rateLimit('donations', 5, 600), async (c) => {
 })
 
 // /donations/stats doit être avant /donations pour éviter que 'stats' soit capturé comme :id
-app.get('/donations/stats', requireAdmin, async (c) => {
+app.get('/donations/stats', requireSection('donations'), async (c) => {
   const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
   const [totals, byType, byMethod, monthly] = await Promise.all([
     c.env.DB.prepare('SELECT COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM donations')
@@ -566,7 +616,7 @@ app.get('/donations/stats', requireAdmin, async (c) => {
   })
 })
 
-app.get('/donations', requireAdmin, async (c) => {
+app.get('/donations', requireSection('donations'), async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT d.id, d.donor_name AS donorName, d.phone, d.amount, d.currency,
             d.contrib_type AS contribType, d.payment_method AS paymentMethod,
@@ -579,7 +629,7 @@ app.get('/donations', requireAdmin, async (c) => {
   return c.json(results)
 })
 
-app.delete('/donations/:id', requireAdmin, async (c) => {
+app.delete('/donations/:id', requireSection('donations'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT donor_name, amount, currency FROM donations WHERE id=?').bind(id).first<{donor_name:string|null,amount:number,currency:string}>()
   await c.env.DB.prepare('DELETE FROM donations WHERE id=?').bind(id).run()
@@ -615,7 +665,7 @@ app.get('/prayer-requests/public', async (c) => {
   return c.json(results)
 })
 
-app.get('/prayer-requests', requireAdmin, async (c) => {
+app.get('/prayer-requests', requireSection('prayers'), async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, name, phone, message, type, is_public AS isPublic, submitted_at AS submittedAt
      FROM prayer_requests ORDER BY submitted_at DESC`
@@ -623,7 +673,7 @@ app.get('/prayer-requests', requireAdmin, async (c) => {
   return c.json(results.map((r: any) => ({ ...r, isPublic: r.isPublic === 1 })))
 })
 
-app.delete('/prayer-requests/:id', requireAdmin, async (c) => {
+app.delete('/prayer-requests/:id', requireSection('prayers'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT name, type FROM prayer_requests WHERE id=?').bind(id).first<{name:string|null,type:string}>()
   await c.env.DB.prepare('DELETE FROM prayer_requests WHERE id=?').bind(id).run()
@@ -927,7 +977,7 @@ app.get('/blog-categories', async (c) => {
   return c.json(results)
 })
 
-app.put('/blog-categories/:id', requireAdmin, async (c) => {
+app.put('/blog-categories/:id', requireSection('blog'), async (c) => {
   const id = c.req.param('id')
   const { name } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM blog_categories WHERE id=?').bind(id).first()
@@ -939,7 +989,7 @@ app.put('/blog-categories/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/blog-categories/:id', requireAdmin, async (c) => {
+app.delete('/blog-categories/:id', requireSection('blog'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT name FROM blog_categories WHERE id=?').bind(id).first<{name:string}>()
   await c.env.DB.prepare('DELETE FROM blog_categories WHERE id=?').bind(id).run()
@@ -949,7 +999,7 @@ app.delete('/blog-categories/:id', requireAdmin, async (c) => {
 
 // ─── blog_posts ────────────────────────────────────────────────────────────────
 
-app.get('/blog-posts/all', requireAdmin, async (c) => {
+app.get('/blog-posts/all', requireSection('blog'), async (c) => {
   const { results } = await c.env.DB.prepare(
     'SELECT id, title, category, author, cover_image AS coverImage, excerpt, content, published_at AS publishedAt, is_published AS isPublished FROM blog_posts ORDER BY published_at DESC'
   ).all()
@@ -971,7 +1021,7 @@ app.get('/blog-posts', async (c) => {
   return c.json(results)
 })
 
-app.put('/blog-posts/:id', requireAdmin, async (c) => {
+app.put('/blog-posts/:id', requireSection('blog'), async (c) => {
   const id = c.req.param('id')
   const data = await c.req.json() as any
   const existing = await c.env.DB.prepare('SELECT id FROM blog_posts WHERE id=?').bind(id).first()
@@ -988,7 +1038,7 @@ app.put('/blog-posts/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/blog-posts/:id', requireAdmin, async (c) => {
+app.delete('/blog-posts/:id', requireSection('blog'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT title FROM blog_posts WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM blog_posts WHERE id=?').bind(id).run()
@@ -1015,14 +1065,14 @@ app.post('/newsletter', rateLimit('newsletter', 5, 600), async (c) => {
   return c.json({ success: true })
 })
 
-app.get('/newsletter', requireAdmin, async (c) => {
+app.get('/newsletter', requireSection('newsletter'), async (c) => {
   const { results } = await c.env.DB.prepare(
     'SELECT id, email, subscribed_at AS subscribedAt FROM newsletter_subscribers ORDER BY subscribed_at DESC'
   ).all()
   return c.json(results)
 })
 
-app.delete('/newsletter/:id', requireAdmin, async (c) => {
+app.delete('/newsletter/:id', requireSection('newsletter'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT email FROM newsletter_subscribers WHERE id=?').bind(id).first<{email:string}>()
   await c.env.DB.prepare('DELETE FROM newsletter_subscribers WHERE id=?').bind(id).run()
@@ -1032,15 +1082,26 @@ app.delete('/newsletter/:id', requireAdmin, async (c) => {
 
 // ─── admins ────────────────────────────────────────────────────────────────────
 
+// Filtre une liste de sections reçue du client : ne garde que des clés valides.
+function sanitizeSections(input: unknown): string[] {
+  if (!Array.isArray(input)) return []
+  const valid = ASSIGNABLE_SECTIONS as readonly string[]
+  return [...new Set(input.filter((s): s is string => typeof s === 'string' && valid.includes(s)))]
+}
+
 app.get('/admins', requireSuperAdmin, async (c) => {
   const { results } = await c.env.DB.prepare(
-    'SELECT email, added_by AS addedBy, added_at AS addedAt, (password_hash IS NOT NULL) AS hasPassword FROM admins ORDER BY added_at DESC'
-  ).all()
-  return c.json(results)
+    'SELECT email, added_by AS addedBy, added_at AS addedAt, sections, (password_hash IS NOT NULL) AS hasPassword FROM admins ORDER BY added_at DESC'
+  ).all<any>()
+  return c.json(results.map((r: any) => {
+    let sections: string[] = []
+    try { const a = JSON.parse(r.sections || '[]'); if (Array.isArray(a)) sections = a } catch { /* colonne absente ou JSON invalide → aucun accès */ }
+    return { email: r.email, addedBy: r.addedBy, addedAt: r.addedAt, hasPassword: r.hasPassword, sections }
+  }))
 })
 
 app.post('/admins', requireSuperAdmin, async (c) => {
-  const { email, password } = await c.req.json()
+  const { email, password, sections } = await c.req.json()
   if (!email?.trim() || !email.includes('@')) return c.json({ error: 'Email invalide' }, 400)
   if (password && password.length < 8) {
     return c.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, 400)
@@ -1048,18 +1109,32 @@ app.post('/admins', requireSuperAdmin, async (c) => {
   const normalized = email.trim().toLowerCase()
   if (normalized === c.env.ADMIN_EMAIL.toLowerCase()) return c.json({ error: 'Cet email est déjà le super-administrateur' }, 409)
   const hash = password ? await hashPassword(password) : null
+  const cleanSections = sanitizeSections(sections)
   try {
     await c.env.DB.prepare(
-      'INSERT INTO admins (email, added_by, added_at, password_hash) VALUES (?,?,?,?)'
-    ).bind(normalized, c.get('user').email, new Date().toISOString(), hash).run()
+      'INSERT INTO admins (email, added_by, added_at, password_hash, sections) VALUES (?,?,?,?,?)'
+    ).bind(normalized, c.get('user').email, new Date().toISOString(), hash, JSON.stringify(cleanSections)).run()
   } catch (e: any) {
     if (e?.message?.includes('UNIQUE') || e?.message?.includes('unique')) {
       return c.json({ error: 'Cet email est déjà administrateur' }, 409)
     }
     throw e
   }
-  await audit(c.env.DB, c.get('user').email, 'Création', 'Administrateurs', normalized, `Ajout administrateur : "${normalized}"`)
+  await audit(c.env.DB, c.get('user').email, 'Création', 'Administrateurs', normalized, `Ajout administrateur : "${normalized}" (${cleanSections.length ? cleanSections.join(', ') : 'aucun accès'})`)
   return c.json({ success: true })
+})
+
+// Le super-admin (re)définit les sections accessibles à un admin.
+app.put('/admins/:email/sections', requireSuperAdmin, async (c) => {
+  const email = decodeURIComponent(c.req.param('email')).trim().toLowerCase()
+  const { sections } = await c.req.json()
+  if (email === c.env.ADMIN_EMAIL.toLowerCase()) return c.json({ error: 'Le super-administrateur a déjà accès à tout' }, 400)
+  const existing = await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(email).first()
+  if (!existing) return c.json({ error: 'Administrateur introuvable' }, 404)
+  const clean = sanitizeSections(sections)
+  await c.env.DB.prepare('UPDATE admins SET sections=? WHERE email=?').bind(JSON.stringify(clean), email).run()
+  await audit(c.env.DB, c.get('user').email, 'Modification', 'Administrateurs', email, `Droits mis à jour pour "${email}" : ${clean.length ? clean.join(', ') : 'aucun accès'}`)
+  return c.json({ success: true, sections: clean })
 })
 
 app.delete('/admins/:email', requireSuperAdmin, async (c) => {
@@ -1094,7 +1169,7 @@ app.put('/admins/:email/password', requireSuperAdmin, async (c) => {
 
 // ─── audit_log ─────────────────────────────────────────────────────────────────
 
-app.get('/audit-log', requireAdmin, async (c) => {
+app.get('/audit-log', requireSuperAdmin, async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, admin_email AS adminEmail, action, section, item_id AS itemId,
             description, performed_at AS performedAt
@@ -1114,7 +1189,7 @@ app.get('/partners', async (c) => {
   return c.json(results)
 })
 
-app.put('/partners/:id', requireAdmin, async (c) => {
+app.put('/partners/:id', requireSection('partners'), async (c) => {
   const id = c.req.param('id')
   const { firstName, lastName, title, church, location, bio, youtubeUrl, website, avatarUrl } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM partners WHERE id=?').bind(id).first()
@@ -1131,7 +1206,7 @@ app.put('/partners/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/partners/:id', requireAdmin, async (c) => {
+app.delete('/partners/:id', requireSection('partners'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT first_name, last_name FROM partners WHERE id=?').bind(id).first<{first_name:string, last_name:string}>()
   await c.env.DB.prepare('DELETE FROM partners WHERE id=?').bind(id).run()
@@ -1150,7 +1225,7 @@ app.get('/library-books', async (c) => {
   return c.json(results)
 })
 
-app.put('/library-books/:id', requireAdmin, async (c) => {
+app.put('/library-books/:id', requireSection('books'), async (c) => {
   const id = c.req.param('id')
   const { title, author, category, description } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM library_books WHERE id=?').bind(id).first()
@@ -1164,7 +1239,7 @@ app.put('/library-books/:id', requireAdmin, async (c) => {
   return c.json({ success: true })
 })
 
-app.delete('/library-books/:id', requireAdmin, async (c) => {
+app.delete('/library-books/:id', requireSection('books'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT title FROM library_books WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM library_books WHERE id=?').bind(id).run()
@@ -1184,7 +1259,7 @@ app.post('/book-orders', rateLimit('book-orders', 5, 600), async (c) => {
   return c.json({ success: true, id })
 })
 
-app.get('/book-orders', requireAdmin, async (c) => {
+app.get('/book-orders', requireSection('books'), async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, book_id AS bookId, book_title AS bookTitle, name, phone, email, submitted_at AS submittedAt
      FROM book_orders ORDER BY submitted_at DESC`
@@ -1192,7 +1267,7 @@ app.get('/book-orders', requireAdmin, async (c) => {
   return c.json(results)
 })
 
-app.delete('/book-orders/:id', requireAdmin, async (c) => {
+app.delete('/book-orders/:id', requireSection('books'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT name, book_title FROM book_orders WHERE id=?').bind(id).first<{name:string,book_title:string}>()
   await c.env.DB.prepare('DELETE FROM book_orders WHERE id=?').bind(id).run()
@@ -1212,7 +1287,7 @@ app.post('/contact-messages', rateLimit('contact-messages', 5, 600), async (c) =
   return c.json({ success: true, id })
 })
 
-app.get('/contact-messages', requireAdmin, async (c) => {
+app.get('/contact-messages', requireSection('contactMessages'), async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT id, name, email, phone, subject, message, submitted_at AS submittedAt
      FROM contact_messages ORDER BY submitted_at DESC`
@@ -1220,7 +1295,7 @@ app.get('/contact-messages', requireAdmin, async (c) => {
   return c.json(results)
 })
 
-app.delete('/contact-messages/:id', requireAdmin, async (c) => {
+app.delete('/contact-messages/:id', requireSection('contactMessages'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT name FROM contact_messages WHERE id=?').bind(id).first<{name:string}>()
   await c.env.DB.prepare('DELETE FROM contact_messages WHERE id=?').bind(id).run()
