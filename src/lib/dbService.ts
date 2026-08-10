@@ -566,6 +566,8 @@ export interface AdminUser {
   addedBy: string;
   addedAt: string;
   hasPassword: boolean;
+  /** Sections du dashboard auxquelles cet admin a accès. */
+  sections: string[];
 }
 
 export async function getAdmins(): Promise<AdminUser[]> {
@@ -575,13 +577,24 @@ export async function getAdmins(): Promise<AdminUser[]> {
   });
   if (!res.ok) throw new Error(`Erreur ${res.status}`);
   const rows = await res.json();
-  return rows.map((r: any) => ({ ...r, hasPassword: !!r.hasPassword }));
+  return rows.map((r: any) => ({ ...r, hasPassword: !!r.hasPassword, sections: Array.isArray(r.sections) ? r.sections : [] }));
 }
 
-export async function addAdmin(email: string, password?: string): Promise<void> {
+export async function addAdmin(email: string, password?: string, sections: string[] = []): Promise<void> {
   const res = await apiFetch('/api/admins', {
     method: 'POST',
-    body: JSON.stringify({ email, password: password || undefined }),
+    body: JSON.stringify({ email, password: password || undefined, sections }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function updateAdminSections(email: string, sections: string[]): Promise<void> {
+  const res = await apiFetch(`/api/admins/${encodeURIComponent(email)}/sections`, {
+    method: 'PUT',
+    body: JSON.stringify({ sections }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));

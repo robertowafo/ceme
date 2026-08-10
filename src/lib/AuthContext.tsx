@@ -7,12 +7,16 @@ export interface AppUser {
   picture: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  /** Sections du dashboard accessibles à cet admin (le super-admin les a toutes). */
+  sections?: string[];
 }
 
 interface AuthContextType {
   user: AppUser | null;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  /** Sections autorisées pour l'utilisateur courant (vide si non connecté). */
+  sections: string[];
   isLoading: boolean;
   loginWithGoogle: () => void;
   loginWithPassword: (email: string, password: string) => Promise<void>;
@@ -103,7 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isSuperAdmin, isLoading, loginWithGoogle, loginWithPassword, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, isSuperAdmin, sections: user?.sections ?? [], isLoading, loginWithGoogle, loginWithPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

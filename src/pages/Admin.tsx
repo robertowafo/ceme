@@ -50,7 +50,7 @@ import {
   getAllBlogPosts, saveBlogPost, deleteBlogPost, BlogPost,
   getBlogCategories, saveBlogCategory, deleteBlogCategory, BlogCategory,
   getNewsletterSubscribers, deleteNewsletterSubscriber, NewsletterSubscriber,
-  getAdmins, addAdmin, removeAdmin, AdminUser, setAdminPassword, changeMyPassword,
+  getAdmins, addAdmin, removeAdmin, AdminUser, setAdminPassword, changeMyPassword, updateAdminSections,
   getAuditLog, AuditEntry,
   getDonationProjects, saveDonationProject, deleteDonationProject, DonationProject,
   getPartners, savePartner, deletePartner, Partner,
@@ -62,9 +62,35 @@ import {
 
 type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'books' | 'contactMessages' | 'admins' | 'audit';
 
+// Registre des sections attribuables (doit rester synchronisé avec
+// ASSIGNABLE_SECTIONS côté backend). 'audit' et 'admins' n'y figurent pas :
+// ils restent exclusifs au super-administrateur.
+const GOLD_ACTIVE = 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10';
+const SECTION_TABS: { key: AdminTab; emoji: string; label: string; Icon: React.ComponentType<{ className?: string }>; active: string }[] = [
+  { key: 'links',           emoji: '🔴', label: 'Recommandés Youtube',      Icon: Youtube,        active: GOLD_ACTIVE },
+  { key: 'photos',          emoji: '📸', label: 'Galerie de Vie',            Icon: ImageIcon,      active: GOLD_ACTIVE },
+  { key: 'events',          emoji: '📅', label: 'Événements & Activités',    Icon: Calendar,       active: GOLD_ACTIVE },
+  { key: 'testimonials',    emoji: '💬', label: 'Témoignages Fidèles',       Icon: Quote,          active: GOLD_ACTIVE },
+  { key: 'documents',       emoji: '📄', label: "Documents d'Étude PDF",     Icon: FileText,       active: GOLD_ACTIVE },
+  { key: 'prayers',         emoji: '🙏', label: 'Requêtes de Prière',        Icon: Heart,          active: 'bg-burgundy text-white border-burgundy shadow-md shadow-burgundy/10' },
+  { key: 'donations',       emoji: '💰', label: 'Dons & Finances',           Icon: DollarSign,     active: 'bg-emerald-700 text-white border-emerald-600 shadow-md shadow-emerald-900/30' },
+  { key: 'blog',            emoji: '📝', label: 'Articles du Blog',          Icon: FileText,       active: GOLD_ACTIVE },
+  { key: 'newsletter',      emoji: '📧', label: 'Abonnés Newsletter',        Icon: Mail,           active: 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-900/30' },
+  { key: 'contactMessages', emoji: '✉️', label: 'Messages de Contact',       Icon: MessageSquare,  active: 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-900/30' },
+  { key: 'projects',        emoji: '🎯', label: 'Projets & Collectes',       Icon: Target,         active: 'bg-teal-700 text-white border-teal-600 shadow-md shadow-teal-900/30' },
+  { key: 'partners',        emoji: '🤝', label: 'Partenaires Grâce TV',      Icon: Users,          active: GOLD_ACTIVE },
+  { key: 'books',           emoji: '📚', label: 'Bibliothèque',              Icon: BookOpen,       active: GOLD_ACTIVE },
+];
+
+// Libellés lisibles des sections, réutilisés dans la Gestion des admins.
+const SECTION_LABELS: Record<string, string> = Object.fromEntries(SECTION_TABS.map(t => [t.key, `${t.emoji} ${t.label}`]));
+
 export function Admin() {
-  const { user, isAdmin, isSuperAdmin, isLoading: isAuthLoading, loginWithGoogle, loginWithPassword, logout } = useAuth();
+  const { user, isAdmin, isSuperAdmin, sections, isLoading: isAuthLoading, loginWithGoogle, loginWithPassword, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('links');
+
+  // Un admin ne voit/agit que sur ses sections ; le super-admin voit tout.
+  const canSee = (key: string) => isSuperAdmin || sections.includes(key);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
 
@@ -111,6 +137,10 @@ export function Admin() {
   const [resetPasswordFor, setResetPasswordFor] = useState<string | null>(null);
   const [resetPasswordValue, setResetPasswordValue] = useState('');
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [newAdminSections, setNewAdminSections] = useState<string[]>([]);
+  const [editSectionsFor, setEditSectionsFor] = useState<string | null>(null);
+  const [editSectionsValue, setEditSectionsValue] = useState<string[]>([]);
+  const [isSavingSections, setIsSavingSections] = useState(false);
 
   // Login screen — email + mot de passe (alternative à Google)
   const [loginEmail, setLoginEmail] = useState('');
@@ -244,6 +274,8 @@ export function Admin() {
   // Load Data based on Tab
   const loadData = async () => {
     if (!isAdmin) return;
+    // Ne jamais charger une section à laquelle l'admin n'a pas accès (évite un 403).
+    if (!canSee(activeTab)) { setIsLoadingData(false); return; }
     setIsLoadingData(true);
     try {
       if (activeTab === 'links') {
@@ -326,7 +358,16 @@ export function Admin() {
 
   useEffect(() => {
     loadData();
-  }, [activeTab, isAdmin]);
+  }, [activeTab, isAdmin, isSuperAdmin, sections]);
+
+  // Recentre l'onglet actif sur une section autorisée : un admin restreint ne
+  // doit jamais rester bloqué sur un onglet auquel il n'a pas accès.
+  useEffect(() => {
+    if (isAuthLoading || !isAdmin || isSuperAdmin) return;
+    if (!sections.includes(activeTab) && sections.length > 0) {
+      setActiveTab(sections[0] as AdminTab);
+    }
+  }, [isAuthLoading, isAdmin, isSuperAdmin, sections, activeTab]);
 
   const showStatus = (text: string, type: 'success' | 'error') => {
     setStatusMessage({ text, type });
@@ -941,207 +982,52 @@ export function Admin() {
               Sections du Site Curées
             </p>
 
-            <button
-              onClick={() => setActiveTab('links')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'links'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Youtube className="w-4.5 h-4.5" /> 🔴 Recommandés Youtube
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.links}</span>
-            </button>
+            {SECTION_TABS.filter(t => canSee(t.key)).map(t => (
+              <button
+                key={t.key}
+                onClick={() => setActiveTab(t.key)}
+                className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                  activeTab === t.key
+                    ? t.active
+                    : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <t.Icon className="w-4.5 h-4.5" /> {t.emoji} {t.label}
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts[t.key as keyof AdminCounts]}</span>
+              </button>
+            ))}
 
-            <button
-              onClick={() => setActiveTab('photos')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'photos'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <ImageIcon className="w-4.5 h-4.5" /> 📸 Galerie de Vie
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.photos}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('events')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'events'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Calendar className="w-4.5 h-4.5" /> 📅 Événements & Activités
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.events}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('testimonials')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'testimonials'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Quote className="w-4.5 h-4.5" /> 💬 Témoignages Fidèles
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.testimonials}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('documents')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'documents'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <FileText className="w-4.5 h-4.5" /> 📄 Documents d'Étude PDF
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.documents}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('prayers')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'prayers'
-                  ? 'bg-burgundy text-white border-burgundy shadow-md shadow-burgundy/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Heart className="w-4.5 h-4.5" /> 🙏 Requêtes de Prière
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.prayers}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('donations')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'donations'
-                  ? 'bg-emerald-700 text-white border-emerald-600 shadow-md shadow-emerald-900/30'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <DollarSign className="w-4.5 h-4.5" /> 💰 Dons & Finances
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.donations}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('blog')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'blog'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <FileText className="w-4.5 h-4.5" /> 📝 Articles du Blog
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.blog}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('newsletter')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'newsletter'
-                  ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-900/30'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Mail className="w-4.5 h-4.5" /> 📧 Abonnés Newsletter
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.newsletter}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('contactMessages')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'contactMessages'
-                  ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-900/30'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <MessageSquare className="w-4.5 h-4.5" /> ✉️ Messages de Contact
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.contactMessages}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('projects')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'projects'
-                  ? 'bg-teal-700 text-white border-teal-600 shadow-md shadow-teal-900/30'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Target className="w-4.5 h-4.5" /> 🎯 Projets & Collectes
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.projects}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('partners')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'partners'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Users className="w-4.5 h-4.5" /> 🤝 Partenaires Grâce TV
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.partners}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab('books')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'books'
-                  ? 'bg-gold text-soft-black border-gold shadow-md shadow-gold/10'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <BookOpen className="w-4.5 h-4.5" /> 📚 Bibliothèque
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.books}</span>
-            </button>
-
-            <div className="border-t border-white/10 my-2 pt-2">
-              <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-white/30 px-3 mb-2">
-                Sécurité & Contrôle
+            {!isSuperAdmin && sections.length === 0 && (
+              <p className="text-xs text-white/40 px-3 py-4 leading-relaxed">
+                Aucune section ne vous a encore été attribuée. Contactez le super-administrateur pour obtenir des droits d'accès.
               </p>
-            </div>
+            )}
 
-            <button
-              onClick={() => setActiveTab('audit')}
-              className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
-                activeTab === 'audit'
-                  ? 'bg-violet-700 text-white border-violet-600 shadow-md shadow-violet-900/30'
-                  : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <FileText className="w-4.5 h-4.5" /> 📋 Registre des Actions
-              </span>
-              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.audit}</span>
-            </button>
+            {isSuperAdmin && (
+              <div className="border-t border-white/10 my-2 pt-2">
+                <p className="text-[10px] font-sans font-bold uppercase tracking-widest text-white/30 px-3 mb-2">
+                  Sécurité & Contrôle
+                </p>
+              </div>
+            )}
+
+            {isSuperAdmin && (
+              <button
+                onClick={() => setActiveTab('audit')}
+                className={`flex items-center justify-between p-4 rounded-xl text-left text-xs font-bold transition-all border ${
+                  activeTab === 'audit'
+                    ? 'bg-violet-700 text-white border-violet-600 shadow-md shadow-violet-900/30'
+                    : 'bg-white/5 hover:bg-white/10 border-white/5 text-white/70'
+                }`}
+              >
+                <span className="flex items-center gap-3">
+                  <FileText className="w-4.5 h-4.5" /> 📋 Registre des Actions
+                </span>
+                <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-black/10">{counts.audit}</span>
+              </button>
+            )}
 
             {isSuperAdmin && (
               <button
@@ -1200,7 +1086,7 @@ export function Admin() {
                 </p>
               </div>
 
-              {activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && activeTab !== 'books' && activeTab !== 'contactMessages' && (
+              {canSee(activeTab) && activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && activeTab !== 'books' && activeTab !== 'contactMessages' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -1243,7 +1129,12 @@ export function Admin() {
             </div>
 
             {/* Loading Cover */}
-            {isLoadingData ? (
+            {!canSee(activeTab) ? (
+              <div className="py-20 flex flex-col items-center justify-center text-center">
+                <ShieldAlert className="w-10 h-10 text-white/20 mb-3" />
+                <p className="text-sm text-white/50">Vous n'avez pas accès à cette section.</p>
+              </div>
+            ) : isLoadingData ? (
               <div className="py-20 flex flex-col items-center justify-center text-center">
                 <div className="w-10 h-10 border-4 border-gold border-t-transparent rounded-full animate-spin mb-3" />
                 <p className="text-xs text-white/50">Synchronisation des données...</p>
@@ -1862,9 +1753,10 @@ export function Admin() {
                             if (!newAdminEmail.trim()) return;
                             setIsAddingAdmin(true);
                             try {
-                              await addAdmin(newAdminEmail.trim(), newAdminPassword.trim() || undefined);
+                              await addAdmin(newAdminEmail.trim(), newAdminPassword.trim() || undefined, newAdminSections);
                               setNewAdminEmail('');
                               setNewAdminPassword('');
+                              setNewAdminSections([]);
                               const updated = await getAdmins();
                               setAdmins(updated);
                               showStatus('Administrateur ajouté avec succès.', 'success');
@@ -1879,8 +1771,32 @@ export function Admin() {
                           <Plus className="w-4 h-4" /> {isAddingAdmin ? 'Ajout...' : 'Ajouter'}
                         </button>
                       </div>
-                      <p className="text-[10px] text-white/30 mt-2">
-                        L'admin peut se connecter avec un compte Google correspondant à cet email, ou avec le mot de passe défini ici (vous pouvez aussi lui en définir un plus tard, ci-dessous).
+                      <div className="mt-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                          Sections accessibles à ce nouvel admin
+                        </p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                          {SECTION_TABS.map(t => {
+                            const checked = newAdminSections.includes(t.key);
+                            return (
+                              <label
+                                key={t.key}
+                                className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-[11px] transition-colors ${checked ? 'bg-gold/15 border-gold/40 text-white' : 'bg-black/30 border-white/10 text-white/60 hover:bg-white/5'}`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => setNewAdminSections(prev => prev.includes(t.key) ? prev.filter(s => s !== t.key) : [...prev, t.key])}
+                                  className="accent-gold"
+                                />
+                                <span className="truncate">{t.emoji} {t.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-white/30 mt-3">
+                        L'admin peut se connecter avec un compte Google correspondant à cet email, ou avec le mot de passe défini ici (vous pouvez aussi lui en définir un plus tard, ci-dessous). Il n'aura accès qu'aux sections cochées — le super-administrateur garde l'accès à tout.
                       </p>
                     </div>
 
@@ -1897,6 +1813,7 @@ export function Admin() {
                             <th className="pb-3 pr-4">Ajouté par</th>
                             <th className="pb-3 pr-4">Date d'ajout</th>
                             <th className="pb-3 pr-4">Mot de passe</th>
+                            <th className="pb-3 pr-4">Accès</th>
                             <th className="pb-3 text-right">Action</th>
                           </tr>
                         </thead>
@@ -1914,12 +1831,33 @@ export function Admin() {
                                     {admin.hasPassword ? 'Défini' : 'Non défini'}
                                   </span>
                                 </td>
+                                <td className="py-4 pr-4">
+                                  {admin.sections.length === 0 ? (
+                                    <span className="text-[10px] text-white/30">Aucun accès</span>
+                                  ) : (
+                                    <span className="text-[10px] text-white/60" title={admin.sections.map(s => SECTION_LABELS[s] || s).join(', ')}>
+                                      {admin.sections.length} section{admin.sections.length > 1 ? 's' : ''}
+                                    </span>
+                                  )}
+                                </td>
                                 <td className="py-4 text-right">
                                   <div className="flex items-center justify-end gap-1">
                                     <button
                                       onClick={() => {
+                                        setEditSectionsFor(prev => prev === admin.email ? null : admin.email);
+                                        setEditSectionsValue(admin.sections);
+                                        setResetPasswordFor(null);
+                                      }}
+                                      className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"
+                                      title="Gérer les sections accessibles"
+                                    >
+                                      <ShieldAlert className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => {
                                         setResetPasswordFor(prev => prev === admin.email ? null : admin.email);
                                         setResetPasswordValue('');
+                                        setEditSectionsFor(null);
                                       }}
                                       className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"
                                       title="Définir / réinitialiser le mot de passe"
@@ -1947,7 +1885,7 @@ export function Admin() {
                               </tr>
                               {resetPasswordFor === admin.email && (
                                 <tr className="border-b border-white/5 bg-black/20">
-                                  <td colSpan={5} className="py-3 px-4">
+                                  <td colSpan={6} className="py-3 px-4">
                                     <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                                       <input
                                         type="text"
@@ -1986,6 +1924,61 @@ export function Admin() {
                                           Annuler
                                         </button>
                                       </div>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                              {editSectionsFor === admin.email && (
+                                <tr className="border-b border-white/5 bg-black/20">
+                                  <td colSpan={6} className="py-4 px-4">
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                                      Sections accessibles à <span className="font-mono text-sky-400 normal-case">{admin.email}</span>
+                                    </p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                      {SECTION_TABS.map(t => {
+                                        const checked = editSectionsValue.includes(t.key);
+                                        return (
+                                          <label
+                                            key={t.key}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-[11px] transition-colors ${checked ? 'bg-gold/15 border-gold/40 text-white' : 'bg-black/30 border-white/10 text-white/60 hover:bg-white/5'}`}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={checked}
+                                              onChange={() => setEditSectionsValue(prev => prev.includes(t.key) ? prev.filter(s => s !== t.key) : [...prev, t.key])}
+                                              className="accent-gold"
+                                            />
+                                            <span className="truncate">{t.emoji} {t.label}</span>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="flex gap-2 mt-3">
+                                      <button
+                                        disabled={isSavingSections}
+                                        onClick={async () => {
+                                          setIsSavingSections(true);
+                                          try {
+                                            await updateAdminSections(admin.email, editSectionsValue);
+                                            setAdmins(prev => prev.map(a => a.email === admin.email ? { ...a, sections: editSectionsValue } : a));
+                                            setEditSectionsFor(null);
+                                            showStatus('Droits d\'accès mis à jour.', 'success');
+                                          } catch (err: any) {
+                                            showStatus(err?.message || 'Erreur lors de la mise à jour.', 'error');
+                                          } finally {
+                                            setIsSavingSections(false);
+                                          }
+                                        }}
+                                        className="bg-gold hover:bg-gold/90 text-soft-black px-3 py-2 rounded-lg text-[10px] font-bold disabled:opacity-40 transition-colors"
+                                      >
+                                        {isSavingSections ? '...' : 'Enregistrer les droits'}
+                                      </button>
+                                      <button
+                                        onClick={() => setEditSectionsFor(null)}
+                                        className="bg-white/5 hover:bg-white/10 border border-white/15 text-white/70 px-3 py-2 rounded-lg text-[10px] font-bold transition-colors"
+                                      >
+                                        Annuler
+                                      </button>
                                     </div>
                                   </td>
                                 </tr>
