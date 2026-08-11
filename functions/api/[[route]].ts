@@ -853,6 +853,66 @@ app.get('/youtube/playlists', async (c) => {
   }
 })
 
+// ─── Émissions curées (programmes) ──────────────────────────────────────────────
+// Présentation soignée (image 16:9 + description + type), reliée à sa playlist
+// YouTube par mots-clés. Source UNIQUE pour le site ET l'app mobile.
+const PROGRAMS = [
+  { id: 'culte-du-dimanche', title: 'Culte du Dimanche', category: 'Cultes & Célébrations', image: '/uploads/culte-du-dimanche-16x9.jpg',
+    description: "Le rassemblement principal de la semaine : adoration, louange et prédication de la Parole, retransmis en direct.", keywords: ['culte', 'dimanche'] },
+  { id: 'manne-matinale', title: 'Manne Matinale', category: 'Dévotion quotidienne', image: '/uploads/manne-matinale-16x9.jpg',
+    description: "Le rendez-vous quotidien pour commencer la journée nourri de la Parole de Dieu, où que vous soyez.", keywords: ['manne', 'matinale'] },
+  { id: 'sommet-elevation', title: "Sommet d'Élévation", category: 'Conférences & Rassemblements', image: '/uploads/sommet-delevation-16x9.jpg',
+    description: "Un grand rassemblement d'élévation spirituelle, de délivrance et d'enseignement de haut niveau.", keywords: ['sommet', 'élévation', 'elevation'] },
+  { id: 'ecole-affaires-royaume', title: 'École des Affaires du Royaume', category: 'Enseignements', image: '/uploads/ecole-des-affaires-du-royaume-16x9.jpg',
+    description: "Sagesse entrepreneuriale et leadership selon les principes bibliques, pour impacter le monde des affaires.", keywords: ['affaires', 'royaume', 'école', 'ecole'] },
+  { id: 'prieres-intercession', title: "Prières d'Intercession", category: 'Prière & Intercession', image: '/uploads/prieres-intercession-16x9.jpg',
+    description: "Des temps d'intercession et de combat spirituel où l'Éternel intervient dans les situations impossibles.", keywords: ['prière', 'priere', 'intercession'] },
+  { id: 'temoignage-gloire', title: 'Témoignage pour la Gloire de Dieu', category: 'Témoignages', image: '/uploads/temoignage-pour-la-gloire-de-dieu-16x9.jpg',
+    description: "Des vies transformées qui rendent gloire à Dieu et fortifient la foi de toute la communauté.", keywords: ['témoignage', 'temoignage', 'gloire'] },
+]
+
+function normalizeStr(s: string): string {
+  return (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+app.get('/programs', async (c) => {
+  const origin = new URL(c.req.url).origin
+  const apiKey = c.env.YOUTUBE_API_KEY
+  let playlists: Array<{ id: string; title: string; videoCount: number }> = []
+  if (apiKey) {
+    try {
+      const cache = caches.default
+      const cached = await cache.match(new Request('https://internal-cache.dev/yt-playlists'))
+      if (cached) {
+        playlists = await cached.json()
+      } else {
+        const { channelId } = await resolveChannelId(apiKey)
+        const data = await fetchJson(
+          `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=50&key=${apiKey}`
+        )
+        playlists = (data.items || []).map((item: any) => ({
+          id: item.id, title: item.snippet.title, videoCount: item.contentDetails?.itemCount || 0,
+        }))
+      }
+    } catch {
+      playlists = []
+    }
+  }
+  const result = PROGRAMS.map((p) => {
+    const match = playlists.find((pl) => {
+      const t = normalizeStr(pl.title)
+      return p.keywords.some((k) => t.includes(normalizeStr(k)))
+    })
+    return {
+      id: p.id, title: p.title, category: p.category, description: p.description,
+      image: `${origin}${p.image}`,
+      playlistId: match?.id ?? null,
+      videoCount: match?.videoCount ?? 0,
+    }
+  })
+  return c.json(result)
+})
+
 app.get('/youtube/sermons', async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY
   if (!apiKey) return c.json([])

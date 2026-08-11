@@ -267,6 +267,7 @@ export function Home() {
   const [plThumbs, setPlThumbs]   = useState<Record<string, string>>({});
   const [partners, setPartners]   = useState<Partner[]>([]);
   const [partnerVideosMap, setPartnerVideosMap] = useState<Record<string, VideoContent[]>>({});
+  const [programs, setPrograms]   = useState<{ id: string; title: string; category: string; description: string; image: string; playlistId: string | null; videoCount: number }[]>([]);
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
@@ -283,6 +284,8 @@ export function Home() {
     }).catch(() => {});
     getBlogPosts().then(setPosts).catch(() => {});
     getStudyDocuments().then(setDocs).catch(() => {});
+    // Émissions curées (image 16:9 + description + playlist résolue) — présentation soignée.
+    fetch('/api/programs').then(r => r.ok ? r.json() : []).then(setPrograms).catch(() => {});
 
     // Chaînes partenaires gérées depuis le dashboard admin (comme dans Emissions).
     // Pour chaque partenaire : on récupère ses playlists YouTube, on prend la plus
@@ -371,6 +374,22 @@ export function Home() {
     }
     return buckets;
   }, [playlists, links, plThumbs]);
+
+  /* ── Émissions curées → cartes (image 16:9 + description) ── */
+  const emissionItems: VideoContent[] = useMemo(
+    () =>
+      programs.map((p) => ({
+        id: `prog-${p.id}`,
+        title: p.title,
+        description: p.description,
+        image: p.image,
+        meta: p.videoCount > 0 ? `${p.category} · ${p.videoCount} vidéos` : p.category,
+        embedUrl: p.playlistId
+          ? `https://www.youtube.com/embed/videoseries?list=${p.playlistId}&autoplay=1&rel=0`
+          : '',
+      })),
+    [programs],
+  );
 
   const featuredPost = posts[0];
   const otherPosts   = posts.slice(1, 7);
@@ -619,7 +638,7 @@ export function Home() {
       )}
 
       {/* ════════════ 04 · ÉMISSIONS ════════════ */}
-      {videoSections.emission.length > 0 && (
+      {emissionItems.length > 0 && (
         <section className="relative bg-white py-24 sm:py-32 overflow-hidden">
           <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="mb-16 sm:mb-28 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
@@ -638,7 +657,7 @@ export function Home() {
               </motion.div>
             </div>
             <Rail>
-              {videoSections.emission.map((v, i) => (
+              {emissionItems.map((v, i) => (
                 <VideoCard key={v.id} item={v} onPlay={setLightbox} index={i} />
               ))}
             </Rail>
