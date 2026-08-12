@@ -268,6 +268,7 @@ export function Home() {
   const [partners, setPartners]   = useState<Partner[]>([]);
   const [partnerVideosMap, setPartnerVideosMap] = useState<Record<string, VideoContent[]>>({});
   const [programs, setPrograms]   = useState<{ id: string; title: string; category: string; description: string; image: string; playlistId: string | null; videoCount: number }[]>([]);
+  const [progVideos, setProgVideos] = useState<Record<string, VideoContent[]>>({});
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
@@ -284,8 +285,27 @@ export function Home() {
     }).catch(() => {});
     getBlogPosts().then(setPosts).catch(() => {});
     getStudyDocuments().then(setDocs).catch(() => {});
-    // Émissions curées (image 16:9 + description + playlist résolue) — présentation soignée.
-    fetch('/api/programs').then(r => r.ok ? r.json() : []).then(setPrograms).catch(() => {});
+    // Émissions curées : chacune devient sa propre section avec SES épisodes.
+    fetch('/api/programs').then(r => r.ok ? r.json() : []).then(async (progs: typeof programs) => {
+      setPrograms(progs);
+      for (const p of progs) {
+        if (!p.playlistId) continue;
+        try {
+          const r = await fetch(`/api/playlist-items?playlistId=${encodeURIComponent(p.playlistId)}`);
+          if (!r.ok) continue;
+          const items: { videoId: string; title: string; thumbnail: string }[] = await r.json();
+          if (!Array.isArray(items) || items.length === 0) continue;
+          const videos: VideoContent[] = items.map(v => ({
+            id: `ev-${p.id}-${v.videoId}`,
+            title: v.title,
+            image: v.thumbnail,
+            meta: p.title,
+            embedUrl: ytEmbedUrl(v.videoId),
+          }));
+          setProgVideos(prev => ({ ...prev, [p.id]: videos }));
+        } catch { /* ignore cette émission */ }
+      }
+    }).catch(() => {});
 
     // Chaînes partenaires gérées depuis le dashboard admin (comme dans Emissions).
     // Pour chaque partenaire : on récupère ses playlists YouTube, on prend la plus
@@ -375,20 +395,10 @@ export function Home() {
     return buckets;
   }, [playlists, links, plThumbs]);
 
-  /* ── Émissions curées → cartes (image 16:9 + description) ── */
-  const emissionItems: VideoContent[] = useMemo(
-    () =>
-      programs.map((p) => ({
-        id: `prog-${p.id}`,
-        title: p.title,
-        description: p.description,
-        image: p.image,
-        meta: p.videoCount > 0 ? `${p.category} · ${p.videoCount} vidéos` : p.category,
-        embedUrl: p.playlistId
-          ? `https://www.youtube.com/embed/videoseries?list=${p.playlistId}&autoplay=1&rel=0`
-          : '',
-      })),
-    [programs],
+  /* ── Chaque émission devient sa propre section (avec ses épisodes) ── */
+  const emissionSections = useMemo(
+    () => programs.map((p) => ({ ...p, videos: progVideos[p.id] || [] })).filter((s) => s.videos.length > 0),
+    [programs, progVideos],
   );
 
   const featuredPost = posts[0];
@@ -637,30 +647,28 @@ export function Home() {
         </section>
       )}
 
-      {/* ════════════ 04 · ÉMISSIONS ════════════ */}
-      {emissionItems.length > 0 && (
+      {/* ════════════ 04 · ÉMISSIONS — une section par émission ════════════ */}
+      {emissionSections.length > 0 && (
         <section className="relative bg-white py-24 sm:py-32 overflow-hidden">
-          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="mb-16 sm:mb-28 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-              <SectionHeader
-                num="04"
-                icon={Tv}
-                label="Émissions"
-                title="Nos programmes"
-                accent="phares."
-                desc="Manne Matinale, Sommet d'Élévation, témoignages… retrouvez les rendez-vous réguliers qui rythment la vie de la chaîne."
-              />
-              <motion.div {...reveal}>
-                <Link to="/emissions" className="group inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors whitespace-nowrap">
-                  Toutes les émissions <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
-                </Link>
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-20 sm:space-y-28">
+            {emissionSections.map((s) => (
+              <motion.div key={s.id} {...reveal}>
+                <div className="mb-8 sm:mb-10 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-grace-orange font-bold text-xs uppercase tracking-widest mb-2">{s.category}</p>
+                    <h3 className="font-serif text-3xl sm:text-5xl font-black text-soft-black leading-none">{s.title}</h3>
+                  </div>
+                  <Link to="/emissions" className="group inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors whitespace-nowrap">
+                    Voir tout <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform" />
+                  </Link>
+                </div>
+                <Rail>
+                  {s.videos.map((v, i) => (
+                    <VideoCard key={v.id} item={v} onPlay={setLightbox} index={i} />
+                  ))}
+                </Rail>
               </motion.div>
-            </div>
-            <Rail>
-              {emissionItems.map((v, i) => (
-                <VideoCard key={v.id} item={v} onPlay={setLightbox} index={i} />
-              ))}
-            </Rail>
+            ))}
           </div>
         </section>
       )}

@@ -910,6 +910,9 @@ app.get('/programs', async (c) => {
       videoCount: match?.videoCount ?? 0,
     }
   })
+  // Émissions les mieux remplies d'abord ; celles à 0 vidéo (playlist YouTube
+  // encore vide) passent en fin de liste.
+  result.sort((a, b) => b.videoCount - a.videoCount)
   return c.json(result)
 })
 
