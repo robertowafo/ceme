@@ -28,6 +28,7 @@ const AboutGraceTV = lazy(() => import('./pages/AboutGraceTV').then((m) => ({ de
 const Give = lazy(() => import('./pages/Give').then((m) => ({ default: m.Give })));
 const SupportGraceTV = lazy(() => import('./pages/SupportGraceTV').then((m) => ({ default: m.SupportGraceTV })));
 const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.Contact })));
+const Lecture = lazy(() => import('./pages/Lecture').then((m) => ({ default: m.Lecture })));
 const DocumentReader = lazy(() => import('./pages/DocumentReader').then((m) => ({ default: m.DocumentReader })));
 
 // Univers Église CEME
@@ -72,6 +73,7 @@ export default function App() {
               <Route path="a-propos" element={<AboutGraceTV />} />
               <Route path="faire-un-don" element={<Give />} />
               <Route path="soutenir-grace-tv" element={<SupportGraceTV />} />
+              <Route path="lecture" element={<Lecture />} />
               <Route path="contact" element={<Contact />} />
               <Route path="admin" element={<Admin />} />
 
