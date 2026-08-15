@@ -659,7 +659,8 @@ app.post('/prayer-requests', rateLimit('prayer-requests', 5, 600), async (c) => 
 
 app.get('/prayer-requests/public', async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT id, name, message, type, submitted_at AS submittedAt
+    `SELECT id, name, message, type, submitted_at AS submittedAt,
+            admin_reply AS adminReply, replied_at AS repliedAt
      FROM prayer_requests WHERE is_public = 1 ORDER BY submitted_at DESC LIMIT 50`
   ).all()
   return c.json(results)

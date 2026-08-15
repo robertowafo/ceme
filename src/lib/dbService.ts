@@ -292,6 +292,8 @@ export interface PrayerRequestPublic {
   message: string;
   type: 'prayer' | 'testimony';
   submittedAt: string;
+  adminReply?: string | null;
+  repliedAt?: string | null;
 }
 
 export async function submitPrayerRequest(data: {

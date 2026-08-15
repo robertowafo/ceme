@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Heart, Send, ShieldCheck, Clock, Users, FileText, BookOpen, Quote, Phone, Loader2 } from 'lucide-react';
+import { Heart, Send, ShieldCheck, Clock, Users, FileText, BookOpen, Quote, Phone, Loader2, MessageSquare } from 'lucide-react';
 import { submitPrayerRequest, getPublicPrayerRequests, PrayerRequestPublic } from '../../lib/dbService';
 import { SEO } from '../../components/SEO';
 import { breadcrumbSchema } from '../../lib/structuredData';
@@ -445,6 +445,15 @@ export function Prayer() {
                         </div>
                       </div>
                       <p className="text-gray-700 leading-relaxed text-sm">{req.message}</p>
+                      {req.adminReply && (
+                        <div className="mt-4 bg-gold/5 border border-gold/20 rounded-xl p-4">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <MessageSquare className="w-3.5 h-3.5 text-gold" />
+                            <span className="text-[10px] font-bold text-gold uppercase tracking-widest">Réponse de l'équipe pastorale</span>
+                          </div>
+                          <p className="text-gray-600 text-sm leading-relaxed italic">{req.adminReply}</p>
+                        </div>
+                      )}
                     </motion.div>
                   ))
                 )}
@@ -499,6 +508,15 @@ export function Prayer() {
                   </div>
                   <Quote className="w-7 h-7 text-gold/30 mb-4" />
                   <p className="text-gray-700 leading-relaxed italic text-sm mb-6">"{t.message}"</p>
+                  {t.adminReply && (
+                    <div className="bg-white border border-gold/20 rounded-xl p-4 mb-4">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-gold" />
+                        <span className="text-[10px] font-bold text-gold uppercase tracking-widest">Mot de l'équipe pastorale</span>
+                      </div>
+                      <p className="text-gray-600 text-sm leading-relaxed">{t.adminReply}</p>
+                    </div>
+                  )}
                   <p className="font-bold text-soft-black text-sm border-t border-gray-200 pt-4">
                     {t.name || 'Anonyme'}
                   </p>
