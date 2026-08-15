@@ -72,7 +72,9 @@ CREATE TABLE IF NOT EXISTS prayer_requests (
   message      TEXT NOT NULL,
   type         TEXT NOT NULL DEFAULT 'prayer' CHECK (type IN ('prayer', 'testimony')),
   is_public    INTEGER NOT NULL DEFAULT 1,
-  submitted_at TEXT NOT NULL
+  submitted_at TEXT NOT NULL,
+  admin_reply  TEXT,
+  replied_at   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS blog_categories (

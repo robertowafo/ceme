@@ -282,6 +282,8 @@ export interface PrayerRequest {
   type: 'prayer' | 'testimony';
   isPublic: boolean;
   submittedAt: string;
+  adminReply?: string | null;
+  repliedAt?: string | null;
 }
 
 export interface PrayerRequestPublic {

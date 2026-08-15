@@ -667,10 +667,23 @@ app.get('/prayer-requests/public', async (c) => {
 
 app.get('/prayer-requests', requireSection('prayers'), async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT id, name, phone, message, type, is_public AS isPublic, submitted_at AS submittedAt
+    `SELECT id, name, phone, message, type, is_public AS isPublic, submitted_at AS submittedAt,
+            admin_reply AS adminReply, replied_at AS repliedAt
      FROM prayer_requests ORDER BY submitted_at DESC`
   ).all<any>()
   return c.json(results.map((r: any) => ({ ...r, isPublic: r.isPublic === 1 })))
+})
+
+app.patch('/prayer-requests/:id/reply', requireSection('prayers'), async (c) => {
+  const id = c.req.param('id')
+  const { reply } = await c.req.json<{ reply: string }>()
+  if (!reply?.trim()) return c.json({ error: 'Réponse vide' }, 400)
+  const now = new Date().toISOString()
+  await c.env.DB.prepare(
+    'UPDATE prayer_requests SET admin_reply=?, replied_at=? WHERE id=?'
+  ).bind(reply.trim(), now, id).run()
+  await audit(c.env.DB, c.get('user').email, 'Réponse', 'Requêtes de Prière', id, `Réponse envoyée à la requête ${id}`)
+  return c.json({ success: true, repliedAt: now })
 })
 
 app.delete('/prayer-requests/:id', requireSection('prayers'), async (c) => {

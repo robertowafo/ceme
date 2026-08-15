@@ -34,6 +34,8 @@ import {
   BookOpen,
   MessageSquare,
   KeyRound,
+  Send,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -84,6 +86,39 @@ const SECTION_TABS: { key: AdminTab; emoji: string; label: string; Icon: React.C
 
 // Libellés lisibles des sections, réutilisés dans la Gestion des admins.
 const SECTION_LABELS: Record<string, string> = Object.fromEntries(SECTION_TABS.map(t => [t.key, `${t.emoji} ${t.label}`]));
+
+function PrayerReplyForm({ prayerId, onReplied }: { prayerId: string; onReplied: (reply: string, repliedAt: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const handleSend = async () => {
+    if (!text.trim()) return;
+    setSending(true);
+    try {
+      const res = await apiFetch(`/api/prayer-requests/${prayerId}/reply`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reply: text.trim() }) });
+      const data = await res.json() as { success: boolean; repliedAt: string };
+      if (data.success) onReplied(text.trim(), data.repliedAt);
+    } catch { /* ignore */ }
+    setSending(false);
+  };
+  if (!open) return (
+    <button onClick={() => setOpen(true)} className="flex items-center gap-1.5 text-[10px] text-gold/70 hover:text-gold font-bold uppercase tracking-wider transition-colors">
+      <MessageSquare className="w-3 h-3" /> Répondre / Encourager
+      <ChevronDown className="w-3 h-3" />
+    </button>
+  );
+  return (
+    <div className="mt-2 space-y-2">
+      <textarea rows={3} className="w-full bg-black/40 border border-gold/20 rounded-lg p-3 text-xs text-white placeholder:text-white/30 focus:border-gold/50 focus:outline-none transition-colors" value={text} onChange={e => setText(e.target.value)} placeholder="Écrivez un mot d'encouragement ou une réponse..." autoFocus />
+      <div className="flex items-center gap-2 justify-end">
+        <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-[10px] text-white/40 hover:text-white/60 font-bold uppercase tracking-wider transition-colors">Annuler</button>
+        <button onClick={handleSend} disabled={sending || !text.trim()} className="flex items-center gap-1.5 px-4 py-1.5 bg-gold text-black text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-gold/90 disabled:opacity-40 transition-all">
+          <Send className="w-3 h-3" /> {sending ? 'Envoi...' : 'Envoyer'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function Admin() {
   const { user, isAdmin, isSuperAdmin, sections, isLoading: isAuthLoading, loginWithGoogle, loginWithPassword, logout } = useAuth();
@@ -1336,72 +1371,72 @@ export function Admin() {
                 )}
                 {/* 6. Prayers View */}
                 {activeTab === 'prayers' && (
-                  <div className="overflow-x-auto">
+                  <div>
                     {prayers.length === 0 ? (
                       <EmptyMessage />
                     ) : (
-                      <table className="w-full text-left text-xs border-collapse">
-                        <thead>
-                          <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
-                            <th className="pb-3 pr-4">Nom / Prénom</th>
-                            <th className="pb-3 pr-4">
-                              <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> Numéro</span>
-                            </th>
-                            <th className="pb-3 pr-4">Prière / Message</th>
-                            <th className="pb-3 pr-4">Type</th>
-                            <th className="pb-3 pr-4">Visibilité</th>
-                            <th className="pb-3 pr-4">Date</th>
-                            <th className="pb-3 text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {prayers.map((pr) => (
-                            <tr key={pr.id} className="border-b border-white/5 hover:bg-white/[0.02] align-top">
-                              <td className="py-4 pr-4 font-semibold text-white whitespace-nowrap">
-                                {pr.name || <span className="text-white/30 italic font-normal">Anonyme</span>}
-                              </td>
-                              <td className="py-4 pr-4 font-mono text-gold/80">
-                                {pr.phone ? (
-                                  <span className="flex items-center gap-1"><Phone className="w-3 h-3 text-gold/50" />{pr.phone}</span>
-                                ) : (
-                                  <span className="text-white/20 italic font-normal">—</span>
+                      <div className="grid grid-cols-1 gap-4">
+                        {prayers.map((pr) => (
+                          <div key={pr.id} className="bg-white/5 border border-white/10 rounded-xl p-5 relative">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${pr.type === 'testimony' ? 'bg-emerald-500/10' : 'bg-burgundy/20'}`}>
+                                  <span className="text-sm">{pr.type === 'testimony' ? '🙌' : '🙏'}</span>
+                                </div>
+                                <div>
+                                  <h4 className="font-bold text-white text-xs">
+                                    {pr.name || <span className="text-white/30 italic font-normal">Anonyme</span>}
+                                  </h4>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className={`text-[9px] font-bold uppercase tracking-wider ${pr.type === 'testimony' ? 'text-emerald-400' : 'text-red-300'}`}>
+                                      {pr.type === 'testimony' ? 'Témoignage' : 'Prière'}
+                                    </span>
+                                    <span className="text-white/20">·</span>
+                                    <span className={`text-[9px] font-bold ${pr.isPublic ? 'text-blue-400' : 'text-white/40'}`}>
+                                      {pr.isPublic ? 'Public' : 'Confidentiel'}
+                                    </span>
+                                    <span className="text-white/20">·</span>
+                                    <span className="text-[9px] text-white/40 font-mono">
+                                      {new Date(pr.submittedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {pr.phone && (
+                                  <a href={`tel:${pr.phone}`} className="p-1.5 rounded-lg hover:bg-white/5 text-gold/60 hover:text-gold transition-colors" title={pr.phone}>
+                                    <Phone className="w-3.5 h-3.5" />
+                                  </a>
                                 )}
-                              </td>
-                              <td className="py-4 pr-4 text-white/75 max-w-sm">
-                                <p className="line-clamp-3 leading-relaxed">{pr.message}</p>
-                              </td>
-                              <td className="py-4 pr-4">
-                                <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                  pr.type === 'testimony'
-                                    ? 'bg-emerald-500/10 text-emerald-400'
-                                    : 'bg-burgundy/20 text-red-300'
-                                }`}>
-                                  {pr.type === 'testimony' ? '🙌 Témoignage' : '🙏 Prière'}
-                                </span>
-                              </td>
-                              <td className="py-4 pr-4">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  pr.isPublic ? 'bg-blue-500/10 text-blue-400' : 'bg-white/5 text-white/40'
-                                }`}>
-                                  {pr.isPublic ? 'Public' : 'Confidentiel'}
-                                </span>
-                              </td>
-                              <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
-                                {new Date(pr.submittedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                              </td>
-                              <td className="py-4 text-right">
-                                <button
-                                  onClick={() => handleDelete(pr.id)}
-                                  className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"
-                                  title="Supprimer cette requête"
-                                >
-                                  <Trash2 className="w-4 h-4" />
+                                <button onClick={() => handleDelete(pr.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors" title="Supprimer">
+                                  <Trash2 className="w-3.5 h-3.5" />
                                 </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                              </div>
+                            </div>
+
+                            <p className="text-white/80 text-xs leading-relaxed whitespace-pre-wrap mb-4">{pr.message}</p>
+
+                            {pr.adminReply ? (
+                              <div className="bg-gold/5 border border-gold/20 rounded-lg p-3 mt-2">
+                                <div className="flex items-center gap-1.5 mb-1.5">
+                                  <Send className="w-3 h-3 text-gold" />
+                                  <span className="text-[10px] font-bold text-gold uppercase tracking-wider">Réponse envoyée</span>
+                                  {pr.repliedAt && (
+                                    <span className="text-[9px] text-white/30 ml-auto font-mono">
+                                      {new Date(pr.repliedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-white/70 text-[11px] leading-relaxed whitespace-pre-wrap">{pr.adminReply}</p>
+                              </div>
+                            ) : (
+                              <PrayerReplyForm prayerId={pr.id} onReplied={(reply, repliedAt) => {
+                                setPrayers(prev => prev.map(p => p.id === pr.id ? { ...p, adminReply: reply, repliedAt } : p));
+                              }} />
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 )}
@@ -2463,10 +2498,12 @@ export function Admin() {
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie</label>
                       <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={docCategory} onChange={e => setDocCategory(e.target.value)}>
-                        <option value="Sermon Notes">Sermon Notes (Notes Pastorale)</option>
-                        <option value="Étude Biblique">Étude Biblique & Doctrine</option>
-                        <option value="Programme">Brochure / Programme d'Événement</option>
-                        <option value="Cantiques">Feuilles de Cantiques & Partition</option>
+                        <option value="Manne Matinale">Manne Matinale</option>
+                        <option value="École des Affaires du Royaume">École des Affaires du Royaume</option>
+                        <option value="Sommet d'Élévation">Sommet d'Élévation</option>
+                        <option value="Culte de Libération et d'Impact Maximum">Culte de Libération et d'Impact Maximum</option>
+                        <option value="Opération Néhémie">Opération Néhémie</option>
+                        <option value="Opération Josué">Opération Josué</option>
                       </select>
                     </div>
 
