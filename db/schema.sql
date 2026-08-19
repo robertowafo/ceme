@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS study_documents (
   description TEXT,
   url         TEXT NOT NULL,
   category    TEXT,
-  file_type   TEXT NOT NULL
+  file_type   TEXT NOT NULL,
+  cover_image TEXT
 );
 
 CREATE TABLE IF NOT EXISTS donations (
@@ -153,6 +154,7 @@ CREATE TABLE IF NOT EXISTS library_books (
   author      TEXT NOT NULL,
   category    TEXT,
   description TEXT,
+  cover_image TEXT,
   created_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
 

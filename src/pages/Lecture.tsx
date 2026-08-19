@@ -2,12 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 import {
-  BookOpen, FileText, ArrowRight, Clock, Search, X,
+  BookOpen, FileText, ArrowRight, Clock, Search, X, Library,
 } from 'lucide-react';
 import { SEO } from '../components/SEO';
 import {
-  getBlogPosts, getStudyDocuments,
-  type BlogPost, type StudyDocument,
+  getBlogPosts, getStudyDocuments, getLibraryBooks,
+  type BlogPost, type StudyDocument, type LibraryBook,
 } from '../lib/dbService';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -30,12 +30,14 @@ const DOC_CATEGORIES = [
 export function Lecture() {
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [docs, setDocs] = useState<StudyDocument[]>([]);
+  const [books, setBooks] = useState<LibraryBook[]>([]);
   const [search, setSearch] = useState('');
   const [activeDocCat, setActiveDocCat] = useState<string | null>(null);
 
   useEffect(() => {
     getBlogPosts().then(setPosts).catch(() => {});
     getStudyDocuments().then(setDocs).catch(() => {});
+    getLibraryBooks().then(setBooks).catch(() => {});
   }, []);
 
   const filteredPosts = useMemo(() => {
@@ -244,12 +246,68 @@ export function Lecture() {
         </section>
       )}
 
-      {/* ════════════ 02 · DOCUMENTS D'ÉTUDE ════════════ */}
-      <section className="relative bg-white py-24 sm:py-32 overflow-hidden">
+      {/* ════════════ 02 · BIBLIOTHÈQUE ════════════ */}
+      {books.length > 0 && (
+        <section className="relative bg-white py-24 sm:py-32 overflow-hidden">
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mb-14 sm:mb-20">
+              <SectionHeader
+                num="02"
+                icon={Library}
+                label="Bibliothèque"
+                title="Des livres qui"
+                accent="transforment."
+                desc="Ouvrages recommandés par nos pasteurs — pour bâtir votre foi et approfondir votre marche avec Dieu."
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {books.map((b, i) => (
+                <motion.div
+                  key={b.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.15 }}
+                  transition={{ duration: 0.6, delay: i * 0.07, ease: EASE }}
+                  className="group bg-gray-soft rounded-2xl overflow-hidden border border-soft-black/8 shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300"
+                >
+                  <div className="relative aspect-[3/4] overflow-hidden bg-grace-blue-deep/5">
+                    {b.coverImage ? (
+                      <img src={b.coverImage} alt={b.title} loading="lazy" referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-grace-blue-deep/10 to-grace-orange/10">
+                        <BookOpen className="w-14 h-14 text-soft-black/15" />
+                      </div>
+                    )}
+                    {b.category && (
+                      <span className="absolute top-3 left-3 bg-white/90 backdrop-blur text-soft-black text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full">
+                        {b.category}
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-serif font-extrabold text-soft-black leading-snug line-clamp-2 group-hover:text-grace-blue transition-colors">
+                      {b.title}
+                    </h3>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-soft-black/40 mt-2">{b.author}</p>
+                    {b.description && (
+                      <p className="text-sm text-soft-black/55 mt-2 line-clamp-2">{b.description}</p>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ════════════ 03 · DOCUMENTS D'ÉTUDE ════════════ */}
+      <section className="relative bg-cream py-24 sm:py-32 overflow-hidden">
         <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-14 sm:mb-20">
             <SectionHeader
-              num="02"
+              num="03"
               icon={FileText}
               label="Documents d'étude"
               title="Pour aller"
@@ -301,13 +359,17 @@ export function Lecture() {
                     to={`/document/${d.id}`}
                     className="group relative flex items-center gap-5 sm:gap-7 bg-gray-soft hover:bg-white border border-transparent hover:border-grace-blue/15 rounded-2xl px-5 sm:px-8 py-6 transition-all duration-300 hover:shadow-[0_18px_45px_-15px_rgba(12,46,102,0.25)] hover:-translate-y-0.5"
                   >
-                    <span
-                      aria-hidden
-                      className="hidden sm:block font-serif font-extrabold text-4xl w-14 shrink-0 text-center"
-                      style={{ WebkitTextStroke: '1.2px rgba(23,99,176,0.35)', color: 'transparent' }}
-                    >
-                      {String(i + 1).padStart(2, '0')}
-                    </span>
+                    {d.coverImage ? (
+                      <img src={d.coverImage} alt={d.title} loading="lazy" referrerPolicy="no-referrer" className="hidden sm:block w-14 h-18 object-cover rounded-lg shrink-0 shadow-sm" />
+                    ) : (
+                      <span
+                        aria-hidden
+                        className="hidden sm:block font-serif font-extrabold text-4xl w-14 shrink-0 text-center"
+                        style={{ WebkitTextStroke: '1.2px rgba(23,99,176,0.35)', color: 'transparent' }}
+                      >
+                        {String(i + 1).padStart(2, '0')}
+                      </span>
+                    )}
                     <span className="shrink-0 w-12 h-12 rounded-xl bg-grace-blue/10 group-hover:bg-grace-orange group-hover:text-white group-hover:rotate-6 text-grace-blue flex items-center justify-center transition-all">
                       <FileText className="w-5 h-5" />
                     </span>

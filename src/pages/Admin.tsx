@@ -162,6 +162,8 @@ export function Admin() {
   const [bookAuthor, setBookAuthor] = useState('');
   const [bookCategory, setBookCategory] = useState('');
   const [bookDesc, setBookDesc] = useState('');
+  const [bookCoverImage, setBookCoverImage] = useState('');
+  const [docCoverImage, setDocCoverImage] = useState('');
   const [bookOrders, setBookOrders] = useState<BookOrder[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
@@ -421,13 +423,13 @@ export function Admin() {
     setPhotoTitle(''); setPhotoCategory('Cultes & Louange'); setPhotoLocation(''); setPhotoUrl(''); setPhotoDesc('');
     setEvtTitle(''); setEvtType('special'); setEvtDateStr(''); setEvtIsoDate(''); setEvtLocation(''); setEvtPreacher(''); setEvtDesc(''); setEvtBadge(''); setEvtBadgeColor('bg-gold text-soft-black font-extrabold'); setEvtImage(''); setEvtIsPopular(false);
     setTestAuthor(''); setTestSince(''); setTestText(''); setTestImg(''); setTestCategory('home');
-    setDocTitle(''); setDocDesc(''); setDocUrl(''); setDocCategory('Sermon Notes'); setDocFileType('PDF');
+    setDocTitle(''); setDocDesc(''); setDocUrl(''); setDocCategory('Sermon Notes'); setDocFileType('PDF'); setDocCoverImage('');
     setBlogTitle(''); setBlogCategory(blogCategories[0]?.name ?? ''); setBlogAuthor('Rev. Dr. Alphonse ESSOMBA');
     setBlogCoverImage(''); setBlogExcerpt(''); setBlogContent('');
     setBlogPublishedAt(new Date().toISOString().slice(0, 10)); setBlogIsPublished(true);
     setProjTitle(''); setProjDesc(''); setProjGoal(''); setProjCurrency('FCFA'); setProjIsActive(true);
     setPartnerFirstName(''); setPartnerLastName(''); setPartnerTitle(''); setPartnerChurch(''); setPartnerLocation(''); setPartnerBio(''); setPartnerYoutubeUrl(''); setPartnerWebsite(''); setPartnerAvatarUrl('');
-    setBookTitle(''); setBookAuthor(''); setBookCategory(''); setBookDesc('');
+    setBookTitle(''); setBookAuthor(''); setBookCategory(''); setBookDesc(''); setBookCoverImage('');
     setShowCatManager(false); setNewCatName('');
   };
 
@@ -476,6 +478,7 @@ export function Admin() {
       setDocUrl(docItem.url);
       setDocCategory(docItem.category || 'Sermon Notes');
       setDocFileType(docItem.fileType);
+      setDocCoverImage(docItem.coverImage || '');
     } else if (activeTab === 'blog') {
       const bp = item as BlogPost;
       setBlogTitle(bp.title);
@@ -510,6 +513,7 @@ export function Admin() {
       setBookAuthor(b.author);
       setBookCategory(b.category || '');
       setBookDesc(b.description || '');
+      setBookCoverImage(b.coverImage || '');
     }
   };
 
@@ -650,7 +654,8 @@ export function Admin() {
           description: docDesc,
           url: docUrl,
           category: docCategory,
-          fileType: docFileType
+          fileType: docFileType,
+          coverImage: docCoverImage || undefined,
         };
         await saveStudyDocument(payload);
 
@@ -705,6 +710,7 @@ export function Admin() {
           author: bookAuthor,
           category: bookCategory || undefined,
           description: bookDesc || undefined,
+          coverImage: bookCoverImage || undefined,
         };
         await saveLibraryBook(payload);
       }
@@ -1344,7 +1350,11 @@ export function Admin() {
                             <tr key={docItem.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                               <td className="py-4 pr-4">
                                 <div className="flex items-center gap-2.5">
-                                  <FileText className="w-4 h-4 text-gold shrink-0" />
+                                  {docItem.coverImage ? (
+                                    <img src={docItem.coverImage} alt={docItem.title} className="w-10 h-10 object-cover rounded-md bg-black shrink-0" />
+                                  ) : (
+                                    <FileText className="w-4 h-4 text-gold shrink-0" />
+                                  )}
                                   <div className="min-w-0">
                                     <p className="font-bold text-white truncate max-w-sm">{docItem.title}</p>
                                     <p className="text-[10px] text-white/40 truncate max-w-sm">{docItem.description || 'Pas de description'}</p>
@@ -2137,19 +2147,26 @@ export function Admin() {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {books.map((b) => (
-                            <div key={b.id} className="bg-white/5 border border-white/10 rounded-xl p-5">
-                              <div className="flex items-start justify-between gap-2 mb-2">
-                                <div className="min-w-0">
+                            <div key={b.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex gap-4">
+                              {b.coverImage ? (
+                                <img src={b.coverImage} alt={b.title} className="w-16 h-22 object-cover rounded-lg bg-black shrink-0" />
+                              ) : (
+                                <div className="w-16 h-22 rounded-lg bg-gold/10 flex items-center justify-center shrink-0">
+                                  <BookOpen className="w-6 h-6 text-gold/40" />
+                                </div>
+                              )}
+                              <div className="flex-1 min-w-0 flex flex-col justify-between">
+                                <div>
                                   {b.category && <span className="text-[10px] font-bold uppercase tracking-wider text-gold bg-gold/10 px-2 py-0.5 rounded-full">{b.category}</span>}
                                   <h4 className="font-bold text-white text-sm mt-1.5">{b.title}</h4>
                                   <p className="text-[11px] text-white/40">De {b.author}</p>
+                                  {b.description && <p className="text-[11px] text-white/55 leading-relaxed line-clamp-2 mt-1">{b.description}</p>}
                                 </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <button onClick={() => handleEdit(b)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                  <button onClick={() => handleDelete(b.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                <div className="flex justify-end gap-1 pt-2">
+                                  <button onClick={() => handleEdit(b)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                                  <button onClick={() => handleDelete(b.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                                 </div>
                               </div>
-                              {b.description && <p className="text-[11px] text-white/55 leading-relaxed line-clamp-2 mt-1">{b.description}</p>}
                             </div>
                           ))}
                         </div>
@@ -2525,6 +2542,17 @@ export function Admin() {
                     </div>
 
                     <div>
+                      <AdminFileUpload
+                        value={docCoverImage}
+                        onChange={setDocCoverImage}
+                        label="Image de couverture (optionnel)"
+                        placeholder="https://... lien vers l'image de couverture"
+                        accept="image/*"
+                        description="Une image de couverture pour illustrer ce document sur le site."
+                      />
+                    </div>
+
+                    <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Courte description du contenu (Optionnel)</label>
                       <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={docDesc} onChange={e => setDocDesc(e.target.value)} placeholder="Que contient ce fichier ? (matières d'études, exhortation etc...)" />
                     </div>
@@ -2766,6 +2794,16 @@ export function Admin() {
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie (optionnel)</label>
                         <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookCategory} onChange={e => setBookCategory(e.target.value)} placeholder="Ex: Prière & Intercession" />
                       </div>
+                    </div>
+                    <div>
+                      <AdminFileUpload
+                        value={bookCoverImage}
+                        onChange={setBookCoverImage}
+                        label="Couverture du livre"
+                        placeholder="https://... lien vers l'image de couverture"
+                        accept="image/*"
+                        description="Photo de la couverture du livre — sera affichée sur le site et dans l'app."
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description (optionnel)</label>

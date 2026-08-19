@@ -50,6 +50,7 @@ export interface StudyDocument {
   url: string;
   category?: string;
   fileType: string;
+  coverImage?: string;
 }
 
 export interface Partner {
@@ -456,6 +457,7 @@ export interface LibraryBook {
   author: string;
   category?: string;
   description?: string;
+  coverImage?: string;
   createdAt?: string;
 }
 

@@ -468,20 +468,20 @@ app.delete('/testimonials/:id', requireSection('testimonials'), async (c) => {
 
 app.get('/study-documents', async (c) => {
   const { results } = await c.env.DB.prepare(
-    'SELECT id, title, description, url, category, file_type AS fileType FROM study_documents'
+    'SELECT id, title, description, url, category, file_type AS fileType, cover_image AS coverImage FROM study_documents'
   ).all()
   return c.json(results)
 })
 
 app.put('/study-documents/:id', requireSection('documents'), async (c) => {
   const id = c.req.param('id')
-  const { title, description, url, category, fileType } = await c.req.json()
+  const { title, description, url, category, fileType, coverImage } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM study_documents WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
-    `INSERT INTO study_documents (id, title, description, url, category, file_type) VALUES (?,?,?,?,?,?)
+    `INSERT INTO study_documents (id, title, description, url, category, file_type, cover_image) VALUES (?,?,?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET title=excluded.title, description=excluded.description, url=excluded.url,
-       category=excluded.category, file_type=excluded.file_type`
-  ).bind(id, title, description ?? null, url, category ?? null, fileType).run()
+       category=excluded.category, file_type=excluded.file_type, cover_image=excluded.cover_image`
+  ).bind(id, title, description ?? null, url, category ?? null, fileType, coverImage ?? null).run()
   await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Documents', id, `${existing ? 'Modification' : 'Ajout'} document : "${title}" (${fileType})`)
   return c.json({ success: true })
 })
@@ -1296,7 +1296,7 @@ app.delete('/partners/:id', requireSection('partners'), async (c) => {
 
 app.get('/library-books', async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT id, title, author, category, description, created_at AS createdAt
+    `SELECT id, title, author, category, description, cover_image AS coverImage, created_at AS createdAt
      FROM library_books ORDER BY created_at ASC`
   ).all()
   return c.json(results)
@@ -1304,14 +1304,14 @@ app.get('/library-books', async (c) => {
 
 app.put('/library-books/:id', requireSection('books'), async (c) => {
   const id = c.req.param('id')
-  const { title, author, category, description } = await c.req.json()
+  const { title, author, category, description, coverImage } = await c.req.json()
   const existing = await c.env.DB.prepare('SELECT id FROM library_books WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
-    `INSERT INTO library_books (id, title, author, category, description, created_at)
-     VALUES (?,?,?,?,?,datetime('now'))
+    `INSERT INTO library_books (id, title, author, category, description, cover_image, created_at)
+     VALUES (?,?,?,?,?,?,datetime('now'))
      ON CONFLICT(id) DO UPDATE SET
-       title=excluded.title, author=excluded.author, category=excluded.category, description=excluded.description`
-  ).bind(id, title, author, category ?? null, description ?? null).run()
+       title=excluded.title, author=excluded.author, category=excluded.category, description=excluded.description, cover_image=excluded.cover_image`
+  ).bind(id, title, author, category ?? null, description ?? null, coverImage ?? null).run()
   await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Bibliothèque', id, `${existing ? 'Modification' : 'Ajout'} ouvrage : "${title}"`)
   return c.json({ success: true })
 })
