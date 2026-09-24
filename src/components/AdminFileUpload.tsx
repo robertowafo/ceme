@@ -10,6 +10,7 @@ interface AdminFileUploadProps {
   required?: boolean;
   accept?: string;
   description?: string;
+  maxSizeMB?: number;
 }
 
 export function AdminFileUpload({
@@ -20,7 +21,8 @@ export function AdminFileUpload({
   placeholder = 'https://...',
   required = false,
   accept = 'image/*',
-  description
+  description,
+  maxSizeMB = 20,
 }: AdminFileUploadProps) {
   // Determine if initial value is an uploaded file (/uploads/...) or external URL
   const isLocalUpload = value?.startsWith('/uploads/');
@@ -40,9 +42,9 @@ export function AdminFileUpload({
     setError(null);
 
     // Basic file validation
-    const maxSize = 20 * 1024 * 1024; // 20MB
+    const maxSize = maxSizeMB * 1024 * 1024;
     if (file.size > maxSize) {
-      setError('Fichier trop lourd (20 Mo max)');
+      setError(`Fichier trop lourd (${maxSizeMB} Mo max)`);
       setIsUploading(false);
       return;
     }
@@ -131,6 +133,7 @@ export function AdminFileUpload({
 
   // Determine file label representation
   const isImage = accept.includes('image/*');
+  const isVideo = accept.includes('video/*');
   const fileName = value ? value.split('/').pop() : '';
 
   return (
@@ -199,6 +202,10 @@ export function AdminFileUpload({
                     className="max-h-32 w-auto object-contain mx-auto"
                   />
                 </div>
+              ) : isVideo && value.startsWith('/uploads/') ? (
+                <div className="relative group w-full max-w-sm overflow-hidden rounded-lg border border-white/10 mb-3 bg-stone-900">
+                  <video src={value} controls className="max-h-48 w-full object-contain mx-auto" />
+                </div>
               ) : (
                 <div className="flex items-center gap-3 bg-stone-950 p-3 rounded-lg border border-white/5 w-full mb-3">
                   <div className="p-2 bg-red-600/10 text-red-500 rounded-lg">
@@ -264,7 +271,11 @@ export function AdminFileUpload({
                     Glissez-déposez ou cliquez pour importer un fichier
                   </p>
                   <p className="text-[10px] text-white/45">
-                    {isImage ? 'Formats images autorisés (JPEG, PNG, WEBP)' : 'Document d\'étude (PDF, DOCX up to 20MB)'}
+                    {isImage
+                      ? 'Formats images autorisés (JPEG, PNG, WEBP)'
+                      : isVideo
+                        ? `Vidéo (MP4, WEBM, MOV) — ${maxSizeMB} Mo max`
+                        : `Document d'étude (PDF, DOCX) — ${maxSizeMB} Mo max`}
                   </p>
                 </div>
               )}

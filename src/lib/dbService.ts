@@ -69,7 +69,9 @@ export interface Partner {
 
 export interface TrailerBanner {
   title: string | null;
-  youtubeId: string;
+  description: string | null;
+  youtubeId: string | null;
+  videoUrl: string | null;
   endDate: string;
 }
 

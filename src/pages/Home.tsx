@@ -413,8 +413,9 @@ export function Home() {
     : null;
 
   // La bannière bande-annonce ne s'affiche que si une vidéo est chargée
-  // depuis le dashboard ET que sa date de fin n'est pas dépassée.
-  const trailerActive = !!trailer?.youtubeId && new Date(trailer.endDate).getTime() > Date.now();
+  // depuis le dashboard (lien YouTube ou fichier importé) ET que sa date de
+  // fin n'est pas dépassée.
+  const trailerActive = !!(trailer?.youtubeId || trailer?.videoUrl) && new Date(trailer.endDate).getTime() > Date.now();
 
   return (
     <div className="bg-cream">
@@ -579,11 +580,11 @@ export function Home() {
               <h2 className="font-serif text-3xl sm:text-5xl font-extrabold text-white leading-[1.1]">
                 {trailer.title || 'Bande-annonce'}
               </h2>
-              <p className="flex items-center justify-center gap-2 text-white/60 text-sm mt-5">
-                <Clock className="w-4 h-4 text-grace-orange" />
-                Disponible jusqu'au{' '}
-                {new Date(trailer.endDate).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}
-              </p>
+              {trailer.description && (
+                <p className="text-white/65 text-sm sm:text-base max-w-2xl mx-auto mt-5 leading-relaxed">
+                  {trailer.description}
+                </p>
+              )}
             </motion.div>
             <motion.div
               {...reveal}
@@ -591,13 +592,17 @@ export function Home() {
               className="relative rounded-3xl overflow-hidden border border-white/10 shadow-[0_40px_100px_-30px_rgba(0,0,0,0.6)]"
             >
               <div className="aspect-video bg-black">
-                <iframe
-                  src={ytEmbedUrl(trailer.youtubeId, false)}
-                  title={trailer.title || 'Bande-annonce'}
-                  className="w-full h-full"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+                {trailer.videoUrl ? (
+                  <video src={trailer.videoUrl} controls playsInline className="w-full h-full object-contain" />
+                ) : (
+                  <iframe
+                    src={ytEmbedUrl(trailer.youtubeId!, false)}
+                    title={trailer.title || 'Bande-annonce'}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                )}
               </div>
             </motion.div>
           </div>

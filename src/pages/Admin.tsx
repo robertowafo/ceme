@@ -171,7 +171,10 @@ export function Admin() {
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [trailer, setTrailer] = useState<TrailerBanner | null>(null);
   const [trailerTitle, setTrailerTitle] = useState('');
+  const [trailerDescription, setTrailerDescription] = useState('');
+  const [trailerSourceMode, setTrailerSourceMode] = useState<'youtube' | 'upload'>('youtube');
   const [trailerYoutubeUrl, setTrailerYoutubeUrl] = useState('');
+  const [trailerVideoUrl, setTrailerVideoUrl] = useState('');
   const [trailerEndDate, setTrailerEndDate] = useState('');
   const [isSavingTrailer, setIsSavingTrailer] = useState(false);
   const [isDeletingTrailer, setIsDeletingTrailer] = useState(false);
@@ -372,7 +375,10 @@ export function Admin() {
         const data = await getTrailer();
         setTrailer(data);
         setTrailerTitle(data?.title || '');
+        setTrailerDescription(data?.description || '');
+        setTrailerSourceMode(data?.videoUrl ? 'upload' : 'youtube');
         setTrailerYoutubeUrl(data?.youtubeId || '');
+        setTrailerVideoUrl(data?.videoUrl || '');
         setTrailerEndDate(data?.endDate || '');
       } else if (activeTab === 'admins') {
         const data = await getAdmins();
@@ -430,12 +436,24 @@ export function Admin() {
 
   // Bande-annonce : enregistrement unique, pas de liste — pas de modal Ajouter/Éditer.
   const handleSaveTrailer = async () => {
-    const parsedId = extractYoutubeId(trailerYoutubeUrl);
-    if (!parsedId) { showStatus('Lien ou identifiant YouTube invalide.', 'error'); return; }
-    if (!trailerEndDate) { showStatus('Merci de choisir une date de fin.', 'error'); return; }
+    let youtubeId: string | null = null;
+    let videoUrl: string | null = null;
+    if (trailerSourceMode === 'youtube') {
+      youtubeId = extractYoutubeId(trailerYoutubeUrl);
+      if (!youtubeId) { showStatus('Lien ou identifiant YouTube invalide.', 'error'); return; }
+    } else {
+      if (!trailerVideoUrl.trim()) { showStatus('Merci d\'importer un fichier vidéo ou de coller un lien.', 'error'); return; }
+      videoUrl = trailerVideoUrl.trim();
+    }
+    if (!trailerEndDate) { showStatus('Merci de choisir une date et une heure de fin.', 'error'); return; }
     setIsSavingTrailer(true);
     try {
-      await saveTrailer({ title: trailerTitle.trim() || null, youtubeId: parsedId, endDate: trailerEndDate });
+      await saveTrailer({
+        title: trailerTitle.trim() || null,
+        description: trailerDescription.trim() || null,
+        youtubeId, videoUrl,
+        endDate: trailerEndDate,
+      });
       showStatus('Bande-annonce enregistrée avec succès !', 'success');
       loadData();
     } catch (err: any) {
@@ -450,7 +468,8 @@ export function Admin() {
     try {
       await deleteTrailer();
       showStatus('Bande-annonce retirée du site.', 'success');
-      setTrailer(null); setTrailerTitle(''); setTrailerYoutubeUrl(''); setTrailerEndDate('');
+      setTrailer(null); setTrailerTitle(''); setTrailerDescription('');
+      setTrailerYoutubeUrl(''); setTrailerVideoUrl(''); setTrailerEndDate('');
       getAdminCounts().then(setCounts).catch(() => {});
     } catch (err: any) {
       showStatus(`Erreur: ${err?.message || 'Erreur serveur'}`, 'error');
@@ -2342,13 +2361,72 @@ export function Admin() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Lien ou identifiant YouTube</label>
-                      <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerYoutubeUrl} onChange={e => setTrailerYoutubeUrl(e.target.value)} placeholder="Collez le lien de la vidéo YouTube" />
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description (optionnel)</label>
+                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={trailerDescription} onChange={e => setTrailerDescription(e.target.value)} placeholder="Un court texte présentant l'événement, affiché sous la vidéo sur l'accueil." />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Source de la vidéo</label>
+                      <div className="flex bg-black/40 border border-white/10 rounded-lg p-0.5 w-fit mb-3">
+                        <button
+                          type="button"
+                          onClick={() => setTrailerSourceMode('youtube')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            trailerSourceMode === 'youtube' ? 'bg-gold text-soft-black font-extrabold' : 'text-white/60 hover:text-white'
+                          }`}
+                        >
+                          <Youtube className="w-3.5 h-3.5" /> Lien YouTube
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setTrailerSourceMode('upload')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                            trailerSourceMode === 'upload' ? 'bg-gold text-soft-black font-extrabold' : 'text-white/60 hover:text-white'
+                          }`}
+                        >
+                          <Video className="w-3.5 h-3.5" /> Importer une vidéo
+                        </button>
+                      </div>
+
+                      {trailerSourceMode === 'youtube' ? (
+                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerYoutubeUrl} onChange={e => setTrailerYoutubeUrl(e.target.value)} placeholder="Collez le lien de la vidéo YouTube" />
+                      ) : (
+                        <AdminFileUpload
+                          value={trailerVideoUrl}
+                          onChange={setTrailerVideoUrl}
+                          label="Fichier vidéo"
+                          placeholder="Ou collez un lien direct vers une vidéo"
+                          accept="video/*"
+                          maxSizeMB={100}
+                          description="Depuis votre ordinateur ou votre téléphone — MP4, WEBM ou MOV, 100 Mo max."
+                        />
+                      )}
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date et heure de fin</label>
-                      <input type="datetime-local" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerEndDate} onChange={e => setTrailerEndDate(e.target.value)} />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="relative">
+                          <Calendar className="w-3.5 h-3.5 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <input
+                            type="date"
+                            style={{ colorScheme: 'dark' }}
+                            className="w-full bg-stone-950 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
+                            value={trailerEndDate.split('T')[0] || ''}
+                            onChange={e => setTrailerEndDate(`${e.target.value}T${trailerEndDate.split('T')[1] || '00:00'}`)}
+                          />
+                        </div>
+                        <div className="relative">
+                          <Clock className="w-3.5 h-3.5 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                          <input
+                            type="time"
+                            style={{ colorScheme: 'dark' }}
+                            className="w-full bg-stone-950 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
+                            value={trailerEndDate.split('T')[1] || ''}
+                            onChange={e => setTrailerEndDate(`${trailerEndDate.split('T')[0] || new Date().toISOString().slice(0, 10)}T${e.target.value}`)}
+                          />
+                        </div>
+                      </div>
                       <p className="text-[10px] text-white/40 mt-1">Passé cette date et heure, la section disparaît automatiquement de l'accueil — pas besoin de revenir l'éteindre.</p>
                     </div>
 

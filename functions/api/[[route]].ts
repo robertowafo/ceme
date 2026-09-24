@@ -366,21 +366,23 @@ app.delete('/recommended-links/:id', requireSection('links'), async (c) => {
 
 app.get('/trailer', async (c) => {
   const row = await c.env.DB.prepare(
-    'SELECT title, youtube_id AS youtubeId, end_date AS endDate FROM trailer WHERE id=?'
-  ).bind('main').first<{ title: string | null; youtubeId: string; endDate: string }>()
+    'SELECT title, description, youtube_id AS youtubeId, video_url AS videoUrl, end_date AS endDate FROM trailer WHERE id=?'
+  ).bind('main').first<{ title: string | null; description: string | null; youtubeId: string | null; videoUrl: string | null; endDate: string }>()
   return c.json(row ?? null)
 })
 
 app.put('/trailer', requireSection('trailer'), async (c) => {
-  const { title, youtubeId, endDate } = await c.req.json()
-  if (!youtubeId || !endDate) return c.json({ error: 'Identifiant YouTube et date de fin requis' }, 400)
+  const { title, description, youtubeId, videoUrl, endDate } = await c.req.json()
+  if (!youtubeId && !videoUrl) return c.json({ error: 'Une vidéo est requise (lien YouTube ou fichier importé)' }, 400)
+  if (!endDate) return c.json({ error: 'Date de fin requise' }, 400)
   const existing = await c.env.DB.prepare('SELECT id FROM trailer WHERE id=?').bind('main').first()
   await c.env.DB.prepare(
-    `INSERT INTO trailer (id, title, youtube_id, end_date, updated_at) VALUES ('main',?,?,?,?)
-     ON CONFLICT(id) DO UPDATE SET title=excluded.title, youtube_id=excluded.youtube_id,
+    `INSERT INTO trailer (id, title, description, youtube_id, video_url, end_date, updated_at) VALUES ('main',?,?,?,?,?,?)
+     ON CONFLICT(id) DO UPDATE SET title=excluded.title, description=excluded.description,
+       youtube_id=excluded.youtube_id, video_url=excluded.video_url,
        end_date=excluded.end_date, updated_at=excluded.updated_at`
-  ).bind(title ?? null, youtubeId, endDate, new Date().toISOString()).run()
-  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Bande-annonce', 'main', `${existing ? 'Modification' : 'Activation'} de la bande-annonce : "${title || youtubeId}"`)
+  ).bind(title ?? null, description ?? null, youtubeId ?? null, videoUrl ?? null, endDate, new Date().toISOString()).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Bande-annonce', 'main', `${existing ? 'Modification' : 'Activation'} de la bande-annonce : "${title || 'sans titre'}"`)
   return c.json({ success: true })
 })
 
@@ -734,13 +736,18 @@ const ALLOWED_UPLOAD_TYPES: Record<string, string> = {
   'application/msword': 'doc',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 'docx',
   'application/epub+zip': 'epub',
+  'video/mp4': 'mp4', 'video/webm': 'webm', 'video/quicktime': 'mov',
 }
+const VIDEO_UPLOAD_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime'])
 
 app.post('/upload', requireAdmin, async (c) => {
   const formData = await c.req.formData()
   const file = formData.get('file') as File | null
   if (!file) return c.json({ error: 'Aucun fichier fourni' }, 400)
-  if (file.size > 20 * 1024 * 1024) return c.json({ error: 'Fichier trop lourd (20 Mo max)' }, 400)
+
+  const isVideo = VIDEO_UPLOAD_TYPES.has(file.type)
+  const maxSize = (isVideo ? 100 : 20) * 1024 * 1024
+  if (file.size > maxSize) return c.json({ error: `Fichier trop lourd (${isVideo ? 100 : 20} Mo max)` }, 400)
 
   const ext = ALLOWED_UPLOAD_TYPES[file.type]
   if (!ext) return c.json({ error: 'Type de fichier non autorisé' }, 400)
