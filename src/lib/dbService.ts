@@ -133,7 +133,7 @@ export async function getTrailer(): Promise<TrailerBanner | null> {
   const res = await fetch('/api/trailer', { credentials: 'same-origin' });
   if (!res.ok) throw new Error(`Erreur ${res.status} sur /api/trailer`);
   const data = await res.json();
-  return data ?? null;
+  return (data as TrailerBanner | null) ?? null;
 }
 
 export async function saveTrailer(trailer: TrailerBanner): Promise<void> {
