@@ -8,6 +8,7 @@ import {
 import { Link } from 'react-router-dom';
 import { SEO } from '../components/SEO';
 import { PagePlaceholder } from '../components/PagePlaceholder';
+import { VideoComments } from '../components/VideoComments';
 
 /* ── Types ───────────────────────────────────────────────────── */
 interface YTPlaylist {
@@ -564,6 +565,7 @@ export function Emissions() {
                             </div>
                           ) : null;
                         })()}
+                        <VideoComments videoId={activeVideoId} videoTitle={playlistVideos.find(v => v.videoId === activeVideoId)?.title} />
                       </div>
 
                       {/* ── Sidebar liste ── */}
@@ -952,6 +954,7 @@ export function Emissions() {
                                 </div>
                               ) : null;
                             })()}
+                            <VideoComments videoId={activePartnerVideoId} videoTitle={partnerVideos.find(v => v.videoId === activePartnerVideoId)?.title} />
                           </div>
                           {/* Sidebar */}
                           <div className="shrink-0 w-full lg:w-[320px] xl:w-[360px] border-t lg:border-t-0 lg:border-l border-white/5 flex flex-col overflow-hidden max-h-[300px] sm:max-h-[380px] lg:max-h-none">

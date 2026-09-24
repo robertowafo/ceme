@@ -19,6 +19,7 @@ import {
 import { getRecommendedLinks, RecommendedLink } from '../../lib/dbService';
 import { isYtPlaylistId, ytEmbedUrl } from '../../lib/youtube';
 import { SEO } from '../../components/SEO';
+import { VideoComments } from '../../components/VideoComments';
 import { breadcrumbSchema } from '../../lib/structuredData';
 
 
@@ -426,6 +427,9 @@ export function Sermons() {
                     <ChevronDown className="w-4 h-4" /> Fermer
                   </button>
                 </div>
+              </div>
+              <div className="px-6 md:px-8 pb-6 md:pb-8">
+                <VideoComments videoId={activePlayId} videoTitle={activePlayInfo?.title} />
               </div>
             </motion.div>
           )}

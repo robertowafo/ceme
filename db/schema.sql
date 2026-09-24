@@ -193,3 +193,17 @@ CREATE TABLE IF NOT EXISTS trailer (
   end_date    TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );
+
+-- Commentaires laissés par les visiteurs sous une vidéo (identifiée par son
+-- ID YouTube, video_id). Propres à la plateforme — jamais envoyés à YouTube.
+-- video_title est un instantané du titre au moment du commentaire, gardé
+-- uniquement pour l'affichage lisible dans le dashboard de modération.
+CREATE TABLE IF NOT EXISTS video_comments (
+  id           TEXT PRIMARY KEY,
+  video_id     TEXT NOT NULL,
+  video_title  TEXT,
+  author_name  TEXT NOT NULL,
+  message      TEXT NOT NULL,
+  submitted_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_video_comments_video_id ON video_comments(video_id);

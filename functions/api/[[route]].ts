@@ -121,6 +121,7 @@ const requireSuperAdmin = async (c: Context<HonoApp>, next: Next) => {
 const ASSIGNABLE_SECTIONS = [
   'links', 'photos', 'events', 'testimonials', 'documents', 'prayers',
   'donations', 'blog', 'newsletter', 'contactMessages', 'projects', 'partners', 'books', 'trailer',
+  'videoComments',
 ] as const
 
 // Lit les sections autorisées d'un admin depuis la base — source de vérité,
@@ -1415,6 +1416,49 @@ app.delete('/contact-messages/:id', requireSection('contactMessages'), async (c)
   return c.json({ success: true })
 })
 
+// ─── video_comments ─────────────────────────────────────────────────────────────
+// Commentaires propres à la plateforme, rattachés à un ID vidéo YouTube. Visibles
+// publiquement dès l'envoi (comme les requêtes de prière publiques) ; l'admin
+// peut en supprimer a posteriori depuis l'onglet de modération.
+
+app.get('/video-comments', async (c) => {
+  const videoId = c.req.query('videoId') || ''
+  if (!videoId) return c.json({ error: 'videoId requis' }, 400)
+  const results = await d1All(c.env.DB.prepare(
+    `SELECT id, video_id AS videoId, author_name AS authorName, message, submitted_at AS submittedAt
+     FROM video_comments WHERE video_id=? ORDER BY submitted_at DESC`
+  ).bind(videoId))
+  return c.json(results)
+})
+
+app.post('/video-comments', rateLimit('video-comments', 8, 600), async (c) => {
+  const { videoId, videoTitle, authorName, message } = await c.req.json()
+  if (!videoId?.trim() || !authorName?.trim() || !message?.trim()) {
+    return c.json({ error: 'Vidéo, nom et message sont requis' }, 400)
+  }
+  const id = 'vc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+  await c.env.DB.prepare(
+    'INSERT INTO video_comments (id, video_id, video_title, author_name, message, submitted_at) VALUES (?,?,?,?,?,?)'
+  ).bind(id, videoId.trim(), videoTitle?.trim() || null, authorName.trim(), message.trim(), new Date().toISOString()).run()
+  return c.json({ success: true, id })
+})
+
+app.get('/video-comments/all', requireSection('videoComments'), async (c) => {
+  const { results } = await c.env.DB.prepare(
+    `SELECT id, video_id AS videoId, video_title AS videoTitle, author_name AS authorName, message, submitted_at AS submittedAt
+     FROM video_comments ORDER BY submitted_at DESC`
+  ).all()
+  return c.json(results)
+})
+
+app.delete('/video-comments/:id', requireSection('videoComments'), async (c) => {
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT author_name, video_title FROM video_comments WHERE id=?').bind(id).first<{author_name:string,video_title:string|null}>()
+  await c.env.DB.prepare('DELETE FROM video_comments WHERE id=?').bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Commentaires Vidéos', id, `Suppression commentaire de "${row?.author_name ?? id}" sur "${row?.video_title ?? '?'}"`)
+  return c.json({ success: true })
+})
+
 // ─── youtube/channel-playlists ────────────────────────────────────────────────
 
 app.get('/youtube/channel-playlists', async (c) => {
@@ -1484,7 +1528,7 @@ app.get('/youtube/channel-playlists', async (c) => {
 // ─── admin counts (all tabs in one query) ──────────────────────────────────────
 
 app.get('/admin/counts', requireAdmin, async (c) => {
-  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog, partners, books, bookOrders, contactMessages, trailer] =
+  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog, partners, books, bookOrders, contactMessages, trailer, videoComments] =
     await Promise.all([
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM recommended_links').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM gallery_photos').first<{n:number}>(),
@@ -1502,6 +1546,7 @@ app.get('/admin/counts', requireAdmin, async (c) => {
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM book_orders').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM contact_messages').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM trailer').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM video_comments').first<{n:number}>(),
     ])
   return c.json({
     links:        Number(links?.n        ?? 0),
@@ -1520,6 +1565,7 @@ app.get('/admin/counts', requireAdmin, async (c) => {
     bookOrders:   Number(bookOrders?.n   ?? 0),
     contactMessages: Number(contactMessages?.n ?? 0),
     trailer:      Number(trailer?.n      ?? 0),
+    videoComments: Number(videoComments?.n ?? 0),
   })
 })
 

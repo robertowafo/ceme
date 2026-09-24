@@ -20,3 +20,18 @@ export function ytEmbedUrl(id: string, autoplay = true): string {
 export function ytThumbUrl(id: string): string | null {
   return isYtPlaylistId(id) ? null : `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
 }
+
+/* Retrouve l'ID (vidéo ou playlist) à partir d'une URL générée par ytEmbedUrl —
+   utile quand seul l'embedUrl est disponible (ex: VideoContent du hub d'accueil),
+   pour savoir sur quel ID rattacher des commentaires. */
+export function extractIdFromEmbedUrl(embedUrl: string): string | null {
+  try {
+    const url = new URL(embedUrl);
+    const listParam = url.searchParams.get('list');
+    if (listParam) return listParam;
+    const last = url.pathname.split('/').filter(Boolean).pop();
+    return last && last !== 'videoseries' ? last : null;
+  } catch {
+    return null;
+  }
+}

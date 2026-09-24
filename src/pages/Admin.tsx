@@ -37,6 +37,7 @@ import {
   Send,
   ChevronDown,
   Video,
+  MessageCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -62,9 +63,10 @@ import {
   getContactMessages, deleteContactMessage, ContactMessage,
   getAdminCounts, AdminCounts,
   getTrailer, saveTrailer, deleteTrailer, TrailerBanner,
+  getAllVideoComments, deleteVideoComment, VideoComment,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'books' | 'contactMessages' | 'trailer' | 'admins' | 'audit';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'books' | 'contactMessages' | 'trailer' | 'videoComments' | 'admins' | 'audit';
 
 // Registre des sections attribuables (doit rester synchronisé avec
 // ASSIGNABLE_SECTIONS côté backend). 'audit' et 'admins' n'y figurent pas :
@@ -85,6 +87,7 @@ const SECTION_TABS: { key: AdminTab; emoji: string; label: string; Icon: React.C
   { key: 'partners',        emoji: '🤝', label: 'Partenaires Grâce TV',      Icon: Users,          active: GOLD_ACTIVE },
   { key: 'books',           emoji: '📚', label: 'Bibliothèque',              Icon: BookOpen,       active: GOLD_ACTIVE },
   { key: 'trailer',         emoji: '🎬', label: 'Bande Annonce',             Icon: Video,          active: 'bg-rose-700 text-white border-rose-600 shadow-md shadow-rose-900/30' },
+  { key: 'videoComments',   emoji: '💬', label: 'Commentaires Vidéos',       Icon: MessageCircle,  active: 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-900/30' },
 ];
 
 // Libellés lisibles des sections, réutilisés dans la Gestion des admins.
@@ -169,6 +172,7 @@ export function Admin() {
   const [docCoverImage, setDocCoverImage] = useState('');
   const [bookOrders, setBookOrders] = useState<BookOrder[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [videoComments, setVideoComments] = useState<VideoComment[]>([]);
   const [trailer, setTrailer] = useState<TrailerBanner | null>(null);
   const [trailerTitle, setTrailerTitle] = useState('');
   const [trailerDescription, setTrailerDescription] = useState('');
@@ -209,7 +213,7 @@ export function Admin() {
   const [isSavingCat, setIsSavingCat] = useState(false);
 
   // Modal / Form States
-  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, partners:0, audit:0, books:0, bookOrders:0, contactMessages:0, trailer:0 });
+  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, partners:0, audit:0, books:0, bookOrders:0, contactMessages:0, trailer:0, videoComments:0 });
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -371,6 +375,9 @@ export function Admin() {
       } else if (activeTab === 'contactMessages') {
         const data = await getContactMessages();
         setContactMessages(data);
+      } else if (activeTab === 'videoComments') {
+        const data = await getAllVideoComments();
+        setVideoComments(data);
       } else if (activeTab === 'trailer') {
         const data = await getTrailer();
         setTrailer(data);
@@ -617,6 +624,8 @@ export function Admin() {
         await deleteLibraryBook(deleteConfirmId);
       } else if (activeTab === 'contactMessages') {
         await deleteContactMessage(deleteConfirmId);
+      } else if (activeTab === 'videoComments') {
+        await deleteVideoComment(deleteConfirmId);
       }
       showStatus('Élément supprimé avec succès !', 'success');
       loadData();
@@ -1171,6 +1180,7 @@ export function Admin() {
                   {activeTab === 'books' && 'Gestion de la Bibliothèque & Commandes'}
                   {activeTab === 'contactMessages' && 'Messages reçus via le formulaire de Contact'}
                   {activeTab === 'trailer' && "Bande-annonce d'un événement spécial (page d'accueil)"}
+                  {activeTab === 'videoComments' && 'Modération des commentaires laissés sous les vidéos'}
                   {activeTab === 'audit' && 'Registre des Actions Administratives'}
                   {activeTab === 'admins' && 'Gestion des Administrateurs'}
                 </h3>
@@ -1189,12 +1199,13 @@ export function Admin() {
                   {activeTab === 'books' && 'library_books'}
                   {activeTab === 'contactMessages' && 'contact_messages'}
                   {activeTab === 'trailer' && 'trailer'}
+                  {activeTab === 'videoComments' && 'video_comments'}
                   {activeTab === 'audit' && 'audit_log'}
                   {activeTab === 'admins' && 'admins'}
                 </p>
               </div>
 
-              {canSee(activeTab) && activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && activeTab !== 'books' && activeTab !== 'contactMessages' && activeTab !== 'trailer' && (
+              {canSee(activeTab) && activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && activeTab !== 'books' && activeTab !== 'contactMessages' && activeTab !== 'trailer' && activeTab !== 'videoComments' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -2318,6 +2329,51 @@ export function Admin() {
                               </td>
                               <td className="py-4 text-right">
                                 <button onClick={() => handleDelete(m.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors" title="Supprimer ce message">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+
+                {/* Commentaires Vidéos View */}
+                {activeTab === 'videoComments' && (
+                  <div className="overflow-x-auto">
+                    {videoComments.length === 0 ? (
+                      <EmptyMessage />
+                    ) : (
+                      <table className="w-full text-left text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-white/10 text-white/40 font-bold uppercase tracking-wider">
+                            <th className="pb-3 pr-4">Auteur</th>
+                            <th className="pb-3 pr-4">Vidéo</th>
+                            <th className="pb-3 pr-4">Commentaire</th>
+                            <th className="pb-3 pr-4">Date</th>
+                            <th className="pb-3 text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {videoComments.map((vc) => (
+                            <tr key={vc.id} className="border-b border-white/5 hover:bg-white/[0.02] align-top">
+                              <td className="py-4 pr-4 font-semibold text-white whitespace-nowrap">{vc.authorName}</td>
+                              <td className="py-4 pr-4 text-white/60 max-w-xs">
+                                <p className="line-clamp-2 leading-relaxed">{vc.videoTitle || vc.videoId}</p>
+                                <a href={`https://www.youtube.com/watch?v=${vc.videoId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-gold/70 hover:text-gold font-mono mt-1">
+                                  <Youtube className="w-3 h-3" /> {vc.videoId}
+                                </a>
+                              </td>
+                              <td className="py-4 pr-4 text-white/75 max-w-sm">
+                                <p className="line-clamp-3 leading-relaxed">{vc.message}</p>
+                              </td>
+                              <td className="py-4 pr-4 text-white/40 font-mono text-[10px] whitespace-nowrap">
+                                {new Date(vc.submittedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td className="py-4 text-right">
+                                <button onClick={() => handleDelete(vc.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors" title="Supprimer ce commentaire">
                                   <Trash2 className="w-4 h-4" />
                                 </button>
                               </td>

@@ -580,6 +580,46 @@ export async function deleteContactMessage(id: string): Promise<void> {
   return remove('/api/contact-messages', id);
 }
 
+// ─── video_comments ─────────────────────────────────────────────────────────────
+
+export interface VideoComment {
+  id: string;
+  videoId: string;
+  videoTitle?: string | null;
+  authorName: string;
+  message: string;
+  submittedAt: string;
+}
+
+export async function getVideoComments(videoId: string): Promise<VideoComment[]> {
+  return getAll<VideoComment>(`/api/video-comments?videoId=${encodeURIComponent(videoId)}`);
+}
+
+export async function submitVideoComment(data: { videoId: string; videoTitle?: string; authorName: string; message: string }): Promise<void> {
+  const res = await fetch('/api/video-comments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function getAllVideoComments(): Promise<VideoComment[]> {
+  const res = await fetch('/api/video-comments/all', {
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) throw new Error(`Erreur ${res.status}`);
+  return res.json();
+}
+
+export async function deleteVideoComment(id: string): Promise<void> {
+  return remove('/api/video-comments', id);
+}
+
 // ─── admin counts ─────────────────────────────────────────────────────────────
 
 export interface AdminCounts {
@@ -587,6 +627,7 @@ export interface AdminCounts {
   documents: number; prayers: number; donations: number; blog: number;
   newsletter: number; projects: number; audit: number; partners: number;
   books: number; bookOrders: number; contactMessages: number; trailer: number;
+  videoComments: number;
 }
 
 export async function getAdminCounts(): Promise<AdminCounts> {

@@ -9,7 +9,8 @@ import {
 import { SEO } from '../components/SEO';
 import { tvStationSchema, webSiteSchema } from '../lib/structuredData';
 import { gsap, SplitText } from '../lib/gsap';
-import { isYtPlaylistId, ytEmbedUrl, ytThumbUrl } from '../lib/youtube';
+import { isYtPlaylistId, ytEmbedUrl, ytThumbUrl, extractIdFromEmbedUrl } from '../lib/youtube';
+import { VideoComments } from '../components/VideoComments';
 import { fetchLiveStatus, type LiveData } from '../lib/liveStatus';
 import { CtaShowcase } from '../components/home/CtaShowcase';
 import {
@@ -1098,7 +1099,7 @@ export function Home() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 16, opacity: 0 }}
               transition={{ type: 'spring', stiffness: 260, damping: 26 }}
-              className="relative w-full max-w-5xl"
+              className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-3 px-1">
@@ -1119,6 +1120,9 @@ export function Home() {
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
+              </div>
+              <div className="px-1">
+                <VideoComments videoId={extractIdFromEmbedUrl(lightbox.embedUrl)} videoTitle={lightbox.title} />
               </div>
             </motion.div>
           </motion.div>
