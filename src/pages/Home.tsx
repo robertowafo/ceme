@@ -270,6 +270,9 @@ export function Home() {
   const [programs, setPrograms]   = useState<{ id: string; title: string; category: string; description: string; image: string; playlistId: string | null; videoCount: number }[]>([]);
   const [progVideos, setProgVideos] = useState<Record<string, VideoContent[]>>({});
   const [trailer, setTrailer]     = useState<TrailerBanner | null>(null);
+  const trailerSectionRef = useRef<HTMLElement>(null);
+  const trailerVideoRef   = useRef<HTMLVideoElement>(null);
+  const [trailerInView, setTrailerInView] = useState(false);
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
@@ -416,6 +419,31 @@ export function Home() {
   // depuis le dashboard (lien YouTube ou fichier importé) ET que sa date de
   // fin n'est pas dépassée.
   const trailerActive = !!(trailer?.youtubeId || trailer?.videoUrl) && new Date(trailer.endDate).getTime() > Date.now();
+
+  // Déclenche la lecture un peu avant que la section soit réellement visible
+  // (rootMargin) : le temps que l'utilisateur finisse de scroller jusqu'à
+  // elle, la vidéo a déjà commencé à charger — pas de trou silencieux.
+  useEffect(() => {
+    if (!trailerActive || !trailerSectionRef.current) return;
+    const el = trailerSectionRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setTrailerInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '400px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [trailerActive]);
+
+  useEffect(() => {
+    if (trailerInView && trailerVideoRef.current) {
+      trailerVideoRef.current.play().catch(() => {});
+    }
+  }, [trailerInView]);
 
   return (
     <div className="bg-cream">
@@ -566,7 +594,7 @@ export function Home() {
 
       {/* ════════════ BANDE-ANNONCE · ÉVÉNEMENT SPÉCIAL ════════════ */}
       {trailerActive && trailer && (
-        <section className="relative overflow-hidden bg-grace-blue-deep py-20 sm:py-28">
+        <section ref={trailerSectionRef} className="relative overflow-hidden bg-grace-blue-deep py-20 sm:py-28">
           <div className="absolute inset-0 pointer-events-none">
             <div className="absolute inset-0 bg-gradient-to-b from-grace-blue-deep via-grace-indigo to-grace-blue-deep" />
             <div className="absolute top-0 left-1/4 w-[480px] h-[480px] rounded-full bg-grace-orange/15 blur-[140px]" />
@@ -593,15 +621,28 @@ export function Home() {
             >
               <div className="aspect-video bg-black">
                 {trailer.videoUrl ? (
-                  <video src={trailer.videoUrl} controls playsInline className="w-full h-full object-contain" />
-                ) : (
+                  <video
+                    ref={trailerVideoRef}
+                    src={trailer.videoUrl}
+                    muted
+                    loop
+                    playsInline
+                    preload="auto"
+                    controls
+                    className="w-full h-full object-contain"
+                  />
+                ) : trailerInView ? (
                   <iframe
-                    src={ytEmbedUrl(trailer.youtubeId!, false)}
+                    src={`https://www.youtube.com/embed/${trailer.youtubeId}?autoplay=1&mute=1&rel=0&playsinline=1`}
                     title={trailer.title || 'Bande-annonce'}
                     className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white/25">
+                    <Play className="w-12 h-12" />
+                  </div>
                 )}
               </div>
             </motion.div>
