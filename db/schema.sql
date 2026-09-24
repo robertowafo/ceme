@@ -177,3 +177,16 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   message      TEXT NOT NULL,
   submitted_at TEXT NOT NULL
 );
+
+-- Bannière "bande-annonce" affichée sur l'accueil (avant la section Sermons &
+-- Cultes) le temps d'un événement spécial. Enregistrement unique (id fixe
+-- 'main') : le dashboard le met à jour (PUT) ou l'efface (DELETE). Le site
+-- public n'affiche la section que si youtube_id est renseigné ET end_date
+-- n'est pas dépassée.
+CREATE TABLE IF NOT EXISTS trailer (
+  id         TEXT PRIMARY KEY DEFAULT 'main',
+  title      TEXT,
+  youtube_id TEXT NOT NULL,
+  end_date   TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);

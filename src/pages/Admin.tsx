@@ -36,6 +36,7 @@ import {
   KeyRound,
   Send,
   ChevronDown,
+  Video,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -60,9 +61,10 @@ import {
   getBookOrders, deleteBookOrder, BookOrder,
   getContactMessages, deleteContactMessage, ContactMessage,
   getAdminCounts, AdminCounts,
+  getTrailer, saveTrailer, deleteTrailer, TrailerBanner,
 } from '../lib/dbService';
 
-type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'books' | 'contactMessages' | 'admins' | 'audit';
+type AdminTab = 'links' | 'photos' | 'events' | 'testimonials' | 'documents' | 'prayers' | 'donations' | 'blog' | 'newsletter' | 'projects' | 'partners' | 'books' | 'contactMessages' | 'trailer' | 'admins' | 'audit';
 
 // Registre des sections attribuables (doit rester synchronisé avec
 // ASSIGNABLE_SECTIONS côté backend). 'audit' et 'admins' n'y figurent pas :
@@ -82,6 +84,7 @@ const SECTION_TABS: { key: AdminTab; emoji: string; label: string; Icon: React.C
   { key: 'projects',        emoji: '🎯', label: 'Projets & Collectes',       Icon: Target,         active: 'bg-teal-700 text-white border-teal-600 shadow-md shadow-teal-900/30' },
   { key: 'partners',        emoji: '🤝', label: 'Partenaires Grâce TV',      Icon: Users,          active: GOLD_ACTIVE },
   { key: 'books',           emoji: '📚', label: 'Bibliothèque',              Icon: BookOpen,       active: GOLD_ACTIVE },
+  { key: 'trailer',         emoji: '🎬', label: 'Bande Annonce',             Icon: Video,          active: 'bg-rose-700 text-white border-rose-600 shadow-md shadow-rose-900/30' },
 ];
 
 // Libellés lisibles des sections, réutilisés dans la Gestion des admins.
@@ -166,6 +169,12 @@ export function Admin() {
   const [docCoverImage, setDocCoverImage] = useState('');
   const [bookOrders, setBookOrders] = useState<BookOrder[]>([]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
+  const [trailer, setTrailer] = useState<TrailerBanner | null>(null);
+  const [trailerTitle, setTrailerTitle] = useState('');
+  const [trailerYoutubeUrl, setTrailerYoutubeUrl] = useState('');
+  const [trailerEndDate, setTrailerEndDate] = useState('');
+  const [isSavingTrailer, setIsSavingTrailer] = useState(false);
+  const [isDeletingTrailer, setIsDeletingTrailer] = useState(false);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [newAdminEmail, setNewAdminEmail] = useState('');
@@ -197,7 +206,7 @@ export function Admin() {
   const [isSavingCat, setIsSavingCat] = useState(false);
 
   // Modal / Form States
-  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, partners:0, audit:0, books:0, bookOrders:0, contactMessages:0 });
+  const [counts, setCounts] = useState<AdminCounts>({ links:0, photos:0, events:0, testimonials:0, documents:0, prayers:0, donations:0, blog:0, newsletter:0, projects:0, partners:0, audit:0, books:0, bookOrders:0, contactMessages:0, trailer:0 });
 
   // Modal / Form States
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -359,6 +368,12 @@ export function Admin() {
       } else if (activeTab === 'contactMessages') {
         const data = await getContactMessages();
         setContactMessages(data);
+      } else if (activeTab === 'trailer') {
+        const data = await getTrailer();
+        setTrailer(data);
+        setTrailerTitle(data?.title || '');
+        setTrailerYoutubeUrl(data?.youtubeId || '');
+        setTrailerEndDate(data?.endDate || '');
       } else if (activeTab === 'admins') {
         const data = await getAdmins();
         setAdmins(data);
@@ -411,6 +426,37 @@ export function Admin() {
     setTimeout(() => {
       setStatusMessage(null);
     }, 4000);
+  };
+
+  // Bande-annonce : enregistrement unique, pas de liste — pas de modal Ajouter/Éditer.
+  const handleSaveTrailer = async () => {
+    const parsedId = extractYoutubeId(trailerYoutubeUrl);
+    if (!parsedId) { showStatus('Lien ou identifiant YouTube invalide.', 'error'); return; }
+    if (!trailerEndDate) { showStatus('Merci de choisir une date de fin.', 'error'); return; }
+    setIsSavingTrailer(true);
+    try {
+      await saveTrailer({ title: trailerTitle.trim() || null, youtubeId: parsedId, endDate: trailerEndDate });
+      showStatus('Bande-annonce enregistrée avec succès !', 'success');
+      loadData();
+    } catch (err: any) {
+      showStatus(`Erreur: ${err?.message || 'Erreur serveur'}`, 'error');
+    } finally {
+      setIsSavingTrailer(false);
+    }
+  };
+
+  const handleDeleteTrailer = async () => {
+    setIsDeletingTrailer(true);
+    try {
+      await deleteTrailer();
+      showStatus('Bande-annonce retirée du site.', 'success');
+      setTrailer(null); setTrailerTitle(''); setTrailerYoutubeUrl(''); setTrailerEndDate('');
+      getAdminCounts().then(setCounts).catch(() => {});
+    } catch (err: any) {
+      showStatus(`Erreur: ${err?.message || 'Erreur serveur'}`, 'error');
+    } finally {
+      setIsDeletingTrailer(false);
+    }
   };
 
   // Open Form for Adding
@@ -1105,6 +1151,7 @@ export function Admin() {
                   {activeTab === 'partners' && 'Gestion des Partenaires Grâce TV'}
                   {activeTab === 'books' && 'Gestion de la Bibliothèque & Commandes'}
                   {activeTab === 'contactMessages' && 'Messages reçus via le formulaire de Contact'}
+                  {activeTab === 'trailer' && "Bande-annonce d'un événement spécial (page d'accueil)"}
                   {activeTab === 'audit' && 'Registre des Actions Administratives'}
                   {activeTab === 'admins' && 'Gestion des Administrateurs'}
                 </h3>
@@ -1122,12 +1169,13 @@ export function Admin() {
                   {activeTab === 'partners' && 'partners'}
                   {activeTab === 'books' && 'library_books'}
                   {activeTab === 'contactMessages' && 'contact_messages'}
+                  {activeTab === 'trailer' && 'trailer'}
                   {activeTab === 'audit' && 'audit_log'}
                   {activeTab === 'admins' && 'admins'}
                 </p>
               </div>
 
-              {canSee(activeTab) && activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && activeTab !== 'books' && activeTab !== 'contactMessages' && (
+              {canSee(activeTab) && activeTab !== 'prayers' && activeTab !== 'donations' && activeTab !== 'blog' && activeTab !== 'newsletter' && activeTab !== 'audit' && activeTab !== 'admins' && activeTab !== 'projects' && activeTab !== 'partners' && activeTab !== 'books' && activeTab !== 'contactMessages' && activeTab !== 'trailer' && (
                 <button
                   onClick={handleAddNew}
                   className="bg-gold hover:bg-gold/90 text-soft-black px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -2259,6 +2307,61 @@ export function Admin() {
                         </tbody>
                       </table>
                     )}
+                  </div>
+                )}
+
+                {/* Bande-annonce : enregistrement unique, formulaire direct (pas de modal) */}
+                {activeTab === 'trailer' && (
+                  <div className="max-w-2xl space-y-6">
+                    <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-xs font-semibold ${
+                      trailer && new Date(trailer.endDate).getTime() > Date.now()
+                        ? 'bg-emerald-900/30 border-emerald-700/40 text-emerald-300'
+                        : 'bg-white/5 border-white/10 text-white/50'
+                    }`}>
+                      {trailer && new Date(trailer.endDate).getTime() > Date.now() ? (
+                        <>
+                          <Video className="w-4 h-4 shrink-0" />
+                          Active sur le site jusqu'au {new Date(trailer.endDate).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}
+                        </>
+                      ) : trailer ? (
+                        <>
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          Configurée mais expirée — invisible sur le site public.
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-4 h-4 shrink-0" />
+                          Aucune bande-annonce configurée — la section reste masquée sur l'accueil.
+                        </>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre (optionnel)</label>
+                      <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerTitle} onChange={e => setTrailerTitle(e.target.value)} placeholder="Ex: Grande Croisade de Guérison — Bande-annonce" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Lien ou identifiant YouTube</label>
+                      <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerYoutubeUrl} onChange={e => setTrailerYoutubeUrl(e.target.value)} placeholder="Collez le lien de la vidéo YouTube" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date et heure de fin</label>
+                      <input type="datetime-local" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerEndDate} onChange={e => setTrailerEndDate(e.target.value)} />
+                      <p className="text-[10px] text-white/40 mt-1">Passé cette date et heure, la section disparaît automatiquement de l'accueil — pas besoin de revenir l'éteindre.</p>
+                    </div>
+
+                    <div className="flex items-center gap-3 pt-2">
+                      <button type="button" onClick={handleSaveTrailer} disabled={isSavingTrailer} className="bg-gold hover:bg-gold/90 text-soft-black px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-40 cursor-pointer">
+                        {isSavingTrailer ? 'Enregistrement...' : 'Enregistrer'}
+                      </button>
+                      {trailer && (
+                        <button type="button" onClick={handleDeleteTrailer} disabled={isDeletingTrailer} className="border border-red-800/50 text-red-400 hover:bg-red-900/20 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-40 cursor-pointer">
+                          {isDeletingTrailer ? 'Retrait...' : 'Retirer la bande-annonce'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </>

@@ -13,8 +13,8 @@ import { isYtPlaylistId, ytEmbedUrl, ytThumbUrl } from '../lib/youtube';
 import { fetchLiveStatus, type LiveData } from '../lib/liveStatus';
 import { CtaShowcase } from '../components/home/CtaShowcase';
 import {
-  getBlogPosts, getRecommendedLinks, getStudyDocuments, getPartners,
-  type BlogPost, type RecommendedLink, type StudyDocument, type Partner,
+  getBlogPosts, getRecommendedLinks, getStudyDocuments, getPartners, getTrailer,
+  type BlogPost, type RecommendedLink, type StudyDocument, type Partner, type TrailerBanner,
 } from '../lib/dbService';
 
 /* ══ Types ═════════════════════════════════════════════════════ */
@@ -269,10 +269,12 @@ export function Home() {
   const [partnerVideosMap, setPartnerVideosMap] = useState<Record<string, VideoContent[]>>({});
   const [programs, setPrograms]   = useState<{ id: string; title: string; category: string; description: string; image: string; playlistId: string | null; videoCount: number }[]>([]);
   const [progVideos, setProgVideos] = useState<Record<string, VideoContent[]>>({});
+  const [trailer, setTrailer]     = useState<TrailerBanner | null>(null);
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
     fetchLiveStatus().then(data => { if (data) setLive(data); });
+    getTrailer().then(setTrailer).catch(() => {});
     fetch('/api/youtube/playlists').then(r => { if (!r.ok) throw 0; return r.json(); }).then(setPlaylists).catch(() => {});
     getRecommendedLinks().then(list => {
       setLinks(list);
@@ -409,6 +411,10 @@ export function Home() {
   const heroEmbed = live?.videoId
     ? `https://www.youtube.com/embed/${live.videoId}?autoplay=1&mute=1&rel=0&playsinline=1`
     : null;
+
+  // La bannière bande-annonce ne s'affiche que si une vidéo est chargée
+  // depuis le dashboard ET que sa date de fin n'est pas dépassée.
+  const trailerActive = !!trailer?.youtubeId && new Date(trailer.endDate).getTime() > Date.now();
 
   return (
     <div className="bg-cream">
@@ -556,6 +562,47 @@ export function Home() {
           </motion.p>
         </div>
       </section>
+
+      {/* ════════════ BANDE-ANNONCE · ÉVÉNEMENT SPÉCIAL ════════════ */}
+      {trailerActive && trailer && (
+        <section className="relative overflow-hidden bg-grace-blue-deep py-20 sm:py-28">
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 bg-gradient-to-b from-grace-blue-deep via-grace-indigo to-grace-blue-deep" />
+            <div className="absolute top-0 left-1/4 w-[480px] h-[480px] rounded-full bg-grace-orange/15 blur-[140px]" />
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full bg-grace-sky/10 blur-[110px]" />
+          </div>
+          <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div {...reveal} className="text-center mb-10">
+              <span className="inline-flex items-center gap-2 bg-grace-orange/15 border border-grace-orange/40 text-grace-orange px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[0.25em] mb-6">
+                <Sparkles className="w-3.5 h-3.5" /> Événement spécial
+              </span>
+              <h2 className="font-serif text-3xl sm:text-5xl font-extrabold text-white leading-[1.1]">
+                {trailer.title || 'Bande-annonce'}
+              </h2>
+              <p className="flex items-center justify-center gap-2 text-white/60 text-sm mt-5">
+                <Clock className="w-4 h-4 text-grace-orange" />
+                Disponible jusqu'au{' '}
+                {new Date(trailer.endDate).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short' })}
+              </p>
+            </motion.div>
+            <motion.div
+              {...reveal}
+              transition={{ ...reveal.transition, delay: 0.1 }}
+              className="relative rounded-3xl overflow-hidden border border-white/10 shadow-[0_40px_100px_-30px_rgba(0,0,0,0.6)]"
+            >
+              <div className="aspect-video bg-black">
+                <iframe
+                  src={ytEmbedUrl(trailer.youtubeId, false)}
+                  title={trailer.title || 'Bande-annonce'}
+                  className="w-full h-full"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      )}
 
       {/* ════════════ 01 · SERMONS & CULTES ════════════ */}
       {videoSections.sermon.length > 0 && (

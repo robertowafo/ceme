@@ -120,7 +120,7 @@ const requireSuperAdmin = async (c: Context<HonoApp>, next: Next) => {
 // du frontend (src/pages/Admin.tsx).
 const ASSIGNABLE_SECTIONS = [
   'links', 'photos', 'events', 'testimonials', 'documents', 'prayers',
-  'donations', 'blog', 'newsletter', 'contactMessages', 'projects', 'partners', 'books',
+  'donations', 'blog', 'newsletter', 'contactMessages', 'projects', 'partners', 'books', 'trailer',
 ] as const
 
 // Lit les sections autorisées d'un admin depuis la base — source de vérité,
@@ -359,6 +359,34 @@ app.delete('/recommended-links/:id', requireSection('links'), async (c) => {
   const row = await c.env.DB.prepare('SELECT title FROM recommended_links WHERE id=?').bind(id).first<{title:string}>()
   await c.env.DB.prepare('DELETE FROM recommended_links WHERE id=?').bind(id).run()
   await audit(c.env.DB, c.get('user').email, 'Suppression', 'Vidéos YouTube', id, `Suppression de la vidéo : "${row?.title ?? id}"`)
+  return c.json({ success: true })
+})
+
+// ─── trailer (bannière bande-annonce, enregistrement unique id='main') ─────────
+
+app.get('/trailer', async (c) => {
+  const row = await c.env.DB.prepare(
+    'SELECT title, youtube_id AS youtubeId, end_date AS endDate FROM trailer WHERE id=?'
+  ).bind('main').first<{ title: string | null; youtubeId: string; endDate: string }>()
+  return c.json(row ?? null)
+})
+
+app.put('/trailer', requireSection('trailer'), async (c) => {
+  const { title, youtubeId, endDate } = await c.req.json()
+  if (!youtubeId || !endDate) return c.json({ error: 'Identifiant YouTube et date de fin requis' }, 400)
+  const existing = await c.env.DB.prepare('SELECT id FROM trailer WHERE id=?').bind('main').first()
+  await c.env.DB.prepare(
+    `INSERT INTO trailer (id, title, youtube_id, end_date, updated_at) VALUES ('main',?,?,?,?)
+     ON CONFLICT(id) DO UPDATE SET title=excluded.title, youtube_id=excluded.youtube_id,
+       end_date=excluded.end_date, updated_at=excluded.updated_at`
+  ).bind(title ?? null, youtubeId, endDate, new Date().toISOString()).run()
+  await audit(c.env.DB, c.get('user').email, existing ? 'Modification' : 'Création', 'Bande-annonce', 'main', `${existing ? 'Modification' : 'Activation'} de la bande-annonce : "${title || youtubeId}"`)
+  return c.json({ success: true })
+})
+
+app.delete('/trailer', requireSection('trailer'), async (c) => {
+  await c.env.DB.prepare('DELETE FROM trailer WHERE id=?').bind('main').run()
+  await audit(c.env.DB, c.get('user').email, 'Suppression', 'Bande-annonce', 'main', 'Retrait de la bande-annonce')
   return c.json({ success: true })
 })
 
@@ -1449,7 +1477,7 @@ app.get('/youtube/channel-playlists', async (c) => {
 // ─── admin counts (all tabs in one query) ──────────────────────────────────────
 
 app.get('/admin/counts', requireAdmin, async (c) => {
-  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog, partners, books, bookOrders, contactMessages] =
+  const [links, photos, events, testimonials, documents, prayers, donations, blog, newsletter, projects, auditLog, partners, books, bookOrders, contactMessages, trailer] =
     await Promise.all([
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM recommended_links').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM gallery_photos').first<{n:number}>(),
@@ -1466,6 +1494,7 @@ app.get('/admin/counts', requireAdmin, async (c) => {
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM library_books').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM book_orders').first<{n:number}>(),
       c.env.DB.prepare('SELECT COUNT(*) AS n FROM contact_messages').first<{n:number}>(),
+      c.env.DB.prepare('SELECT COUNT(*) AS n FROM trailer').first<{n:number}>(),
     ])
   return c.json({
     links:        Number(links?.n        ?? 0),
@@ -1483,6 +1512,7 @@ app.get('/admin/counts', requireAdmin, async (c) => {
     books:        Number(books?.n        ?? 0),
     bookOrders:   Number(bookOrders?.n   ?? 0),
     contactMessages: Number(contactMessages?.n ?? 0),
+    trailer:      Number(trailer?.n      ?? 0),
   })
 })
 

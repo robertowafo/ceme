@@ -67,6 +67,12 @@ export interface Partner {
   createdAt?: string;
 }
 
+export interface TrailerBanner {
+  title: string | null;
+  youtubeId: string;
+  endDate: string;
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 // Les lectures peuvent échouer de façon transitoire (cold-start du Worker,
@@ -119,6 +125,31 @@ export async function saveRecommendedLink(link: RecommendedLink): Promise<void> 
 
 export async function deleteRecommendedLink(id: string): Promise<void> {
   return remove('/api/recommended-links', id);
+}
+
+// ─── trailer (bannière bande-annonce, enregistrement unique) ──────────────────
+
+export async function getTrailer(): Promise<TrailerBanner | null> {
+  const res = await fetch('/api/trailer', { credentials: 'same-origin' });
+  if (!res.ok) throw new Error(`Erreur ${res.status} sur /api/trailer`);
+  const data = await res.json();
+  return data ?? null;
+}
+
+export async function saveTrailer(trailer: TrailerBanner): Promise<void> {
+  const res = await apiFetch('/api/trailer', { method: 'PUT', body: JSON.stringify(trailer) });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
+}
+
+export async function deleteTrailer(): Promise<void> {
+  const res = await apiFetch('/api/trailer', { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || 'Erreur serveur');
+  }
 }
 
 // ─── gallery_photos ────────────────────────────────────────────────────────────
@@ -553,7 +584,7 @@ export interface AdminCounts {
   links: number; photos: number; events: number; testimonials: number;
   documents: number; prayers: number; donations: number; blog: number;
   newsletter: number; projects: number; audit: number; partners: number;
-  books: number; bookOrders: number; contactMessages: number;
+  books: number; bookOrders: number; contactMessages: number; trailer: number;
 }
 
 export async function getAdminCounts(): Promise<AdminCounts> {
