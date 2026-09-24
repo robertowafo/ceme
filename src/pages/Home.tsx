@@ -272,7 +272,9 @@ export function Home() {
   const [trailer, setTrailer]     = useState<TrailerBanner | null>(null);
   const trailerSectionRef = useRef<HTMLElement>(null);
   const trailerVideoRef   = useRef<HTMLVideoElement>(null);
+  const trailerIframeRef  = useRef<HTMLIFrameElement>(null);
   const [trailerInView, setTrailerInView] = useState(false);
+  const [trailerMuted, setTrailerMuted]   = useState(false);
 
   /* ── Chargement parallèle de toutes les sources ── */
   useEffect(() => {
@@ -430,6 +432,8 @@ export function Home() {
       (entries) => {
         if (entries[0]?.isIntersecting) {
           setTrailerInView(true);
+          // L'autoplay YouTube n'est autorisé par les navigateurs qu'en muet.
+          if (trailer?.youtubeId && !trailer.videoUrl) setTrailerMuted(true);
           observer.disconnect();
         }
       },
@@ -439,11 +443,33 @@ export function Home() {
     return () => observer.disconnect();
   }, [trailerActive]);
 
+  // Vidéo importée : on tente la lecture avec le son ; si le navigateur la
+  // bloque (politique d'autoplay sans interaction préalable), on retombe en
+  // muet et on affiche un bouton "Activer le son" bien visible.
   useEffect(() => {
-    if (trailerInView && trailerVideoRef.current) {
+    if (!trailerInView || !trailerVideoRef.current) return;
+    const v = trailerVideoRef.current;
+    v.muted = false;
+    v.play().catch(() => {
+      v.muted = true;
+      setTrailerMuted(true);
+      v.play().catch(() => {});
+    });
+  }, [trailerInView]);
+
+  const unmuteTrailer = () => {
+    if (trailerVideoRef.current) {
+      trailerVideoRef.current.muted = false;
       trailerVideoRef.current.play().catch(() => {});
     }
-  }, [trailerInView]);
+    if (trailerIframeRef.current) {
+      const post = (func: string, args: unknown[] = []) =>
+        trailerIframeRef.current!.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
+      post('unMute');
+      post('setVolume', [100]);
+    }
+    setTrailerMuted(false);
+  };
 
   return (
     <div className="bg-cream">
@@ -619,12 +645,11 @@ export function Home() {
               transition={{ ...reveal.transition, delay: 0.1 }}
               className="relative rounded-3xl overflow-hidden border border-white/10 shadow-[0_40px_100px_-30px_rgba(0,0,0,0.6)]"
             >
-              <div className="aspect-video bg-black">
+              <div className="relative aspect-video bg-black">
                 {trailer.videoUrl ? (
                   <video
                     ref={trailerVideoRef}
                     src={trailer.videoUrl}
-                    muted
                     loop
                     playsInline
                     preload="auto"
@@ -633,7 +658,8 @@ export function Home() {
                   />
                 ) : trailerInView ? (
                   <iframe
-                    src={`https://www.youtube.com/embed/${trailer.youtubeId}?autoplay=1&mute=1&rel=0&playsinline=1`}
+                    ref={trailerIframeRef}
+                    src={`https://www.youtube.com/embed/${trailer.youtubeId}?autoplay=1&mute=1&rel=0&playsinline=1&enablejsapi=1`}
                     title={trailer.title || 'Bande-annonce'}
                     className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -643,6 +669,15 @@ export function Home() {
                   <div className="w-full h-full flex items-center justify-center text-white/25">
                     <Play className="w-12 h-12" />
                   </div>
+                )}
+
+                {trailerMuted && (
+                  <button
+                    onClick={unmuteTrailer}
+                    className="absolute bottom-4 right-4 z-10 inline-flex items-center gap-2 bg-black/70 hover:bg-black/85 border border-white/20 text-white px-4 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-sm transition-colors animate-pulse"
+                  >
+                    <Volume2 className="w-4 h-4 text-grace-orange" /> Activer le son
+                  </button>
                 )}
               </div>
             </motion.div>
