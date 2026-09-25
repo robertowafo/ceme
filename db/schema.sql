@@ -198,12 +198,15 @@ CREATE TABLE IF NOT EXISTS trailer (
 -- ID YouTube, video_id). Propres à la plateforme — jamais envoyés à YouTube.
 -- video_title est un instantané du titre au moment du commentaire, gardé
 -- uniquement pour l'affichage lisible dans le dashboard de modération.
+-- parent_id : si renseigné, ce commentaire est une réponse à un commentaire
+-- racine (parent_id lui-même toujours NULL — un seul niveau de réponse).
 CREATE TABLE IF NOT EXISTS video_comments (
   id           TEXT PRIMARY KEY,
   video_id     TEXT NOT NULL,
   video_title  TEXT,
   author_name  TEXT NOT NULL,
   message      TEXT NOT NULL,
-  submitted_at TEXT NOT NULL
+  submitted_at TEXT NOT NULL,
+  parent_id    TEXT REFERENCES video_comments(id)
 );
 CREATE INDEX IF NOT EXISTS idx_video_comments_video_id ON video_comments(video_id);

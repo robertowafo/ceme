@@ -589,13 +589,14 @@ export interface VideoComment {
   authorName: string;
   message: string;
   submittedAt: string;
+  parentId?: string | null;
 }
 
 export async function getVideoComments(videoId: string): Promise<VideoComment[]> {
   return getAll<VideoComment>(`/api/video-comments?videoId=${encodeURIComponent(videoId)}`);
 }
 
-export async function submitVideoComment(data: { videoId: string; videoTitle?: string; authorName: string; message: string }): Promise<void> {
+export async function submitVideoComment(data: { videoId: string; videoTitle?: string; authorName: string; message: string; parentId?: string }): Promise<void> {
   const res = await fetch('/api/video-comments', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

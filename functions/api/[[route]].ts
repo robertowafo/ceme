@@ -1425,27 +1425,37 @@ app.get('/video-comments', async (c) => {
   const videoId = c.req.query('videoId') || ''
   if (!videoId) return c.json({ error: 'videoId requis' }, 400)
   const results = await d1All(c.env.DB.prepare(
-    `SELECT id, video_id AS videoId, author_name AS authorName, message, submitted_at AS submittedAt
+    `SELECT id, video_id AS videoId, author_name AS authorName, message, submitted_at AS submittedAt, parent_id AS parentId
      FROM video_comments WHERE video_id=? ORDER BY submitted_at DESC`
   ).bind(videoId))
   return c.json(results)
 })
 
 app.post('/video-comments', rateLimit('video-comments', 8, 600), async (c) => {
-  const { videoId, videoTitle, authorName, message } = await c.req.json()
+  const { videoId, videoTitle, authorName, message, parentId } = await c.req.json()
   if (!videoId?.trim() || !authorName?.trim() || !message?.trim()) {
     return c.json({ error: 'Vidéo, nom et message sont requis' }, 400)
   }
+  let parent: string | null = null
+  if (parentId) {
+    // Une réponse ne peut viser qu'un commentaire racine (pas de réponse à une
+    // réponse) de la même vidéo — un seul niveau de fil.
+    const parentRow = await c.env.DB.prepare(
+      'SELECT id FROM video_comments WHERE id=? AND video_id=? AND parent_id IS NULL'
+    ).bind(parentId, videoId.trim()).first()
+    if (!parentRow) return c.json({ error: 'Commentaire parent introuvable' }, 400)
+    parent = parentId
+  }
   const id = 'vc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
   await c.env.DB.prepare(
-    'INSERT INTO video_comments (id, video_id, video_title, author_name, message, submitted_at) VALUES (?,?,?,?,?,?)'
-  ).bind(id, videoId.trim(), videoTitle?.trim() || null, authorName.trim(), message.trim(), new Date().toISOString()).run()
+    'INSERT INTO video_comments (id, video_id, video_title, author_name, message, submitted_at, parent_id) VALUES (?,?,?,?,?,?,?)'
+  ).bind(id, videoId.trim(), videoTitle?.trim() || null, authorName.trim(), message.trim(), new Date().toISOString(), parent).run()
   return c.json({ success: true, id })
 })
 
 app.get('/video-comments/all', requireSection('videoComments'), async (c) => {
   const { results } = await c.env.DB.prepare(
-    `SELECT id, video_id AS videoId, video_title AS videoTitle, author_name AS authorName, message, submitted_at AS submittedAt
+    `SELECT id, video_id AS videoId, video_title AS videoTitle, author_name AS authorName, message, submitted_at AS submittedAt, parent_id AS parentId
      FROM video_comments ORDER BY submitted_at DESC`
   ).all()
   return c.json(results)
@@ -1454,7 +1464,8 @@ app.get('/video-comments/all', requireSection('videoComments'), async (c) => {
 app.delete('/video-comments/:id', requireSection('videoComments'), async (c) => {
   const id = c.req.param('id')
   const row = await c.env.DB.prepare('SELECT author_name, video_title FROM video_comments WHERE id=?').bind(id).first<{author_name:string,video_title:string|null}>()
-  await c.env.DB.prepare('DELETE FROM video_comments WHERE id=?').bind(id).run()
+  // Supprime aussi les réponses rattachées, pour ne pas laisser de fil orphelin.
+  await c.env.DB.prepare('DELETE FROM video_comments WHERE id=? OR parent_id=?').bind(id, id).run()
   await audit(c.env.DB, c.get('user').email, 'Suppression', 'Commentaires Vidéos', id, `Suppression commentaire de "${row?.author_name ?? id}" sur "${row?.video_title ?? '?'}"`)
   return c.json({ success: true })
 })

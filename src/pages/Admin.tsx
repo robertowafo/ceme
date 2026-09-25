@@ -2359,7 +2359,10 @@ export function Admin() {
                         <tbody>
                           {videoComments.map((vc) => (
                             <tr key={vc.id} className="border-b border-white/5 hover:bg-white/[0.02] align-top">
-                              <td className="py-4 pr-4 font-semibold text-white whitespace-nowrap">{vc.authorName}</td>
+                              <td className="py-4 pr-4 font-semibold text-white whitespace-nowrap">
+                                {vc.parentId && <span className="text-white/30 font-normal mr-1">↳ réponse ·</span>}
+                                {vc.authorName}
+                              </td>
                               <td className="py-4 pr-4 text-white/60 max-w-xs">
                                 <p className="line-clamp-2 leading-relaxed">{vc.videoTitle || vc.videoId}</p>
                                 <a href={`https://www.youtube.com/watch?v=${vc.videoId}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[10px] text-gold/70 hover:text-gold font-mono mt-1">
