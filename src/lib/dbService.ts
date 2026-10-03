@@ -224,6 +224,8 @@ export interface Donation {
   projectId?: string;
   projectTitle?: string;
   submittedAt: string;
+  /** 'pending' tant qu'un admin n'a pas vérifié le paiement ; absent = confirmé (anciens dons). */
+  status?: 'pending' | 'confirmed';
 }
 
 export interface DonationStats {
@@ -304,6 +306,18 @@ export async function getDonationStats(): Promise<DonationStats> {
 
 export async function deleteDonation(id: string): Promise<void> {
   return remove('/api/donations', id);
+}
+
+export async function confirmDonation(id: string): Promise<void> {
+  const res = await fetch(`/api/donations/${encodeURIComponent(id)}/confirm`, {
+    method: 'PATCH',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({})) as { error?: string };
+    throw new Error(data.error || `Erreur ${res.status}`);
+  }
 }
 
 // ─── prayer_requests ───────────────────────────────────────────────────────────

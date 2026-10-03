@@ -5,8 +5,11 @@ import { handle } from 'hono/cloudflare-pages'
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie'
 import { SignJWT, jwtVerify } from 'jose'
 import type { Context, Next } from 'hono'
+import { ValidationError, str, reqStr, oneOf, posInt, url as optUrl, email as vEmail, matchesMagicBytes } from '../_lib/validate'
 
 const SESSION_COOKIE = 'session'
+// Session courte : le JWT n'est pas révocable, on limite donc sa durée de vie.
+const SESSION_SECONDS = 60 * 60 * 24
 
 // Cookie « Secure » uniquement en HTTPS (prod) — sinon le dev local en http://
 // ne recevrait jamais le cookie de retour.
@@ -23,6 +26,10 @@ type Bindings = {
   JWT_SECRET: string
   ADMIN_EMAIL: string
   YOUTUBE_API_KEY: string
+  // Client id OAuth Google : sert à vérifier l'audience des jetons de connexion.
+  // En prod, VITE_GOOGLE_CLIENT_ID (variable Pages) est aussi lisible ici.
+  GOOGLE_CLIENT_ID?: string
+  VITE_GOOGLE_CLIENT_ID?: string
   RATE_LIMIT: KVNamespace
 }
 
@@ -45,7 +52,7 @@ async function signSession(payload: JwtPayload, secret: string): Promise<string>
   const key = new TextEncoder().encode(secret)
   return new SignJWT(payload as any)
     .setProtectedHeader({ alg: 'HS256' })
-    .setExpirationTime('7d')
+    .setExpirationTime('1d')
     .sign(key)
 }
 
@@ -79,6 +86,11 @@ function timingSafeEqual(a: string, b: string): boolean {
   return diff === 0
 }
 
+let dummyHashCache: string | null = null
+async function dummyHash(): Promise<string> {
+  return (dummyHashCache ??= await hashPassword('dummy-password-for-timing'))
+}
+
 async function verifyPassword(password: string, stored: string): Promise<boolean> {
   const parts = stored.split(':')
   if (parts.length !== 4 || parts[0] !== 'pbkdf2') return false
@@ -94,21 +106,50 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 
 const app = new Hono<HonoApp>().basePath('/api')
 
-const requireAdmin = async (c: Context<HonoApp>, next: Next) => {
+// Erreurs de validation → 400 lisible ; tout le reste → 500 générique (le détail
+// part dans les logs, jamais dans la réponse).
+app.onError((err, c) => {
+  if (err instanceof ValidationError) return c.json({ error: err.message }, 400)
+  if (err instanceof SyntaxError) return c.json({ error: 'Corps de requête invalide' }, 400)
+  console.error(err)
+  return c.json({ error: 'Erreur interne du serveur' }, 500)
+})
+
+const normEmail = (e: string | undefined | null) => (e ?? '').trim().toLowerCase()
+
+// Vérifie le cookie de session ET que le compte est toujours autorisé : le JWT
+// seul n'est pas révocable, donc un admin supprimé de la table `admins` perdrait
+// sinon l'accès seulement à l'expiration du jeton. Le super-admin est déterminé
+// par ADMIN_EMAIL (secret serveur), pas uniquement par la revendication du JWT.
+async function authenticate(c: Context<HonoApp>): Promise<
+  { payload: JwtPayload; isSuper: boolean } | { res: Response }
+> {
   const token = getCookie(c, SESSION_COOKIE)
-  if (!token) return c.json({ error: 'Non authentifié' }, 401)
+  if (!token) return { res: c.json({ error: 'Non authentifié' }, 401) }
   const payload = await verifySession(token, c.env.JWT_SECRET)
-  if (!payload?.isAdmin) return c.json({ error: "Accès réservé à l'administrateur" }, 403)
-  c.set('user', payload)
+  if (!payload) return { res: c.json({ error: 'Session expirée' }, 401) }
+  const isSuper = !!payload.isSuperAdmin && normEmail(payload.email) === normEmail(c.env.ADMIN_EMAIL)
+  if (!isSuper) {
+    const row = payload.isAdmin
+      ? await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(normEmail(payload.email)).first()
+      : null
+    if (!row) return { res: c.json({ error: "Accès réservé à l'administrateur" }, 403) }
+  }
+  return { payload, isSuper }
+}
+
+const requireAdmin = async (c: Context<HonoApp>, next: Next) => {
+  const auth = await authenticate(c)
+  if ('res' in auth) return auth.res
+  c.set('user', auth.payload)
   await next()
 }
 
 const requireSuperAdmin = async (c: Context<HonoApp>, next: Next) => {
-  const token = getCookie(c, SESSION_COOKIE)
-  if (!token) return c.json({ error: 'Non authentifié' }, 401)
-  const payload = await verifySession(token, c.env.JWT_SECRET)
-  if (!payload?.isSuperAdmin) return c.json({ error: 'Accès réservé au super-administrateur' }, 403)
-  c.set('user', payload)
+  const auth = await authenticate(c)
+  if ('res' in auth) return auth.res
+  if (!auth.isSuper) return c.json({ error: 'Accès réservé au super-administrateur' }, 403)
+  c.set('user', auth.payload)
   await next()
 }
 
@@ -149,13 +190,11 @@ function sectionsForUser(isSuperAdmin: boolean, dbSections: string[]): string[] 
 // Middleware paramétré : le super-admin passe partout ; sinon la section doit
 // figurer dans les droits de l'admin.
 const requireSection = (section: string) => async (c: Context<HonoApp>, next: Next) => {
-  const token = getCookie(c, SESSION_COOKIE)
-  if (!token) return c.json({ error: 'Non authentifié' }, 401)
-  const payload = await verifySession(token, c.env.JWT_SECRET)
-  if (!payload?.isAdmin) return c.json({ error: "Accès réservé à l'administrateur" }, 403)
-  c.set('user', payload)
-  if (payload.isSuperAdmin) return await next()
-  const allowed = await getAdminSections(c.env.DB, payload.email)
+  const auth = await authenticate(c)
+  if ('res' in auth) return auth.res
+  c.set('user', auth.payload)
+  if (auth.isSuper) return await next()
+  const allowed = await getAdminSections(c.env.DB, auth.payload.email)
   if (!allowed.includes(section)) return c.json({ error: "Vous n'avez pas accès à cette section" }, 403)
   await next()
 }
@@ -193,39 +232,62 @@ function rateLimit(name: string, limit: number, windowSeconds: number) {
   }
 }
 
+const reqStrUrl = (value: unknown, field: string) => optUrl(value, field, true) as string
+
 async function audit(
   db: D1Database,
   email: string,
-  action: 'Création' | 'Modification' | 'Suppression' | 'Upload',
+  action: 'Création' | 'Modification' | 'Suppression' | 'Upload' | 'Réponse' | 'Confirmation',
   section: string,
   itemId: string | null,
   description: string
 ): Promise<void> {
   const id = 'log_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
-  await db.prepare(
-    'INSERT INTO audit_log (id, admin_email, action, section, item_id, description, performed_at) VALUES (?,?,?,?,?,?,?)'
-  ).bind(id, email, action, section, itemId ?? null, description, new Date().toISOString()).run()
+  try {
+    await db.prepare(
+      'INSERT INTO audit_log (id, admin_email, action, section, item_id, description, performed_at) VALUES (?,?,?,?,?,?,?)'
+    ).bind(id, email, action, section, itemId ?? null, description.slice(0, 500), new Date().toISOString()).run()
+  } catch (err) {
+    // La modification est déjà faite : un échec du journal ne doit pas la
+    // transformer en 500 côté client.
+    console.error('audit_log insert failed', err)
+  }
 }
 
 // ─── Auth ──────────────────────────────────────────────────────────────────────
 
-app.post('/auth/google', async (c) => {
-  const { accessToken } = await c.req.json()
+app.post('/auth/google', rateLimit('auth-google', 20, 10 * 60), async (c) => {
+  const body = await c.req.json().catch(() => ({})) as { accessToken?: unknown }
+  const accessToken = typeof body.accessToken === 'string' ? body.accessToken : ''
   if (!accessToken) return c.json({ error: 'accessToken manquant' }, 400)
   try {
+    // Le jeton doit avoir été émis POUR cette application : sans ce contrôle,
+    // un jeton Google obtenu par n'importe quelle autre application suffirait.
+    const clientId = c.env.GOOGLE_CLIENT_ID || c.env.VITE_GOOGLE_CLIENT_ID
+    if (clientId) {
+      const tokenRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?access_token=${encodeURIComponent(accessToken)}`)
+      if (!tokenRes.ok) return c.json({ error: 'Token Google invalide' }, 401)
+      const tokenInfo = await tokenRes.json() as { aud?: string; azp?: string }
+      if (tokenInfo.aud !== clientId && tokenInfo.azp !== clientId) {
+        return c.json({ error: 'Token Google invalide' }, 401)
+      }
+    } else {
+      console.warn('GOOGLE_CLIENT_ID absent : audience du jeton Google non vérifiée')
+    }
     const googleRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
     if (!googleRes.ok) return c.json({ error: 'Token Google invalide' }, 401)
     const info = await googleRes.json() as any
     if (!info.email_verified) return c.json({ error: 'Adresse email Google non vérifiée' }, 403)
-    const isSuperAdmin = info.email === c.env.ADMIN_EMAIL
+    const userEmail = normEmail(info.email)
+    const isSuperAdmin = userEmail === normEmail(c.env.ADMIN_EMAIL)
     const isAdminFromDB = !isSuperAdmin
-      ? !!(await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(info.email).first())
+      ? !!(await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(userEmail).first())
       : false
     const isAdmin = isSuperAdmin || isAdminFromDB
     const token = await signSession(
-      { sub: info.sub, email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin },
+      { sub: info.sub, email: userEmail, name: info.name, picture: info.picture, isAdmin, isSuperAdmin },
       c.env.JWT_SECRET
     )
     // Le JWT ne part plus jamais dans le corps JSON : il vit uniquement dans un
@@ -236,10 +298,10 @@ app.post('/auth/google', async (c) => {
       secure: isHttps(c),
       sameSite: 'Strict',
       path: '/',
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: SESSION_SECONDS,
     })
-    const sections = sectionsForUser(isSuperAdmin, isAdminFromDB ? await getAdminSections(c.env.DB, info.email) : [])
-    return c.json({ user: { email: info.email, name: info.name, picture: info.picture, isAdmin, isSuperAdmin, sections } })
+    const sections = sectionsForUser(isSuperAdmin, isAdminFromDB ? await getAdminSections(c.env.DB, userEmail) : [])
+    return c.json({ user: { email: userEmail, name: info.name, picture: info.picture, isAdmin, isSuperAdmin, sections } })
   } catch {
     return c.json({ error: "Erreur d'authentification" }, 500)
   }
@@ -253,15 +315,23 @@ app.post('/auth/logout', async (c) => {
 // Connexion email + mot de passe — alternative à Google pour les admins avec un
 // email professionnel ou un autre fournisseur. Limité pour freiner le bruteforce.
 app.post('/auth/login', rateLimit('auth-login', 10, 10 * 60), async (c) => {
-  const { email, password } = await c.req.json()
-  if (!email?.trim() || !password) return c.json({ error: 'Email et mot de passe requis' }, 400)
-  const normalized = email.trim().toLowerCase()
+  const body = await c.req.json().catch(() => ({})) as { email?: unknown; password?: unknown }
+  if (typeof body.email !== 'string' || !body.email.trim() || typeof body.password !== 'string' || !body.password) {
+    return c.json({ error: 'Email et mot de passe requis' }, 400)
+  }
+  if (body.password.length > 256) return c.json({ error: 'Identifiants invalides' }, 401)
+  const password = body.password
+  const normalized = normEmail(body.email)
   const row = await c.env.DB.prepare('SELECT password_hash FROM admins WHERE email=?')
     .bind(normalized).first<{ password_hash: string | null }>()
-  if (!row?.password_hash || !(await verifyPassword(password, row.password_hash))) {
+  // Toujours dériver un hash, même si le compte n'existe pas : évite de révéler
+  // par le temps de réponse quels emails sont des comptes admin.
+  const stored = row?.password_hash || await dummyHash()
+  const valid = await verifyPassword(password, stored)
+  if (!row?.password_hash || !valid) {
     return c.json({ error: 'Identifiants invalides' }, 401)
   }
-  const isSuperAdmin = normalized === c.env.ADMIN_EMAIL.toLowerCase()
+  const isSuperAdmin = normalized === normEmail(c.env.ADMIN_EMAIL)
   const name = normalized.split('@')[0]
   const token = await signSession(
     { sub: normalized, email: normalized, name, picture: '', isAdmin: true, isSuperAdmin },
@@ -272,7 +342,7 @@ app.post('/auth/login', rateLimit('auth-login', 10, 10 * 60), async (c) => {
     secure: isHttps(c),
     sameSite: 'Strict',
     path: '/',
-    maxAge: 60 * 60 * 24 * 7,
+    maxAge: SESSION_SECONDS,
   })
   const sections = sectionsForUser(isSuperAdmin, isSuperAdmin ? [] : await getAdminSections(c.env.DB, normalized))
   return c.json({ user: { email: normalized, name, picture: '', isAdmin: true, isSuperAdmin, sections } })
@@ -283,10 +353,10 @@ app.post('/auth/login', rateLimit('auth-login', 10, 10 * 60), async (c) => {
 // forcément de ligne dans `admins`), currentPassword n'est pas requis.
 app.put('/auth/password', requireAdmin, async (c) => {
   const { currentPassword, newPassword } = await c.req.json()
-  if (!newPassword || newPassword.length < 8) {
-    return c.json({ error: 'Le nouveau mot de passe doit contenir au moins 8 caractères' }, 400)
+  if (typeof newPassword !== 'string' || newPassword.length < 8 || newPassword.length > 256) {
+    return c.json({ error: 'Le nouveau mot de passe doit contenir entre 8 et 256 caractères' }, 400)
   }
-  const email = c.get('user').email.toLowerCase()
+  const email = normEmail(c.get('user').email)
   const row = await c.env.DB.prepare('SELECT password_hash FROM admins WHERE email=?')
     .bind(email).first<{ password_hash: string | null }>()
   if (row?.password_hash) {
@@ -297,21 +367,24 @@ app.put('/auth/password', requireAdmin, async (c) => {
   const hash = await hashPassword(newPassword)
   if (row) {
     await c.env.DB.prepare('UPDATE admins SET password_hash=? WHERE email=?').bind(hash, email).run()
-  } else {
+  } else if (email === normEmail(c.env.ADMIN_EMAIL)) {
+    // Seul le super-admin (qui n'a pas forcément de ligne) peut créer sa ligne ;
+    // un admin révoqué ne doit pas pouvoir se réinscrire lui-même.
     await c.env.DB.prepare(
       'INSERT INTO admins (email, added_by, added_at, password_hash) VALUES (?,?,?,?)'
     ).bind(email, 'auto', new Date().toISOString(), hash).run()
+  } else {
+    return c.json({ error: "Accès réservé à l'administrateur" }, 403)
   }
   return c.json({ success: true })
 })
 
 app.get('/auth/me', async (c) => {
-  const token = getCookie(c, SESSION_COOKIE)
-  if (!token) return c.json({ error: 'Non authentifié' }, 401)
-  const payload = await verifySession(token, c.env.JWT_SECRET)
-  if (!payload) return c.json({ error: 'Session expirée' }, 401)
-  const sections = sectionsForUser(payload.isSuperAdmin, payload.isSuperAdmin ? [] : await getAdminSections(c.env.DB, payload.email))
-  return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: payload.isAdmin, isSuperAdmin: payload.isSuperAdmin, sections } })
+  const auth = await authenticate(c)
+  if ('res' in auth) return auth.res
+  const { payload, isSuper } = auth
+  const sections = sectionsForUser(isSuper, isSuper ? [] : await getAdminSections(c.env.DB, payload.email))
+  return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: true, isSuperAdmin: isSuper, sections } })
 })
 
 // D1 peut lever une erreur transitoire au démarrage à froid du Worker
@@ -345,6 +418,7 @@ app.get('/recommended-links', async (c) => {
 app.put('/recommended-links/:id', requireSection('links'), async (c) => {
   const id = c.req.param('id')
   const { title, youtubeId, description, category } = await c.req.json()
+  reqStr(title, 'title', 200); reqStr(youtubeId, 'youtubeId', 64); str(description, 'description', 2000); reqStr(category, 'category', 50)
   const existing = await c.env.DB.prepare('SELECT id FROM recommended_links WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO recommended_links (id, title, youtube_id, description, category) VALUES (?,?,?,?,?)
@@ -374,6 +448,7 @@ app.get('/trailer', async (c) => {
 
 app.put('/trailer', requireSection('trailer'), async (c) => {
   const { title, description, youtubeId, videoUrl, endDate } = await c.req.json()
+  str(title, 'title', 200); str(description, 'description', 2000); str(youtubeId, 'youtubeId', 64); optUrl(videoUrl, 'videoUrl'); str(endDate, 'endDate', 40)
   if (!youtubeId && !videoUrl) return c.json({ error: 'Une vidéo est requise (lien YouTube ou fichier importé)' }, 400)
   if (!endDate) return c.json({ error: 'Date de fin requise' }, 400)
   const existing = await c.env.DB.prepare('SELECT id FROM trailer WHERE id=?').bind('main').first()
@@ -405,6 +480,7 @@ app.get('/gallery-photos', async (c) => {
 app.put('/gallery-photos/:id', requireSection('photos'), async (c) => {
   const id = c.req.param('id')
   const { category, title, location, url, desc } = await c.req.json()
+  reqStr(category, 'category', 100); reqStr(title, 'title', 200); str(location, 'location', 200); reqStrUrl(url, 'url'); str(desc, 'desc', 1000)
   const existing = await c.env.DB.prepare('SELECT id FROM gallery_photos WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO gallery_photos (id, category, title, location, url, note) VALUES (?,?,?,?,?,?)
@@ -445,6 +521,9 @@ app.post('/admin/events/cleanup', requireSection('events'), async (c) => {
 app.put('/church-events/:id', requireSection('events'), async (c) => {
   const id = c.req.param('id')
   const { title, type, dateStr, isoDate, location, preacher, desc, badge, badgeColor, image, isPopular } = await c.req.json()
+  reqStr(title, 'title', 200); oneOf(type, ['special', 'upcoming', 'annonce'] as const, 'type'); reqStr(dateStr, 'dateStr', 100)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(isoDate))) throw new ValidationError('Date invalide : isoDate')
+  str(location, 'location', 200); str(preacher, 'preacher', 200); str(desc, 'desc', 3000); str(badge, 'badge', 60); optUrl(image, 'image')
   const existing = await c.env.DB.prepare('SELECT id FROM church_events WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO church_events (id, title, type, date_str, iso_date, location, preacher, note, badge, badge_color, image, is_popular)
@@ -477,6 +556,7 @@ app.get('/testimonials', async (c) => {
 app.put('/testimonials/:id', requireSection('testimonials'), async (c) => {
   const id = c.req.param('id')
   const { author, since, text, img, category } = await c.req.json()
+  reqStr(author, 'author', 100); str(since, 'since', 60); reqStr(text, 'text', 3000); optUrl(img, 'img'); reqStr(category, 'category', 50)
   const existing = await c.env.DB.prepare('SELECT id FROM testimonials WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO testimonials (id, author, since, text, img, category) VALUES (?,?,?,?,?,?)
@@ -507,6 +587,7 @@ app.get('/study-documents', async (c) => {
 app.put('/study-documents/:id', requireSection('documents'), async (c) => {
   const id = c.req.param('id')
   const { title, description, url, category, fileType, coverImage } = await c.req.json()
+  reqStr(title, 'title', 200); str(description, 'description', 2000); reqStrUrl(url, 'url'); str(category, 'category', 100); reqStr(fileType, 'fileType', 10); optUrl(coverImage, 'coverImage')
   const existing = await c.env.DB.prepare('SELECT id FROM study_documents WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO study_documents (id, title, description, url, category, file_type, cover_image) VALUES (?,?,?,?,?,?,?)
@@ -557,11 +638,26 @@ app.get('/documents/download/:id', async (c) => {
 
 // ─── donation_projects ─────────────────────────────────────────────────────────
 
+// La colonne `status` vient de la migration 002 : tant qu'elle n'est pas passée,
+// le code retombe sur l'ancien comportement (tous les dons comptent).
+let donationStatusKnown = false
+async function hasDonationStatus(db: D1Database): Promise<boolean> {
+  if (donationStatusKnown) return true
+  try {
+    const row = await db.prepare("SELECT 1 AS ok FROM pragma_table_info('donations') WHERE name='status'").first()
+    donationStatusKnown = !!row
+  } catch {
+    donationStatusKnown = false
+  }
+  return donationStatusKnown
+}
+
 app.get('/donation-projects', async (c) => {
+  const confirmedOnly = (await hasDonationStatus(c.env.DB)) ? " AND d.status = 'confirmed'" : ''
   const { results } = await c.env.DB.prepare(
     `SELECT p.id, p.title, p.description, p.goal_amount AS goalAmount, p.currency,
             p.is_active AS isActive, p.created_at AS createdAt,
-            COALESCE((SELECT SUM(d.amount) FROM donations d WHERE d.project_id = p.id), 0) AS raisedAmount
+            COALESCE((SELECT SUM(d.amount) FROM donations d WHERE d.project_id = p.id${confirmedOnly}), 0) AS raisedAmount
      FROM donation_projects p ORDER BY p.created_at DESC`
   ).all<any>()
   return c.json(results.map((r: any) => ({ ...r, isActive: r.isActive === 1 })))
@@ -570,6 +666,7 @@ app.get('/donation-projects', async (c) => {
 app.put('/donation-projects/:id', requireSection('projects'), async (c) => {
   const id = c.req.param('id')
   const { title, description, goalAmount, currency, isActive } = await c.req.json()
+  reqStr(title, 'title', 200); str(description, 'description', 2000); posInt(goalAmount, 'goalAmount', 1e12); str(currency, 'currency', 10)
   const existing = await c.env.DB.prepare('SELECT id FROM donation_projects WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO donation_projects (id, title, description, goal_amount, currency, is_active, created_at)
@@ -595,43 +692,54 @@ app.delete('/donation-projects/:id', requireSection('projects'), async (c) => {
 // ─── donations ────────────────────────────────────────────────────────────────
 
 app.post('/donations', rateLimit('donations', 5, 600), async (c) => {
-  const { donorName, phone, amount, currency, contribType, paymentMethod, reference, projectId } = await c.req.json()
-  if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
-    return c.json({ error: 'Montant invalide' }, 400)
+  const body = await c.req.json()
+  const donorName = str(body.donorName, 'donorName', 100)
+  const phone = str(body.phone, 'phone', 30)
+  const amount = posInt(body.amount, 'amount', 1e10)
+  const currency = oneOf(body.currency, ['FCFA', 'XAF', 'EUR', 'USD'] as const, 'currency', 'FCFA')
+  const contribType = oneOf(body.contribType, ['Dîme', 'Offrande', 'Projets'] as const, 'contribType', 'Offrande')
+  const paymentMethod = oneOf(body.paymentMethod, ['OM', 'MTN', 'Card'] as const, 'paymentMethod', 'OM')
+  const reference = str(body.reference, 'reference', 100)
+  const projectId = str(body.projectId, 'projectId', 128)
+  if (projectId) {
+    const project = await c.env.DB.prepare('SELECT 1 FROM donation_projects WHERE id=?').bind(projectId).first()
+    if (!project) return c.json({ error: 'Projet inconnu' }, 400)
   }
   const id = 'don_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
-  await c.env.DB.prepare(
-    'INSERT INTO donations (id, donor_name, phone, amount, currency, contrib_type, payment_method, reference, project_id, submitted_at) VALUES (?,?,?,?,?,?,?,?,?,?)'
-  ).bind(
-    id,
-    donorName?.trim() || null,
-    phone?.trim() || null,
-    Math.round(Number(amount)),
-    currency || 'FCFA',
-    contribType || 'Offrande',
-    paymentMethod || 'OM',
-    reference || null,
-    projectId || null,
-    new Date().toISOString()
-  ).run()
+  // Un don déclaré en ligne n'est qu'une déclaration : il reste « pending » (et
+  // ne compte pas dans les totaux publics) tant qu'un admin ne l'a pas confirmé
+  // après vérification du paiement. Voir db/migrations/002_donation_status.sql.
+  if (await hasDonationStatus(c.env.DB)) {
+    await c.env.DB.prepare(
+      'INSERT INTO donations (id, donor_name, phone, amount, currency, contrib_type, payment_method, reference, project_id, submitted_at, status) VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+    ).bind(id, donorName, phone, amount, currency, contribType, paymentMethod, reference, projectId, new Date().toISOString(), 'pending').run()
+  } else {
+    await c.env.DB.prepare(
+      'INSERT INTO donations (id, donor_name, phone, amount, currency, contrib_type, payment_method, reference, project_id, submitted_at) VALUES (?,?,?,?,?,?,?,?,?,?)'
+    ).bind(id, donorName, phone, amount, currency, contribType, paymentMethod, reference, projectId, new Date().toISOString()).run()
+  }
   return c.json({ success: true, id })
 })
 
 // /donations/stats doit être avant /donations pour éviter que 'stats' soit capturé comme :id
 app.get('/donations/stats', requireSection('donations'), async (c) => {
   const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString()
+  // Les statistiques ne comptent que les dons confirmés (une fois la migration passée).
+  const hasStatus = await hasDonationStatus(c.env.DB)
+  const only = hasStatus ? " WHERE status='confirmed'" : ''
+  const and = hasStatus ? " AND status='confirmed'" : ''
   const [totals, byType, byMethod, monthly] = await Promise.all([
-    c.env.DB.prepare('SELECT COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM donations')
+    c.env.DB.prepare(`SELECT COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM donations${only}`)
       .first<{ count: number; total: number }>(),
     c.env.DB.prepare(
-      'SELECT contrib_type AS type, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM donations GROUP BY contrib_type ORDER BY total DESC'
+      `SELECT contrib_type AS type, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM donations${only} GROUP BY contrib_type ORDER BY total DESC`
     ).all<{ type: string; count: number; total: number }>(),
     c.env.DB.prepare(
-      'SELECT payment_method AS method, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM donations GROUP BY payment_method'
+      `SELECT payment_method AS method, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total FROM donations${only} GROUP BY payment_method`
     ).all<{ method: string; count: number; total: number }>(),
     c.env.DB.prepare(
       `SELECT strftime('%Y-%m', submitted_at) AS month, COUNT(*) AS count, COALESCE(SUM(amount),0) AS total
-       FROM donations WHERE submitted_at >= ? GROUP BY month ORDER BY month`
+       FROM donations WHERE submitted_at >= ?${and} GROUP BY month ORDER BY month`
     ).bind(sixMonthsAgo).all<{ month: string; count: number; total: number }>()
   ])
   const thisMonth = new Date().toISOString().slice(0, 7)
@@ -648,16 +756,30 @@ app.get('/donations/stats', requireSection('donations'), async (c) => {
 })
 
 app.get('/donations', requireSection('donations'), async (c) => {
+  const statusCol = (await hasDonationStatus(c.env.DB)) ? 'd.status' : "'confirmed'"
   const { results } = await c.env.DB.prepare(
     `SELECT d.id, d.donor_name AS donorName, d.phone, d.amount, d.currency,
             d.contrib_type AS contribType, d.payment_method AS paymentMethod,
             d.reference, d.project_id AS projectId, d.submitted_at AS submittedAt,
-            p.title AS projectTitle
+            p.title AS projectTitle, ${statusCol} AS status
      FROM donations d
      LEFT JOIN donation_projects p ON p.id = d.project_id
-     ORDER BY d.submitted_at DESC`
+     ORDER BY d.submitted_at DESC LIMIT 2000`
   ).all()
   return c.json(results)
+})
+
+// Confirme un don après vérification du paiement : il entre alors dans les totaux.
+app.patch('/donations/:id/confirm', requireSection('donations'), async (c) => {
+  if (!(await hasDonationStatus(c.env.DB))) {
+    return c.json({ error: 'Migration 002_donation_status.sql à exécuter avant de confirmer des dons' }, 409)
+  }
+  const id = c.req.param('id')
+  const row = await c.env.DB.prepare('SELECT donor_name, amount, currency FROM donations WHERE id=?').bind(id).first<{donor_name:string|null,amount:number,currency:string}>()
+  if (!row) return c.json({ error: 'Don introuvable' }, 404)
+  await c.env.DB.prepare("UPDATE donations SET status='confirmed' WHERE id=?").bind(id).run()
+  await audit(c.env.DB, c.get('user').email, 'Confirmation', 'Dons', id, `Confirmation du don de ${row.donor_name ?? 'Anonyme'} : ${row.amount} ${row.currency}`)
+  return c.json({ success: true })
 })
 
 app.delete('/donations/:id', requireSection('donations'), async (c) => {
@@ -671,18 +793,22 @@ app.delete('/donations/:id', requireSection('donations'), async (c) => {
 // ─── prayer_requests ───────────────────────────────────────────────────────────
 
 app.post('/prayer-requests', rateLimit('prayer-requests', 5, 600), async (c) => {
-  const { name, phone, message, type, isPublic } = await c.req.json()
-  if (!message?.trim()) return c.json({ error: 'Le message est requis' }, 400)
+  const body = await c.req.json()
+  const name = str(body.name, 'name', 100)
+  const phone = str(body.phone, 'phone', 30)
+  const message = reqStr(body.message, 'message', 3000)
   const id = 'prq_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
   await c.env.DB.prepare(
     'INSERT INTO prayer_requests (id, name, phone, message, type, is_public, submitted_at) VALUES (?,?,?,?,?,?,?)'
   ).bind(
     id,
-    name?.trim() || null,
-    phone?.trim() || null,
-    message.trim(),
-    type === 'testimony' ? 'testimony' : 'prayer',
-    isPublic !== false ? 1 : 0,
+    name,
+    phone,
+    message,
+    body.type === 'testimony' ? 'testimony' : 'prayer',
+    // Privé par défaut : une demande de prière ne devient publique que si la
+    // personne le choisit explicitement.
+    body.isPublic === true ? 1 : 0,
     new Date().toISOString()
   ).run()
   return c.json({ success: true, id })
@@ -709,7 +835,7 @@ app.get('/prayer-requests', requireSection('prayers'), async (c) => {
 app.patch('/prayer-requests/:id/reply', requireSection('prayers'), async (c) => {
   const id = c.req.param('id')
   const { reply } = await c.req.json<{ reply: string }>()
-  if (!reply?.trim()) return c.json({ error: 'Réponse vide' }, 400)
+  reqStr(reply, 'reply', 3000)
   const now = new Date().toISOString()
   await c.env.DB.prepare(
     'UPDATE prayer_requests SET admin_reply=?, replied_at=? WHERE id=?'
@@ -743,7 +869,7 @@ const VIDEO_UPLOAD_TYPES = new Set(['video/mp4', 'video/webm', 'video/quicktime'
 
 app.post('/upload', requireAdmin, async (c) => {
   const formData = await c.req.formData()
-  const file = formData.get('file') as File | null
+  const file = formData.get('file') as unknown as File | null
   if (!file) return c.json({ error: 'Aucun fichier fourni' }, 400)
 
   const isVideo = VIDEO_UPLOAD_TYPES.has(file.type)
@@ -752,6 +878,10 @@ app.post('/upload', requireAdmin, async (c) => {
 
   const ext = ALLOWED_UPLOAD_TYPES[file.type]
   if (!ext) return c.json({ error: 'Type de fichier non autorisé' }, 400)
+
+  // `file.type` est déclaré par le client : on vérifie aussi l'en-tête binaire.
+  const head = new Uint8Array(await file.slice(0, 16).arrayBuffer())
+  if (!matchesMagicBytes(file.type, head)) return c.json({ error: 'Le contenu du fichier ne correspond pas à son type' }, 400)
 
   const key = `uploads/${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`
 
@@ -814,7 +944,7 @@ async function resolveChannelId(apiKey: string): Promise<{ channelId: string; up
 
   const result = { channelId, uploadsPlaylistId }
   await cache.put(cacheKey, new Response(JSON.stringify(result), {
-    headers: { 'Cache-Control': `max-age=${CACHE_TTL}`, 'Content-Type': 'application/json' }
+    headers: { 'Cache-Control': 'max-age=86400', 'Content-Type': 'application/json' }
   }))
   return result
 }
@@ -843,36 +973,51 @@ app.get('/youtube/live', async (c) => {
 
   const cache = caches.default
   const cacheKey = new Request('https://internal-cache.dev/yt-live')
+  const staleKey = new Request('https://internal-cache.dev/yt-live-stale')
   const cached = await cache.match(cacheKey)
   if (cached) return cached
 
   try {
-    const { channelId } = await resolveChannelId(apiKey)
-    const data = await fetchJson(
-      `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&eventType=live&key=${apiKey}`
+    const { channelId, uploadsPlaylistId } = await resolveChannelId(apiKey)
+    // Détection à 2 unités de quota (playlistItems + videos) au lieu de 100 par
+    // `search.list` : le quota quotidien (10 000) s'épuisait sinon en quelques
+    // dizaines de ratés de cache et faisait tomber le direct. Un direct apparaît
+    // dans la playlist « uploads » de la chaîne dès son démarrage.
+    const uploads = await fetchJson(
+      `https://www.googleapis.com/youtube/v3/playlistItems?part=contentDetails&playlistId=${uploadsPlaylistId}&maxResults=5&key=${apiKey}`
     )
-    let result: any
-    if (data.items?.length > 0) {
-      const item = data.items[0]
-      result = { isLive: true, videoId: item.id.videoId, title: item.snippet.title, channelId }
-    } else {
-      const recentData = await fetchJson(
-        `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&order=date&maxResults=1&key=${apiKey}`
+    const ids: string[] = (uploads.items || []).map((i: any) => i.contentDetails?.videoId).filter(Boolean)
+    let result: any = { isLive: false, videoId: null, channelId }
+    if (ids.length > 0) {
+      const vids = await fetchJson(
+        `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${ids.join(',')}&key=${apiKey}`
       )
-      const item = recentData.items?.[0]
-      result = item
-        ? { isLive: false, videoId: item.id.videoId, title: item.snippet.title, description: item.snippet.description, publishedAt: item.snippet.publishedAt, channelId }
-        : { isLive: false, videoId: null, channelId }
+      const items: any[] = vids.items || []
+      const live = items.find((v) => v.snippet?.liveBroadcastContent === 'live')
+      if (live) {
+        result = { isLive: true, videoId: live.id, title: live.snippet.title, channelId }
+      } else {
+        const latest = items.find((v) => v.id === ids[0]) ?? items[0]
+        if (latest) {
+          result = {
+            isLive: false, videoId: latest.id, title: latest.snippet.title,
+            description: latest.snippet.description, publishedAt: latest.snippet.publishedAt, channelId,
+          }
+        }
+      }
     }
-    // TTL court : reste réactif si un direct démarre, tout en évitant de
-    // ré-interroger l'API YouTube (2-3 appels en cascade) à chaque visite.
-    const response = new Response(JSON.stringify(result), {
-      headers: { 'Cache-Control': 'max-age=45', 'Content-Type': 'application/json' }
-    })
+    // TTL court pour rester réactif à un démarrage de direct ; une copie « de
+    // secours » plus longue sert de repli si l'API YouTube échoue (quota, panne).
+    const body = JSON.stringify(result)
+    const response = new Response(body, { headers: { 'Cache-Control': 'max-age=60', 'Content-Type': 'application/json' } })
     await cache.put(cacheKey, response.clone())
+    await cache.put(staleKey, new Response(body, { headers: { 'Cache-Control': 'max-age=3600', 'Content-Type': 'application/json' } }))
     return response
   } catch (err: any) {
-    return c.json({ error: err.message }, 500)
+    console.error('youtube live error', err?.message)
+    const stale = await cache.match(staleKey)
+    if (stale) return stale
+    return c.json({ error: 'Service YouTube momentanément indisponible' }, 502)
   }
 })
 
@@ -899,7 +1044,8 @@ app.get('/youtube/playlists', async (c) => {
     await cache.put(cacheKey, response.clone())
     return response
   } catch (err: any) {
-    return c.json({ error: err.message }, 500)
+    console.error('youtube error', err?.message)
+    return c.json({ error: 'Service YouTube momentanément indisponible' }, 502)
   }
 })
 
@@ -1017,44 +1163,70 @@ app.get('/youtube/sermons', async (c) => {
     await cache.put(cacheKey, response.clone())
     return response
   } catch (err: any) {
-    return c.json({ error: err.message }, 500)
+    console.error('youtube error', err?.message)
+    return c.json({ error: 'Service YouTube momentanément indisponible' }, 502)
   }
 })
 
+// Les infos vidéo ne sont servies que pour des IDs déjà enregistrés comme liens
+// recommandés (le site public en a besoin) ou à un admin connecté (auto-remplissage
+// du formulaire) : sinon n'importe qui pouvait consommer le quota YouTube.
+async function canQueryVideoInfo(c: Context<HonoApp>, id: string): Promise<boolean> {
+  const known = await c.env.DB.prepare('SELECT 1 FROM recommended_links WHERE youtube_id=?').bind(id).first()
+  if (known) return true
+  const auth = await authenticate(c)
+  return !('res' in auth)
+}
+
 app.get('/youtube/video-info', async (c) => {
-  let videoId = (c.req.query('urlOrId') || '').trim()
-  if (!videoId) return c.json({ error: 'Paramètre urlOrId manquant' }, 400)
+  const input = (c.req.query('urlOrId') || '').trim()
+  if (!input) return c.json({ error: 'Paramètre urlOrId manquant' }, 400)
+  if (input.length > 300) return c.json({ error: 'Paramètre urlOrId invalide' }, 400)
   const apiKey = c.env.YOUTUBE_API_KEY
 
   // Playlist ? (URL contenant list=… ou ID brut PL/UU/FL/OL…)
-  const listMatch = videoId.match(/[?&]list=([\w-]+)/)
-  const playlistId = listMatch ? listMatch[1] : (/^(PL|UU|FL|OL)[\w-]{10,}$/.test(videoId) ? videoId : null)
-  if (playlistId) {
-    if (!apiKey) return c.json({ error: 'Clé API YouTube absente' }, 500)
-    try {
+  const listMatch = input.match(/[?&]list=([\w-]+)/)
+  const playlistId = listMatch ? listMatch[1] : (/^(PL|UU|FL|OL)[\w-]{10,}$/.test(input) ? input : null)
+  let videoId = ''
+  if (!playlistId) {
+    if (/^[\w-]{11}$/.test(input)) {
+      videoId = input
+    } else {
+      const m = input.match(/(?:youtu\.be\/|\/v\/|\/embed\/|watch\?v=|[?&]v=|shorts\/)([\w-]{11})(?![\w-])/)
+      if (!m) return c.json({ error: 'ID YouTube introuvable' }, 400)
+      videoId = m[1]
+    }
+  }
+  const id = (playlistId ?? videoId) as string
+  if (!(await canQueryVideoInfo(c, id))) return c.json({ error: 'Non autorisé' }, 403)
+
+  const cache = caches.default
+  const cacheKey = new Request(`https://internal-cache.dev/yt-info-${id}`)
+  const cached = await cache.match(cacheKey)
+  if (cached) return cached
+  const done = async (body: unknown) => {
+    const res = new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=3600' } })
+    await cache.put(cacheKey, res.clone())
+    return res
+  }
+
+  try {
+    if (playlistId) {
+      if (!apiKey) return c.json({ error: 'Clé API YouTube absente' }, 500)
       const data = await fetchJson(
         `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&id=${playlistId}&key=${apiKey}`
       )
       const item = data.items?.[0]
       if (!item) return c.json({ error: 'Playlist introuvable' }, 404)
-      return c.json({
+      return await done({
         id: playlistId, isPlaylist: true,
         title: item.snippet.title, preacher: item.snippet.channelTitle,
         duration: `${item.contentDetails?.itemCount || 0} vidéos`,
         image: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || '',
         description: item.snippet.description || ''
       })
-    } catch (err: any) {
-      return c.json({ error: err.message }, 500)
     }
-  }
 
-  if (videoId.length !== 11) {
-    const match = videoId.match(/^.*(youtu\.be\/|v\/|embed\/|watch\?v=|&v=|shorts\/)([^#&?]*)/)
-    if (match?.[2]?.length === 11) videoId = match[2]
-    else return c.json({ error: 'ID YouTube introuvable' }, 400)
-  }
-  try {
     if (apiKey) {
       const data = await fetchJson(
         `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
@@ -1062,9 +1234,9 @@ app.get('/youtube/video-info', async (c) => {
       if (data.items?.length > 0) {
         const item = data.items[0]
         const m = (item.contentDetails?.duration || '').match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
-        const [, h, min, s] = (m || []).map((v: any) => (v ? parseInt(v) : 0))
-        const duration = h > 0 ? `${h}h ${min}m` : min > 0 ? `${min} min` : `${s}s`
-        return c.json({
+        const [, h, min, sec] = (m || []).map((v: any) => (v ? parseInt(v) : 0))
+        const duration = h > 0 ? `${h}h ${min}m` : min > 0 ? `${min} min` : `${sec}s`
+        return await done({
           id: videoId, title: item.snippet.title, preacher: item.snippet.channelTitle,
           duration, image: item.snippet.thumbnails?.high?.url || `https://img.youtube.com/vi/${videoId}/0.jpg`,
           description: item.snippet.description || ''
@@ -1072,12 +1244,13 @@ app.get('/youtube/video-info', async (c) => {
       }
     }
     const fb = await fetchJson(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`)
-    return c.json({
+    return await done({
       id: videoId, title: fb.title || 'Message', preacher: fb.author_name || 'Chaîne',
       duration: '15 min', image: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`, description: ''
     })
   } catch (err: any) {
-    return c.json({ error: err.message }, 500)
+    console.error('youtube error', err?.message)
+    return c.json({ error: 'Service YouTube momentanément indisponible' }, 502)
   }
 })
 
@@ -1093,6 +1266,7 @@ app.get('/blog-categories', async (c) => {
 app.put('/blog-categories/:id', requireSection('blog'), async (c) => {
   const id = c.req.param('id')
   const { name } = await c.req.json()
+  reqStr(name, 'name', 100)
   const existing = await c.env.DB.prepare('SELECT id FROM blog_categories WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO blog_categories (id, name) VALUES (?, ?)
@@ -1137,6 +1311,8 @@ app.get('/blog-posts', async (c) => {
 app.put('/blog-posts/:id', requireSection('blog'), async (c) => {
   const id = c.req.param('id')
   const data = await c.req.json() as any
+  reqStr(data.title, 'title', 300); reqStr(data.category, 'category', 100); reqStr(data.author, 'author', 100)
+  optUrl(data.coverImage, 'coverImage'); str(data.excerpt, 'excerpt', 1000); reqStr(data.content, 'content', 200000); reqStr(data.publishedAt, 'publishedAt', 40)
   const existing = await c.env.DB.prepare('SELECT id FROM blog_posts WHERE id=?').bind(id).first()
   await c.env.DB.prepare(`
     INSERT INTO blog_posts (id, title, category, author, cover_image, excerpt, content, published_at, is_published)
@@ -1162,13 +1338,13 @@ app.delete('/blog-posts/:id', requireSection('blog'), async (c) => {
 // ─── newsletter_subscribers ────────────────────────────────────────────────────
 
 app.post('/newsletter', rateLimit('newsletter', 5, 600), async (c) => {
-  const { email } = await c.req.json()
-  if (!email?.trim() || !email.includes('@')) return c.json({ error: 'Adresse email invalide' }, 400)
+  const { email: rawEmail } = await c.req.json()
+  const email = vEmail(rawEmail, 'email', true) as string
   const id = 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
   try {
     await c.env.DB.prepare(
       'INSERT INTO newsletter_subscribers (id, email, subscribed_at) VALUES (?,?,?)'
-    ).bind(id, email.trim().toLowerCase(), new Date().toISOString()).run()
+    ).bind(id, email, new Date().toISOString()).run()
   } catch (e: any) {
     if (e?.message?.includes('UNIQUE') || e?.message?.includes('unique')) {
       return c.json({ error: 'Cette adresse email est déjà abonnée.' }, 409)
@@ -1215,12 +1391,11 @@ app.get('/admins', requireSuperAdmin, async (c) => {
 
 app.post('/admins', requireSuperAdmin, async (c) => {
   const { email, password, sections } = await c.req.json()
-  if (!email?.trim() || !email.includes('@')) return c.json({ error: 'Email invalide' }, 400)
-  if (password && password.length < 8) {
-    return c.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, 400)
+  const normalized = vEmail(email, 'email', true) as string
+  if (password && (typeof password !== 'string' || password.length < 8 || password.length > 256)) {
+    return c.json({ error: 'Le mot de passe doit contenir entre 8 et 256 caractères' }, 400)
   }
-  const normalized = email.trim().toLowerCase()
-  if (normalized === c.env.ADMIN_EMAIL.toLowerCase()) return c.json({ error: 'Cet email est déjà le super-administrateur' }, 409)
+  if (normalized === normEmail(c.env.ADMIN_EMAIL)) return c.json({ error: 'Cet email est déjà le super-administrateur' }, 409)
   const hash = password ? await hashPassword(password) : null
   const cleanSections = sanitizeSections(sections)
   try {
@@ -1241,7 +1416,7 @@ app.post('/admins', requireSuperAdmin, async (c) => {
 app.put('/admins/:email/sections', requireSuperAdmin, async (c) => {
   const email = decodeURIComponent(c.req.param('email')).trim().toLowerCase()
   const { sections } = await c.req.json()
-  if (email === c.env.ADMIN_EMAIL.toLowerCase()) return c.json({ error: 'Le super-administrateur a déjà accès à tout' }, 400)
+  if (email === normEmail(c.env.ADMIN_EMAIL)) return c.json({ error: 'Le super-administrateur a déjà accès à tout' }, 400)
   const existing = await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(email).first()
   if (!existing) return c.json({ error: 'Administrateur introuvable' }, 404)
   const clean = sanitizeSections(sections)
@@ -1251,7 +1426,7 @@ app.put('/admins/:email/sections', requireSuperAdmin, async (c) => {
 })
 
 app.delete('/admins/:email', requireSuperAdmin, async (c) => {
-  const email = decodeURIComponent(c.req.param('email'))
+  const email = decodeURIComponent(c.req.param('email')).trim().toLowerCase()
   await c.env.DB.prepare('DELETE FROM admins WHERE email=?').bind(email).run()
   await audit(c.env.DB, c.get('user').email, 'Suppression', 'Administrateurs', email, `Révocation administrateur : "${email}"`)
   return c.json({ success: true })
@@ -1265,7 +1440,7 @@ app.put('/admins/:email/password', requireSuperAdmin, async (c) => {
   if (!password || password.length < 8) {
     return c.json({ error: 'Le mot de passe doit contenir au moins 8 caractères' }, 400)
   }
-  const isSelf = email === c.env.ADMIN_EMAIL.toLowerCase()
+  const isSelf = email === normEmail(c.env.ADMIN_EMAIL)
   const existing = await c.env.DB.prepare('SELECT 1 FROM admins WHERE email=?').bind(email).first()
   if (!existing && !isSelf) return c.json({ error: 'Administrateur introuvable' }, 404)
   const hash = await hashPassword(password)
@@ -1305,6 +1480,8 @@ app.get('/partners', async (c) => {
 app.put('/partners/:id', requireSection('partners'), async (c) => {
   const id = c.req.param('id')
   const { firstName, lastName, title, church, location, bio, youtubeUrl, website, avatarUrl } = await c.req.json()
+  reqStr(firstName, 'firstName', 100); reqStr(lastName, 'lastName', 100); str(title, 'title', 100); str(church, 'church', 200); str(location, 'location', 200)
+  str(bio, 'bio', 3000); reqStrUrl(youtubeUrl, 'youtubeUrl'); optUrl(website, 'website'); optUrl(avatarUrl, 'avatarUrl')
   const existing = await c.env.DB.prepare('SELECT id FROM partners WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO partners (id, first_name, last_name, title, church, location, bio, youtube_url, website, avatar_url, created_at)
@@ -1341,6 +1518,7 @@ app.get('/library-books', async (c) => {
 app.put('/library-books/:id', requireSection('books'), async (c) => {
   const id = c.req.param('id')
   const { title, author, category, description, coverImage } = await c.req.json()
+  reqStr(title, 'title', 200); reqStr(author, 'author', 200); str(category, 'category', 100); str(description, 'description', 3000); optUrl(coverImage, 'coverImage')
   const existing = await c.env.DB.prepare('SELECT id FROM library_books WHERE id=?').bind(id).first()
   await c.env.DB.prepare(
     `INSERT INTO library_books (id, title, author, category, description, cover_image, created_at)
@@ -1363,12 +1541,16 @@ app.delete('/library-books/:id', requireSection('books'), async (c) => {
 // ─── book_orders ────────────────────────────────────────────────────────────────
 
 app.post('/book-orders', rateLimit('book-orders', 5, 600), async (c) => {
-  const { bookId, bookTitle, name, phone, email } = await c.req.json()
-  if (!bookTitle?.trim() || !name?.trim()) return c.json({ error: 'Nom et ouvrage requis' }, 400)
+  const body = await c.req.json()
+  const bookTitle = reqStr(body.bookTitle, 'bookTitle', 200)
+  const name = reqStr(body.name, 'name', 100)
+  const bookId = str(body.bookId, 'bookId', 128)
+  const phone = str(body.phone, 'phone', 30)
+  const orderEmail = vEmail(body.email, 'email')
   const id = 'bko_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
   await c.env.DB.prepare(
     'INSERT INTO book_orders (id, book_id, book_title, name, phone, email, submitted_at) VALUES (?,?,?,?,?,?,?)'
-  ).bind(id, bookId ?? null, bookTitle.trim(), name.trim(), phone?.trim() || null, email?.trim() || null, new Date().toISOString()).run()
+  ).bind(id, bookId, bookTitle, name, phone, orderEmail, new Date().toISOString()).run()
   return c.json({ success: true, id })
 })
 
@@ -1391,12 +1573,16 @@ app.delete('/book-orders/:id', requireSection('books'), async (c) => {
 // ─── contact_messages ───────────────────────────────────────────────────────────
 
 app.post('/contact-messages', rateLimit('contact-messages', 5, 600), async (c) => {
-  const { name, email, phone, subject, message } = await c.req.json()
-  if (!name?.trim() || !email?.trim() || !message?.trim()) return c.json({ error: 'Nom, email et message sont requis' }, 400)
+  const body = await c.req.json()
+  const name = reqStr(body.name, 'name', 100)
+  const contactEmail = vEmail(body.email, 'email', true) as string
+  const phone = str(body.phone, 'phone', 30)
+  const subject = str(body.subject, 'subject', 200)
+  const message = reqStr(body.message, 'message', 5000)
   const id = 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
   await c.env.DB.prepare(
     'INSERT INTO contact_messages (id, name, email, phone, subject, message, submitted_at) VALUES (?,?,?,?,?,?,?)'
-  ).bind(id, name.trim(), email.trim(), phone?.trim() || null, subject?.trim() || null, message.trim(), new Date().toISOString()).run()
+  ).bind(id, name, contactEmail, phone, subject, message, new Date().toISOString()).run()
   return c.json({ success: true, id })
 })
 
@@ -1423,33 +1609,36 @@ app.delete('/contact-messages/:id', requireSection('contactMessages'), async (c)
 
 app.get('/video-comments', async (c) => {
   const videoId = c.req.query('videoId') || ''
-  if (!videoId) return c.json({ error: 'videoId requis' }, 400)
+  if (!videoId || videoId.length > 64) return c.json({ error: 'videoId requis' }, 400)
   const results = await d1All(c.env.DB.prepare(
     `SELECT id, video_id AS videoId, author_name AS authorName, message, submitted_at AS submittedAt, parent_id AS parentId
-     FROM video_comments WHERE video_id=? ORDER BY submitted_at DESC`
+     FROM video_comments WHERE video_id=? ORDER BY submitted_at DESC LIMIT 500`
   ).bind(videoId))
   return c.json(results)
 })
 
 app.post('/video-comments', rateLimit('video-comments', 8, 600), async (c) => {
-  const { videoId, videoTitle, authorName, message, parentId } = await c.req.json()
-  if (!videoId?.trim() || !authorName?.trim() || !message?.trim()) {
-    return c.json({ error: 'Vidéo, nom et message sont requis' }, 400)
-  }
+  const body = await c.req.json()
+  const videoId = reqStr(body.videoId, 'videoId', 64)
+  if (!/^[\w-]+$/.test(videoId)) throw new ValidationError('Champ invalide : videoId')
+  const videoTitle = str(body.videoTitle, 'videoTitle', 200)
+  const authorName = reqStr(body.authorName, 'authorName', 60)
+  const message = reqStr(body.message, 'message', 800)
+  const parentId = str(body.parentId, 'parentId', 64)
   let parent: string | null = null
   if (parentId) {
     // Une réponse ne peut viser qu'un commentaire racine (pas de réponse à une
     // réponse) de la même vidéo — un seul niveau de fil.
     const parentRow = await c.env.DB.prepare(
       'SELECT id FROM video_comments WHERE id=? AND video_id=? AND parent_id IS NULL'
-    ).bind(parentId, videoId.trim()).first()
+    ).bind(parentId, videoId).first()
     if (!parentRow) return c.json({ error: 'Commentaire parent introuvable' }, 400)
     parent = parentId
   }
   const id = 'vc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
   await c.env.DB.prepare(
     'INSERT INTO video_comments (id, video_id, video_title, author_name, message, submitted_at, parent_id) VALUES (?,?,?,?,?,?,?)'
-  ).bind(id, videoId.trim(), videoTitle?.trim() || null, authorName.trim(), message.trim(), new Date().toISOString(), parent).run()
+  ).bind(id, videoId, videoTitle, authorName, message, new Date().toISOString(), parent).run()
   return c.json({ success: true, id })
 })
 
@@ -1475,7 +1664,13 @@ app.delete('/video-comments/:id', requireSection('videoComments'), async (c) => 
 app.get('/youtube/channel-playlists', async (c) => {
   const channelUrl = c.req.query('channelUrl') || ''
   const apiKey = c.env.YOUTUBE_API_KEY
-  if (!channelUrl || !apiKey) return c.json([])
+  if (!channelUrl || !apiKey || channelUrl.length > 300) return c.json([])
+
+  // Uniquement les chaînes enregistrées comme partenaires : sans cette liste
+  // blanche, chaque URL arbitraire consommait du quota YouTube (jusqu'à 100
+  // unités par recherche) et permettait de le vider.
+  const knownPartner = await c.env.DB.prepare('SELECT 1 FROM partners WHERE youtube_url=?').bind(channelUrl).first()
+  if (!knownPartner) return c.json([])
 
   const cache = caches.default
   const cacheKey = new Request(`https://internal-cache.dev/yt-ch-pls-${encodeURIComponent(channelUrl)}`)
@@ -1532,7 +1727,8 @@ app.get('/youtube/channel-playlists', async (c) => {
     await cache.put(cacheKey, response.clone())
     return response
   } catch (err: any) {
-    return c.json({ error: err.message }, 500)
+    console.error('youtube error', err?.message)
+    return c.json({ error: 'Service YouTube momentanément indisponible' }, 502)
   }
 })
 

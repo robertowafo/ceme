@@ -38,6 +38,7 @@ import {
   ChevronDown,
   Video,
   MessageCircle,
+  CheckCircle2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
@@ -50,7 +51,7 @@ import {
   getTestimonials, saveTestimonial, deleteTestimonial, TestimonialItem,
   getStudyDocuments, saveStudyDocument, deleteStudyDocument, StudyDocument,
   getAllPrayerRequests, deletePrayerRequest, PrayerRequest,
-  getAllDonations, getDonationStats, deleteDonation, Donation, DonationStats,
+  getAllDonations, getDonationStats, deleteDonation, confirmDonation, Donation, DonationStats,
   getAllBlogPosts, saveBlogPost, deleteBlogPost, BlogPost,
   getBlogCategories, saveBlogCategory, deleteBlogCategory, BlogCategory,
   getNewsletterSubscribers, deleteNewsletterSubscriber, NewsletterSubscriber,
@@ -592,6 +593,18 @@ export function Admin() {
   // Delete Handlers
   const handleDelete = (id: string) => {
     setDeleteConfirmId(id);
+  };
+
+  // Un don déclaré en ligne n'entre dans les totaux qu'après vérification du paiement.
+  const handleConfirmDonation = async (id: string) => {
+    try {
+      await confirmDonation(id);
+      const [data, stats] = await Promise.all([getAllDonations(), getDonationStats()]);
+      setDonations(data);
+      setDonationStats(stats);
+    } catch (err: any) {
+      alert(err?.message || 'Impossible de confirmer ce don.');
+    }
   };
 
   const handleConfirmDelete = async () => {
@@ -1685,9 +1698,12 @@ export function Admin() {
                                   )}
                                 </td>
                                 <td className="py-4 pr-4">
-                                  <span className={`flex items-center gap-1 text-[10px] font-bold ${d.paymentMethod === 'OM' ? 'text-orange-400' : 'text-blue-400'}`}>
-                                    {d.paymentMethod === 'OM' ? <Smartphone className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
-                                    {d.paymentMethod === 'OM' ? 'Orange Money' : 'Carte'}
+                                  <span className={`flex items-center gap-1 text-[10px] font-bold ${d.paymentMethod === 'OM' ? 'text-orange-400' : d.paymentMethod === 'MTN' ? 'text-yellow-400' : 'text-blue-400'}`}>
+                                    {d.paymentMethod === 'OM' || d.paymentMethod === 'MTN' ? <Smartphone className="w-3 h-3" /> : <CreditCard className="w-3 h-3" />}
+                                    {d.paymentMethod === 'OM' ? 'Orange Money' : d.paymentMethod === 'MTN' ? 'MTN MoMo' : 'Virement / Autre'}
+                                  </span>
+                                  <span className={`mt-1 inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider ${d.status === 'pending' ? 'bg-amber-500/15 text-amber-300' : 'bg-emerald-500/10 text-emerald-300/80'}`}>
+                                    {d.status === 'pending' ? 'À vérifier' : 'Confirmé'}
                                   </span>
                                 </td>
                                 <td className="py-4 pr-4 font-mono text-white/40 text-[10px]">
@@ -1697,6 +1713,16 @@ export function Admin() {
                                   {new Date(d.submittedAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                 </td>
                                 <td className="py-4 text-right">
+                                  {d.status === 'pending' && (
+                                    <button
+                                      onClick={() => handleConfirmDonation(d.id)}
+                                      className="p-1.5 rounded-lg hover:bg-white/5 text-amber-300 hover:text-emerald-400 transition-colors"
+                                      title="Confirmer ce don (paiement vérifié)"
+                                      aria-label="Confirmer ce don"
+                                    >
+                                      <CheckCircle2 className="w-4 h-4" />
+                                    </button>
+                                  )}
                                   <button
                                     onClick={() => handleDelete(d.id)}
                                     className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"
