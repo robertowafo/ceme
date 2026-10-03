@@ -276,7 +276,7 @@ export function Live() {
                     Séquencez ou configurez le lien de votre chaîne continue. Collez le lien direct (ex: chaîne YouTube Live, intégration VMix ou lecteur vidéo HLS). Si laissé vide, la Web-TV utilisera le signal live principal de Grâce TV.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-3">
-                    <input
+                    <input aria-label="Lien du flux H24"
                       type="text"
                       className="flex-1 bg-black/50 border border-white/20 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-grace-orange"
                       placeholder="Ex: https://www.youtube.com/watch?v=... ou widget d'intégration"
