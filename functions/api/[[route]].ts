@@ -381,7 +381,9 @@ app.put('/auth/password', requireAdmin, async (c) => {
 
 app.get('/auth/me', async (c) => {
   const auth = await authenticate(c)
-  if ('res' in auth) return auth.res
+  // Visiteur non connecté : réponse normale (200) plutôt qu'un 401 qui s'afficherait
+  // comme une erreur dans la console de chaque visiteur du site public.
+  if ('res' in auth) return c.json({ user: null })
   const { payload, isSuper } = auth
   const sections = sectionsForUser(isSuper, isSuper ? [] : await getAdminSections(c.env.DB, payload.email))
   return c.json({ user: { email: payload.email, name: payload.name, picture: payload.picture, isAdmin: true, isSuperAdmin: isSuper, sections } })
