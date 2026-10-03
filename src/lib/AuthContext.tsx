@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useGoogleLogin } from '@react-oauth/google';
 
 export interface AppUser {
   email: string;
@@ -18,7 +17,7 @@ interface AuthContextType {
   /** Sections autorisées pour l'utilisateur courant (vide si non connecté). */
   sections: string[];
   isLoading: boolean;
-  loginWithGoogle: () => void;
+  loginWithGoogleToken: (accessToken: string) => Promise<void>;
   loginWithPassword: (email: string, password: string) => Promise<void>;
   logout: () => void;
 }
@@ -47,37 +46,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setIsLoading(true);
-      try {
-        const res = await fetch('/api/auth/google', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accessToken: tokenResponse.access_token })
-        });
-        if (!res.ok) throw new Error('Échec de l\'authentification');
-        const data = await res.json() as { user: AppUser };
-        setUser(data.user);
-        setIsAdmin(data.user.isAdmin ?? false);
-        setIsSuperAdmin(data.user.isSuperAdmin ?? false);
-      } catch (error) {
-        console.error('Erreur de connexion:', error);
-        throw error;
-      } finally {
-        setIsLoading(false);
-      }
-    },
-    onError: (error) => {
-      console.error('Erreur Google OAuth:', error);
+  // Reçoit le jeton obtenu par le bouton Google (components/GoogleSignInButton) et
+  // l'échange contre une session (cookie HttpOnly posé par l'API).
+  const loginWithGoogleToken = async (accessToken: string) => {
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken })
+      });
+      if (!res.ok) throw new Error('Échec de l\'authentification');
+      const data = await res.json() as { user: AppUser };
+      setUser(data.user);
+      setIsAdmin(data.user.isAdmin ?? false);
+      setIsSuperAdmin(data.user.isSuperAdmin ?? false);
+    } finally {
       setIsLoading(false);
     }
-  });
-
-  const loginWithGoogle = () => {
-    setIsLoading(true);
-    googleLogin();
   };
 
   const loginWithPassword = async (email: string, password: string) => {
@@ -107,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAdmin, isSuperAdmin, sections: user?.sections ?? [], isLoading, loginWithGoogle, loginWithPassword, logout }}>
+    <AuthContext.Provider value={{ user, isAdmin, isSuperAdmin, sections: user?.sections ?? [], isLoading, loginWithGoogleToken, loginWithPassword, logout }}>
       {children}
     </AuthContext.Provider>
   );

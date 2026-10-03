@@ -8,7 +8,6 @@ import { useEffect, lazy, Suspense } from 'react';
 import { RootLayout } from './components/layout/RootLayout';
 import { EgliseLayout } from './components/layout/EgliseLayout';
 import { AuthProvider } from './lib/AuthContext';
-import { Admin } from './pages/Admin';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -30,6 +29,9 @@ const SupportGraceTV = lazy(() => import('./pages/SupportGraceTV').then((m) => (
 const PrayerGraceTV = lazy(() => import('./pages/PrayerGraceTV').then((m) => ({ default: m.PrayerGraceTV })));
 const Contact = lazy(() => import('./pages/Contact').then((m) => ({ default: m.Contact })));
 const Lecture = lazy(() => import('./pages/Lecture').then((m) => ({ default: m.Lecture })));
+// Le dashboard (très volumineux) n'est téléchargé que par ceux qui ouvrent /admin.
+const Admin = lazy(() => import('./pages/Admin').then((m) => ({ default: m.Admin })));
+const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
 const DocumentReader = lazy(() => import('./pages/DocumentReader').then((m) => ({ default: m.DocumentReader })));
 
 // Univers Église CEME
@@ -101,6 +103,9 @@ export default function App() {
               <Route path="blog" element={<Navigate to="/eglise/blog" replace />} />
               <Route path="blog/:id" element={<RedirectBlogPost />} />
               <Route path="give" element={<Navigate to="/faire-un-don" replace />} />
+
+              {/* URL inconnue : page 404 (noindex) au lieu d'une page vide */}
+              <Route path="*" element={<NotFound />} />
             </Route>
 
             {/* Page lecteur autonome — sans navbar ni footer */}

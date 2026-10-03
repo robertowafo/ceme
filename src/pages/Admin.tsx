@@ -40,6 +40,7 @@ import {
   MessageCircle,
   CheckCircle2,
 } from 'lucide-react';
+import { GoogleSignInButton } from '../components/GoogleSignInButton';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../lib/AuthContext';
 import { apiFetch } from '../lib/auth';
@@ -116,7 +117,7 @@ function PrayerReplyForm({ prayerId, onReplied }: { prayerId: string; onReplied:
   );
   return (
     <div className="mt-2 space-y-2">
-      <textarea rows={3} className="w-full bg-black/40 border border-gold/20 rounded-lg p-3 text-xs text-white placeholder:text-white/30 focus:border-gold/50 focus:outline-none transition-colors" value={text} onChange={e => setText(e.target.value)} placeholder="Écrivez un mot d'encouragement ou une réponse..." autoFocus />
+      <textarea aria-label="Réponse à la requête" rows={3} className="w-full bg-black/40 border border-gold/20 rounded-lg p-3 text-xs text-white placeholder:text-white/30 focus:border-gold/50 focus:outline-none transition-colors" value={text} onChange={e => setText(e.target.value)} placeholder="Écrivez un mot d'encouragement ou une réponse..." autoFocus />
       <div className="flex items-center gap-2 justify-end">
         <button onClick={() => setOpen(false)} className="px-3 py-1.5 text-[10px] text-white/40 hover:text-white/60 font-bold uppercase tracking-wider transition-colors">Annuler</button>
         <button onClick={handleSend} disabled={sending || !text.trim()} className="flex items-center gap-1.5 px-4 py-1.5 bg-gold text-black text-[10px] font-bold uppercase tracking-wider rounded-lg hover:bg-gold/90 disabled:opacity-40 transition-all">
@@ -128,7 +129,7 @@ function PrayerReplyForm({ prayerId, onReplied }: { prayerId: string; onReplied:
 }
 
 export function Admin() {
-  const { user, isAdmin, isSuperAdmin, sections, isLoading: isAuthLoading, loginWithGoogle, loginWithPassword, logout } = useAuth();
+  const { user, isAdmin, isSuperAdmin, sections, isLoading: isAuthLoading, loginWithPassword, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('links');
 
   // Un admin ne voit/agit que sur ses sections ; le super-admin voit tout.
@@ -873,12 +874,11 @@ export function Admin() {
               </div>
             ) : (
               <div className="w-full">
-                <button
-                  onClick={loginWithGoogle}
+                <GoogleSignInButton
                   className="w-full bg-gold hover:bg-gold/90 text-soft-black font-bold uppercase tracking-wider px-6 py-3.5 rounded-xl transition-all shadow-lg text-xs flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <GoogleIcon className="w-4 h-4" /> Se connecter avec Google
-                </button>
+                </GoogleSignInButton>
 
                 <div className="flex items-center gap-3 my-5">
                   <div className="flex-1 h-px bg-white/10" />
@@ -903,7 +903,7 @@ export function Admin() {
                     }
                   }}
                 >
-                  <input
+                  <input aria-label="Adresse email"
                     type="email"
                     value={loginEmail}
                     onChange={e => setLoginEmail(e.target.value)}
@@ -911,7 +911,7 @@ export function Admin() {
                     autoComplete="username"
                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
                   />
-                  <input
+                  <input aria-label="Mot de passe"
                     type="password"
                     value={loginPassword}
                     onChange={e => setLoginPassword(e.target.value)}
@@ -1052,7 +1052,7 @@ export function Admin() {
                     }
                   }}
                 >
-                  <input
+                  <input aria-label="Mot de passe"
                     type="password"
                     value={myCurrentPassword}
                     onChange={e => setMyCurrentPassword(e.target.value)}
@@ -1060,7 +1060,7 @@ export function Admin() {
                     autoComplete="current-password"
                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
                   />
-                  <input
+                  <input aria-label="Mot de passe"
                     type="password"
                     value={myNewPassword}
                     onChange={e => setMyNewPassword(e.target.value)}
@@ -1068,7 +1068,7 @@ export function Admin() {
                     autoComplete="new-password"
                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
                   />
-                  <input
+                  <input aria-label="Mot de passe"
                     type="password"
                     value={myNewPasswordConfirm}
                     onChange={e => setMyNewPasswordConfirm(e.target.value)}
@@ -1361,7 +1361,7 @@ export function Admin() {
                             <tr key={evt.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                               <td className="py-4 pr-4">
                                 <div className="flex items-center gap-3">
-                                  <img src={evt.image} className="w-10 h-10 object-cover rounded-md bg-stone-950" />
+                                  <img src={evt.image} alt="" className="w-10 h-10 object-cover rounded-md bg-stone-950" />
                                   <div className="min-w-0">
                                     <p className="font-bold text-white truncate max-w-xs">{evt.title}</p>
                                     <p className="text-[10px] text-white/50 truncate max-w-xs">{evt.location}</p>
@@ -1402,7 +1402,7 @@ export function Admin() {
                       <div className="grid grid-cols-1 gap-4">
                         {testimonials.map((test) => (
                           <div key={test.id} className="bg-white/5 border border-white/10 rounded-xl p-5 relative">
-                            {test.img && <img src={test.img} className="w-10 h-10 rounded-full object-cover float-left mr-3 border border-gold" />}
+                            {test.img && <img src={test.img} alt="" className="w-10 h-10 rounded-full object-cover float-left mr-3 border border-gold" />}
                             <div>
                               <div className="flex items-center justify-between mb-1.5">
                                 <h4 className="font-bold text-white text-xs">{test.author} <span className="text-[10px] text-white/50 font-normal ml-1">({test.since})</span></h4>
@@ -1882,14 +1882,14 @@ export function Admin() {
                     <div className="bg-black/30 border border-white/10 rounded-xl p-5">
                       <h4 className="text-xs font-bold uppercase tracking-widest text-white/60 mb-4">Ajouter un administrateur</h4>
                       <div className="flex flex-col sm:flex-row gap-3">
-                        <input
+                        <input aria-label="Adresse email"
                           type="email"
                           value={newAdminEmail}
                           onChange={e => setNewAdminEmail(e.target.value)}
                           placeholder="adresse@email.com"
                           className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-gold"
                         />
-                        <input
+                        <input aria-label="Mot de passe (optionnel)"
                           type="text"
                           value={newAdminPassword}
                           onChange={e => setNewAdminPassword(e.target.value)}
@@ -2036,7 +2036,7 @@ export function Admin() {
                                 <tr className="border-b border-white/5 bg-black/20">
                                   <td colSpan={6} className="py-3 px-4">
                                     <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-                                      <input
+                                      <input aria-label="Nouveau mot de passe"
                                         type="text"
                                         autoFocus
                                         value={resetPasswordValue}
@@ -2162,7 +2162,7 @@ export function Admin() {
                             <tr key={bp.id} className="border-b border-white/5 hover:bg-white/[0.02]">
                               <td className="py-4 pr-4">
                                 <div className="flex items-center gap-3">
-                                  {bp.coverImage && <img src={bp.coverImage} className="w-10 h-10 object-cover rounded-md bg-stone-950 shrink-0" />}
+                                  {bp.coverImage && <img src={bp.coverImage} alt="" className="w-10 h-10 object-cover rounded-md bg-stone-950 shrink-0" />}
                                   <p className="font-bold text-white truncate max-w-xs">{bp.title}</p>
                                 </div>
                               </td>
@@ -2442,12 +2442,12 @@ export function Admin() {
 
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre (optionnel)</label>
-                      <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerTitle} onChange={e => setTrailerTitle(e.target.value)} placeholder="Ex: Grande Croisade de Guérison — Bande-annonce" />
+                      <input aria-label="Titre (optionnel)" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerTitle} onChange={e => setTrailerTitle(e.target.value)} placeholder="Ex: Grande Croisade de Guérison — Bande-annonce" />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description (optionnel)</label>
-                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={trailerDescription} onChange={e => setTrailerDescription(e.target.value)} placeholder="Un court texte présentant l'événement, affiché sous la vidéo sur l'accueil." />
+                      <textarea aria-label="Description (optionnel)" rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={trailerDescription} onChange={e => setTrailerDescription(e.target.value)} placeholder="Un court texte présentant l'événement, affiché sous la vidéo sur l'accueil." />
                     </div>
 
                     <div>
@@ -2474,7 +2474,7 @@ export function Admin() {
                       </div>
 
                       {trailerSourceMode === 'youtube' ? (
-                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerYoutubeUrl} onChange={e => setTrailerYoutubeUrl(e.target.value)} placeholder="Collez le lien de la vidéo YouTube" />
+                        <input aria-label="Lien YouTube de la bande-annonce" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={trailerYoutubeUrl} onChange={e => setTrailerYoutubeUrl(e.target.value)} placeholder="Collez le lien de la vidéo YouTube" />
                       ) : (
                         <AdminFileUpload
                           value={trailerVideoUrl}
@@ -2493,7 +2493,7 @@ export function Admin() {
                       <div className="grid grid-cols-2 gap-3">
                         <div className="relative">
                           <Calendar className="w-3.5 h-3.5 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          <input
+                          <input aria-label="Date"
                             type="date"
                             style={{ colorScheme: 'dark' }}
                             className="w-full bg-stone-950 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
@@ -2503,7 +2503,7 @@ export function Admin() {
                         </div>
                         <div className="relative">
                           <Clock className="w-3.5 h-3.5 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                          <input
+                          <input aria-label="Heure"
                             type="time"
                             style={{ colorScheme: 'dark' }}
                             className="w-full bg-stone-950 border border-white/10 rounded-xl pl-9 pr-3 py-2.5 text-xs text-white"
@@ -2561,12 +2561,12 @@ export function Admin() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre de la vidéo</label>
-                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Ex: La Puissance de la Prière de Delivrance" />
+                      <input aria-label="Titre de la vidéo" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkTitle} onChange={e => setLinkTitle(e.target.value)} placeholder="Ex: La Puissance de la Prière de Delivrance" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Lien YouTube (vidéo ou playlist)</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkYoutubeId} onChange={e => setLinkYoutubeId(e.target.value)} placeholder="Collez le lien d'une vidéo ou d'une playlist" />
+                        <input aria-label="Lien YouTube (vidéo ou playlist)" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkYoutubeId} onChange={e => setLinkYoutubeId(e.target.value)} placeholder="Collez le lien d'une vidéo ou d'une playlist" />
                         <p className="text-[10px] text-white/40 mt-1">Accepte une vidéo seule ou une playlist entière — le titre se remplit automatiquement.</p>
                         {isAdminFetchingInfo && (
                           <p className="text-[10px] text-gold mt-1 animate-pulse flex items-center gap-1.5">
@@ -2577,7 +2577,7 @@ export function Admin() {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie</label>
-                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkCategory} onChange={e => setLinkCategory(e.target.value)}>
+                        <select aria-label="Catégorie" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={linkCategory} onChange={e => setLinkCategory(e.target.value)}>
                           <option value="Sermon">📖 Sermon d'Enseignement</option>
                           <option value="Louange">🎵 Louange & Adoration</option>
                           <option value="Musique">🎶 Musique & Chansons</option>
@@ -2590,7 +2590,7 @@ export function Admin() {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description courte (optionnel)</label>
-                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={linkDesc} onChange={e => setLinkDesc(e.target.value)} placeholder="Exliquez brièvement l'onction abordée dans ce message..." />
+                      <textarea aria-label="Description courte (optionnel)" rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={linkDesc} onChange={e => setLinkDesc(e.target.value)} placeholder="Exliquez brièvement l'onction abordée dans ce message..." />
                     </div>
                   </div>
                 )}
@@ -2600,12 +2600,12 @@ export function Admin() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre de la photo</label>
-                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={photoTitle} onChange={e => setPhotoTitle(e.target.value)} placeholder="Ex: Culte solennel d'onction" />
+                      <input aria-label="Titre de la photo" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={photoTitle} onChange={e => setPhotoTitle(e.target.value)} placeholder="Ex: Culte solennel d'onction" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie Galerie</label>
-                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={photoCategory} onChange={e => setPhotoCategory(e.target.value)}>
+                        <select aria-label="Catégorie Galerie" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={photoCategory} onChange={e => setPhotoCategory(e.target.value)}>
                           <option value="Cultes & Louange">Cultes & Louange</option>
                           <option value="Jeunesse & Enfants">Jeunesse & Enfants</option>
                           <option value="Actions Sociales">Actions Sociales</option>
@@ -2614,7 +2614,7 @@ export function Admin() {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Lieu (Optionnel)</label>
-                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={photoLocation} onChange={e => setPhotoLocation(e.target.value)} placeholder="Ex: Sanctuaire Principal CEME" />
+                        <input aria-label="Lieu (Optionnel)" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={photoLocation} onChange={e => setPhotoLocation(e.target.value)} placeholder="Ex: Sanctuaire Principal CEME" />
                       </div>
                     </div>
                     <div>
@@ -2630,7 +2630,7 @@ export function Admin() {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description de la scène (Optionnel)</label>
-                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={photoDesc} onChange={e => setPhotoDesc(e.target.value)} placeholder="Que représente cette photo pour la vie de l'église ?" />
+                      <textarea aria-label="Description de la scène (Optionnel)" rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={photoDesc} onChange={e => setPhotoDesc(e.target.value)} placeholder="Que représente cette photo pour la vie de l'église ?" />
                     </div>
                   </div>
                 )}
@@ -2641,11 +2641,11 @@ export function Admin() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre du programme</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtTitle} onChange={e => setEvtTitle(e.target.value)} placeholder="Ex: Solennité Royale & Louange Céleste" />
+                        <input aria-label="Titre du programme" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtTitle} onChange={e => setEvtTitle(e.target.value)} placeholder="Ex: Solennité Royale & Louange Céleste" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Type d'Événement</label>
-                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtType} onChange={e => setEvtType(e.target.value as any)}>
+                        <select aria-label="Type d'Événement" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtType} onChange={e => setEvtType(e.target.value as any)}>
                           <option value="special">🔥 Culte Spécial (Star)</option>
                           <option value="upcoming">📅 Bientôt / À venir</option>
                           <option value="annonce">📢 Annonce Pastorale</option>
@@ -2656,7 +2656,7 @@ export function Admin() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date réelle de l'événement *</label>
-                        <input
+                        <input aria-label="Date réelle de l'événement"
                           type="date"
                           required
                           className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white"
@@ -2677,7 +2677,7 @@ export function Admin() {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Texte affiché sur le site</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtDateStr} onChange={e => setEvtDateStr(e.target.value)} placeholder="Ex: Dimanche 28 Juin à 09h00" />
+                        <input aria-label="Texte affiché sur le site" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtDateStr} onChange={e => setEvtDateStr(e.target.value)} placeholder="Ex: Dimanche 28 Juin à 09h00" />
                         <p className="text-white/35 text-[10px] mt-1">Rempli automatiquement — personnalisez si besoin (ajoutez l'heure, ex: à 09h00).</p>
                       </div>
                     </div>
@@ -2685,22 +2685,22 @@ export function Admin() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Emplacement physique</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtLocation} onChange={e => setEvtLocation(e.target.value)} placeholder="Ex: Sanctuaire Principal CEME" />
+                        <input aria-label="Emplacement physique" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtLocation} onChange={e => setEvtLocation(e.target.value)} placeholder="Ex: Sanctuaire Principal CEME" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Orateur / Prédicateur</label>
-                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtPreacher} onChange={e => setEvtPreacher(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
+                        <input aria-label="Orateur / Prédicateur" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtPreacher} onChange={e => setEvtPreacher(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Texte du Ruban / Badge</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtBadge} onChange={e => setEvtBadge(e.target.value)} placeholder="Ex: CÉLÉBRATION SPÉCIALE" />
+                        <input aria-label="Texte du Ruban / Badge" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtBadge} onChange={e => setEvtBadge(e.target.value)} placeholder="Ex: CÉLÉBRATION SPÉCIALE" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Couleur Tailwind du Ruban</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtBadgeColor} onChange={e => setEvtBadgeColor(e.target.value)} placeholder="bg-gold text-soft-black font-extrabold" />
+                        <input aria-label="Couleur Tailwind du Ruban" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={evtBadgeColor} onChange={e => setEvtBadgeColor(e.target.value)} placeholder="bg-gold text-soft-black font-extrabold" />
                       </div>
                     </div>
 
@@ -2723,7 +2723,7 @@ export function Admin() {
 
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description complète du programme</label>
-                      <textarea rows={3} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={evtDesc} onChange={e => setEvtDesc(e.target.value)} placeholder="Expliquez en détail aux fidèles ce qui est prévu et comment s'y préparer spirituellement..." />
+                      <textarea aria-label="Description complète du programme" rows={3} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={evtDesc} onChange={e => setEvtDesc(e.target.value)} placeholder="Expliquez en détail aux fidèles ce qui est prévu et comment s'y préparer spirituellement..." />
                     </div>
                   </div>
                 )}
@@ -2734,18 +2734,18 @@ export function Admin() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Auteur du témoignage</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={testAuthor} onChange={e => setTestAuthor(e.target.value)} placeholder="Ex: Jean-Pierre K." />
+                        <input aria-label="Auteur du témoignage" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={testAuthor} onChange={e => setTestAuthor(e.target.value)} placeholder="Ex: Jean-Pierre K." />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Identité / Ancienneté</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={testSince} onChange={e => setTestSince(e.target.value)} placeholder="Ex: Membre depuis 2019" />
+                        <input aria-label="Identité / Ancienneté" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={testSince} onChange={e => setTestSince(e.target.value)} placeholder="Ex: Membre depuis 2019" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Emplacement / Affichage</label>
-                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={testCategory} onChange={e => setTestCategory(e.target.value)}>
+                        <select aria-label="Emplacement / Affichage" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={testCategory} onChange={e => setTestCategory(e.target.value)}>
                           <option value="home">Card d'Accueil principal</option>
                           <option value="horizontal">Horizontal (Croix Témoignages Relat.)</option>
                           <option value="vertical">Vertical (Croix Témoignages Divines)</option>
@@ -2765,7 +2765,7 @@ export function Admin() {
 
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">L'Histoire de Grâce / Témoignage écrit</label>
-                      <textarea rows={4} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={testText} onChange={e => setTestText(e.target.value)} placeholder="Rédigez l'œuvre de restauration divine en actions complètes..." />
+                      <textarea aria-label="L'Histoire de Grâce / Témoignage écrit" rows={4} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={testText} onChange={e => setTestText(e.target.value)} placeholder="Rédigez l'œuvre de restauration divine en actions complètes..." />
                     </div>
                   </div>
                 )}
@@ -2775,12 +2775,12 @@ export function Admin() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre du document d'étude</label>
-                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Ex: Notes d'Enseignement : L'Onction Maximale" />
+                      <input aria-label="Titre du document d'étude" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Ex: Notes d'Enseignement : L'Onction Maximale" />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie</label>
-                      <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={docCategory} onChange={e => setDocCategory(e.target.value)}>
+                      <select aria-label="Catégorie" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={docCategory} onChange={e => setDocCategory(e.target.value)}>
                         <option value="Manne Matinale">Manne Matinale</option>
                         <option value="École des Affaires du Royaume">École des Affaires du Royaume</option>
                         <option value="Sommet d'Élévation">Sommet d'Élévation</option>
@@ -2820,7 +2820,7 @@ export function Admin() {
 
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Courte description du contenu (Optionnel)</label>
-                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={docDesc} onChange={e => setDocDesc(e.target.value)} placeholder="Que contient ce fichier ? (matières d'études, exhortation etc...)" />
+                      <textarea aria-label="Courte description du contenu (Optionnel)" rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={docDesc} onChange={e => setDocDesc(e.target.value)} placeholder="Que contient ce fichier ? (matières d'études, exhortation etc...)" />
                     </div>
                   </div>
                 )}
@@ -2830,7 +2830,7 @@ export function Admin() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre de l'article</label>
-                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogTitle} onChange={e => setBlogTitle(e.target.value)} placeholder="Ex: Comment vivre par la Foi au quotidien" />
+                      <input aria-label="Titre de l'article" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogTitle} onChange={e => setBlogTitle(e.target.value)} placeholder="Ex: Comment vivre par la Foi au quotidien" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
@@ -2844,7 +2844,7 @@ export function Admin() {
                             <Plus className="w-3 h-3" /> Gérer
                           </button>
                         </div>
-                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogCategory} onChange={e => setBlogCategory(e.target.value)}>
+                        <select aria-label="Catégorie de l'article" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogCategory} onChange={e => setBlogCategory(e.target.value)}>
                           {blogCategories.length === 0 ? (
                             <option value="">— Aucune catégorie —</option>
                           ) : (
@@ -2888,7 +2888,7 @@ export function Admin() {
 
                             {/* Add new category */}
                             <div className="flex gap-2 pt-1 border-t border-white/10">
-                              <input
+                              <input aria-label="Nom de la catégorie"
                                 type="text"
                                 value={newCatName}
                                 onChange={e => setNewCatName(e.target.value)}
@@ -2924,13 +2924,13 @@ export function Admin() {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Auteur</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogAuthor} onChange={e => setBlogAuthor(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
+                        <input aria-label="Auteur" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogAuthor} onChange={e => setBlogAuthor(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Date de publication</label>
-                        <input type="date" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogPublishedAt} onChange={e => setBlogPublishedAt(e.target.value)} />
+                        <input aria-label="Date de publication" type="date" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={blogPublishedAt} onChange={e => setBlogPublishedAt(e.target.value)} />
                       </div>
                       <div className="flex items-center gap-3 pt-6">
                         <input type="checkbox" id="chkPublished" className="w-4 h-4 accent-gold cursor-pointer" checked={blogIsPublished} onChange={e => setBlogIsPublished(e.target.checked)} />
@@ -2949,11 +2949,11 @@ export function Admin() {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Résumé / Accroche (optionnel)</label>
-                      <textarea rows={2} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={blogExcerpt} onChange={e => setBlogExcerpt(e.target.value)} placeholder="Une phrase courte qui donne envie de lire l'article..." />
+                      <textarea aria-label="Résumé / Accroche (optionnel)" rows={2} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={blogExcerpt} onChange={e => setBlogExcerpt(e.target.value)} placeholder="Une phrase courte qui donne envie de lire l'article..." />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Contenu complet de l'article</label>
-                      <textarea rows={12} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white resize-y font-mono leading-relaxed" value={blogContent} onChange={e => setBlogContent(e.target.value)} placeholder="Rédigez ici le contenu complet de l'article. Vous pouvez utiliser des sauts de ligne pour structurer votre texte." />
+                      <textarea aria-label="Contenu complet de l'article" rows={12} required className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white resize-y font-mono leading-relaxed" value={blogContent} onChange={e => setBlogContent(e.target.value)} placeholder="Rédigez ici le contenu complet de l'article. Vous pouvez utiliser des sauts de ligne pour structurer votre texte." />
                       <p className="text-[10px] text-white/30 mt-1">Utilisez des sauts de ligne pour les paragraphes. Le texte sera formaté automatiquement.</p>
                     </div>
                   </div>
@@ -2964,20 +2964,20 @@ export function Admin() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Nom du projet</label>
-                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projTitle} onChange={e => setProjTitle(e.target.value)} placeholder="Ex: Rénovation de la Salle d'Accueil" />
+                      <input aria-label="Nom du projet" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projTitle} onChange={e => setProjTitle(e.target.value)} placeholder="Ex: Rénovation de la Salle d'Accueil" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description (optionnel)</label>
-                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={projDesc} onChange={e => setProjDesc(e.target.value)} placeholder="Décrivez brièvement l'objectif du projet..." />
+                      <textarea aria-label="Description (optionnel)" rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={projDesc} onChange={e => setProjDesc(e.target.value)} placeholder="Décrivez brièvement l'objectif du projet..." />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Montant objectif</label>
-                        <input type="number" required min="1" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projGoal} onChange={e => setProjGoal(e.target.value)} placeholder="Ex: 500000" />
+                        <input aria-label="Montant objectif" type="number" required min="1" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projGoal} onChange={e => setProjGoal(e.target.value)} placeholder="Ex: 500000" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Devise</label>
-                        <select className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projCurrency} onChange={e => setProjCurrency(e.target.value)}>
+                        <select aria-label="Devise" className="w-full bg-stone-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={projCurrency} onChange={e => setProjCurrency(e.target.value)}>
                           <option value="FCFA">FCFA</option>
                           <option value="EUR">EUR</option>
                           <option value="USD">USD</option>
@@ -2997,39 +2997,39 @@ export function Admin() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre (optionnel)</label>
-                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerTitle} onChange={e => setPartnerTitle(e.target.value)} placeholder="Ex: Pasteur, Évangéliste..." />
+                        <input aria-label="Titre (optionnel)" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerTitle} onChange={e => setPartnerTitle(e.target.value)} placeholder="Ex: Pasteur, Évangéliste..." />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Prénom *</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerFirstName} onChange={e => setPartnerFirstName(e.target.value)} placeholder="Ex: Raymon" />
+                        <input aria-label="Prénom" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerFirstName} onChange={e => setPartnerFirstName(e.target.value)} placeholder="Ex: Raymon" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Nom *</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerLastName} onChange={e => setPartnerLastName(e.target.value)} placeholder="Ex: KOFFI" />
+                        <input aria-label="Nom" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerLastName} onChange={e => setPartnerLastName(e.target.value)} placeholder="Ex: KOFFI" />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Église / Ministère (optionnel)</label>
-                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerChurch} onChange={e => setPartnerChurch(e.target.value)} placeholder="Ex: Club 700" />
+                        <input aria-label="Église / Ministère (optionnel)" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerChurch} onChange={e => setPartnerChurch(e.target.value)} placeholder="Ex: Club 700" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Localisation (optionnel)</label>
-                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerLocation} onChange={e => setPartnerLocation(e.target.value)} placeholder="Ex: Afrique francophone" />
+                        <input aria-label="Localisation (optionnel)" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerLocation} onChange={e => setPartnerLocation(e.target.value)} placeholder="Ex: Afrique francophone" />
                       </div>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Chaîne YouTube *</label>
-                      <input type="url" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerYoutubeUrl} onChange={e => setPartnerYoutubeUrl(e.target.value)} placeholder="Ex: https://www.youtube.com/@Club700" />
+                      <input aria-label="Chaîne YouTube" type="url" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerYoutubeUrl} onChange={e => setPartnerYoutubeUrl(e.target.value)} placeholder="Ex: https://www.youtube.com/@Club700" />
                       <p className="text-[10px] text-white/30 mt-1">URL complète de la chaîne YouTube du partenaire (avec @handle).</p>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Site web (optionnel)</label>
-                      <input type="url" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerWebsite} onChange={e => setPartnerWebsite(e.target.value)} placeholder="Ex: https://www.club700.com" />
+                      <input aria-label="Site web (optionnel)" type="url" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={partnerWebsite} onChange={e => setPartnerWebsite(e.target.value)} placeholder="Ex: https://www.club700.com" />
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description / Biographie (optionnel)</label>
-                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={partnerBio} onChange={e => setPartnerBio(e.target.value)} placeholder="Décrivez brièvement le ministère ou le parcours de ce partenaire..." />
+                      <textarea aria-label="Description / Biographie (optionnel)" rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={partnerBio} onChange={e => setPartnerBio(e.target.value)} placeholder="Décrivez brièvement le ministère ou le parcours de ce partenaire..." />
                     </div>
                     <div>
                       <AdminFileUpload
@@ -3049,16 +3049,16 @@ export function Admin() {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Titre *</label>
-                      <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookTitle} onChange={e => setBookTitle(e.target.value)} placeholder="Ex: La Puissance de la Prière Fervente" />
+                      <input aria-label="Titre" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookTitle} onChange={e => setBookTitle(e.target.value)} placeholder="Ex: La Puissance de la Prière Fervente" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Auteur *</label>
-                        <input type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookAuthor} onChange={e => setBookAuthor(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
+                        <input aria-label="Auteur" type="text" required className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookAuthor} onChange={e => setBookAuthor(e.target.value)} placeholder="Ex: Rev. Dr. Alphonse ESSOMBA" />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Catégorie (optionnel)</label>
-                        <input type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookCategory} onChange={e => setBookCategory(e.target.value)} placeholder="Ex: Prière & Intercession" />
+                        <input aria-label="Catégorie (optionnel)" type="text" className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white" value={bookCategory} onChange={e => setBookCategory(e.target.value)} placeholder="Ex: Prière & Intercession" />
                       </div>
                     </div>
                     <div>
@@ -3073,7 +3073,7 @@ export function Admin() {
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-wider mb-2">Description (optionnel)</label>
-                      <textarea rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={bookDesc} onChange={e => setBookDesc(e.target.value)} placeholder="Résumé de l'ouvrage..." />
+                      <textarea aria-label="Description (optionnel)" rows={3} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-xs text-white" value={bookDesc} onChange={e => setBookDesc(e.target.value)} placeholder="Résumé de l'ouvrage..." />
                     </div>
                   </div>
                 )}

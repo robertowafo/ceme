@@ -49,7 +49,7 @@ function ReplyForm({ onCancel, onSubmit, defaultName }: {
 
   return (
     <form onSubmit={handleSubmit} className="mt-2.5 space-y-2">
-      <input
+      <input aria-label="Nom"
         type="text"
         value={name}
         onChange={e => setName(e.target.value)}
@@ -58,7 +58,7 @@ function ReplyForm({ onCancel, onSubmit, defaultName }: {
         className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 focus:border-grace-orange/50 focus:outline-none transition-colors"
       />
       <div className="flex gap-2 items-end">
-        <textarea
+        <textarea aria-label="Message"
           rows={2}
           value={message}
           onChange={e => setMessage(e.target.value)}
@@ -153,7 +153,7 @@ export function VideoComments({ videoId, videoTitle }: { videoId: string | null 
       </h4>
 
       <form onSubmit={handleSubmit} className="space-y-2.5 mb-6">
-        <input
+        <input aria-label="Nom"
           type="text"
           value={name}
           onChange={e => setName(e.target.value)}
@@ -162,7 +162,7 @@ export function VideoComments({ videoId, videoTitle }: { videoId: string | null 
           className="w-full bg-white/5 border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-grace-orange/50 focus:outline-none transition-colors"
         />
         <div className="flex gap-2 items-end">
-          <textarea
+          <textarea aria-label="Message"
             rows={2}
             value={message}
             onChange={e => setMessage(e.target.value)}

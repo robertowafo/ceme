@@ -169,7 +169,7 @@ export function Blog() {
             <div className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
               <h3 className="font-serif text-xl font-bold mb-4">Rechercher</h3>
               <div className="relative">
-                <input
+                <input aria-label="Rechercher"
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -234,7 +234,7 @@ export function Blog() {
                 </div>
               ) : (
                 <form className="relative z-10" onSubmit={handleNewsletterSubmit}>
-                  <input
+                  <input aria-label="Adresse email"
                     type="email"
                     required
                     value={newsletterEmail}

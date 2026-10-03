@@ -248,7 +248,7 @@ export function Prayer() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 Nom / Prénom <span className="text-gray-300 font-normal">(Optionnel)</span>
                               </label>
-                              <input
+                              <input aria-label="Nom / Prénom"
                                 type="text"
                                 value={name}
                                 onChange={e => setName(e.target.value)}
@@ -260,7 +260,7 @@ export function Prayer() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Téléphone <span className="text-gray-300 font-normal">(Pour suivi)</span></span>
                               </label>
-                              <input
+                              <input aria-label="Téléphone"
                                 type="tel"
                                 value={phone}
                                 onChange={e => setPhone(e.target.value)}
@@ -272,7 +272,7 @@ export function Prayer() {
 
                           <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Votre Requête</label>
-                            <textarea
+                            <textarea aria-label="Votre Requête"
                               rows={5}
                               required
                               value={message}
@@ -337,7 +337,7 @@ export function Prayer() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 Nom / Prénom <span className="text-gray-300 font-normal">(Optionnel)</span>
                               </label>
-                              <input
+                              <input aria-label="Nom / Prénom"
                                 type="text"
                                 value={name}
                                 onChange={e => setName(e.target.value)}
@@ -349,7 +349,7 @@ export function Prayer() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Téléphone <span className="text-gray-300 font-normal">(Optionnel)</span></span>
                               </label>
-                              <input
+                              <input aria-label="Téléphone"
                                 type="tel"
                                 value={phone}
                                 onChange={e => setPhone(e.target.value)}
@@ -361,7 +361,7 @@ export function Prayer() {
 
                           <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Votre Témoignage</label>
-                            <textarea
+                            <textarea aria-label="Votre Témoignage"
                               rows={6}
                               required
                               value={message}

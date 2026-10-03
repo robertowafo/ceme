@@ -111,7 +111,7 @@ export function Lecture() {
           <motion.div {...reveal} transition={{ ...reveal.transition, delay: 0.24 }} className="mt-10 max-w-lg mx-auto">
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-              <input
+              <input aria-label="Rechercher"
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}

@@ -76,22 +76,22 @@ export function Contact() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Nom Complet</label>
-                      <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jean Dupont" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
+                      <input aria-label="Nom Complet" type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Jean Dupont" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Adresse Email</label>
-                      <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jean@exemple.com" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
+                      <input aria-label="Adresse Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="jean@exemple.com" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all" required/>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Téléphone</label>
-                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+237 600 00 00 00" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all"/>
+                      <input aria-label="Téléphone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+237 600 00 00 00" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold transition-all"/>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Sujet de votre demande</label>
-                      <select value={subject} onChange={e => setSubject(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold appearance-none text-gray-700 cursor-pointer transition-all">
+                      <select aria-label="Sujet de votre demande" value={subject} onChange={e => setSubject(e.target.value)} className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3.5 focus:outline-none focus:ring-2 focus:ring-gold appearance-none text-gray-700 cursor-pointer transition-all">
                         <option>Information générale</option>
                         <option>Demande d'entretien pastoral</option>
                         <option>Visite à l'hôpital ou domicile</option>
@@ -103,7 +103,7 @@ export function Contact() {
 
                   <div>
                     <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Votre Message</label>
-                    <textarea rows={6} value={message} onChange={e => setMessage(e.target.value)} placeholder="Comment pouvons-nous vous aider ?" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-gold resize-none transition-all" required></textarea>
+                    <textarea aria-label="Votre Message" rows={6} value={message} onChange={e => setMessage(e.target.value)} placeholder="Comment pouvons-nous vous aider ?" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-gold resize-none transition-all" required></textarea>
                   </div>
 
                   {status === 'error' && (

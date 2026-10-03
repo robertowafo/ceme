@@ -236,7 +236,7 @@ export function PrayerGraceTV() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 Nom / Prénom <span className="text-gray-300 font-normal">(Optionnel)</span>
                               </label>
-                              <input
+                              <input aria-label="Nom / Prénom"
                                 type="text" value={name} onChange={e => setName(e.target.value)}
                                 placeholder="Ex: Jean DUPONT"
                                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-grace-orange focus:bg-white w-full transition-all"
@@ -246,7 +246,7 @@ export function PrayerGraceTV() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Téléphone <span className="text-gray-300 font-normal">(Pour suivi)</span></span>
                               </label>
-                              <input
+                              <input aria-label="Téléphone"
                                 type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                                 placeholder="Ex: +237 6XX XXX XXX"
                                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-grace-orange focus:bg-white w-full transition-all"
@@ -256,7 +256,7 @@ export function PrayerGraceTV() {
 
                           <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Votre Requête</label>
-                            <textarea
+                            <textarea aria-label="Votre Requête"
                               rows={5} required value={message} onChange={e => setMessage(e.target.value)}
                               placeholder="Décrivez votre situation, votre besoin de prière..."
                               className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-grace-orange focus:bg-white w-full resize-none transition-all"
@@ -306,7 +306,7 @@ export function PrayerGraceTV() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 Nom / Prénom <span className="text-gray-300 font-normal">(Optionnel)</span>
                               </label>
-                              <input
+                              <input aria-label="Nom / Prénom"
                                 type="text" value={name} onChange={e => setName(e.target.value)}
                                 placeholder="Ex: Jean DUPONT"
                                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-grace-orange focus:bg-white w-full transition-all"
@@ -316,7 +316,7 @@ export function PrayerGraceTV() {
                               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">
                                 <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> Téléphone <span className="text-gray-300 font-normal">(Optionnel)</span></span>
                               </label>
-                              <input
+                              <input aria-label="Téléphone"
                                 type="tel" value={phone} onChange={e => setPhone(e.target.value)}
                                 placeholder="Ex: +237 6XX XXX XXX"
                                 className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-grace-orange focus:bg-white w-full transition-all"
@@ -326,7 +326,7 @@ export function PrayerGraceTV() {
 
                           <div>
                             <label className="block text-xs font-bold text-gray-700 uppercase tracking-wide mb-2">Votre Témoignage</label>
-                            <textarea
+                            <textarea aria-label="Votre Témoignage"
                               rows={6} required value={message} onChange={e => setMessage(e.target.value)}
                               placeholder="Racontez comment Dieu a répondu à votre prière, votre guérison, votre délivrance..."
                               className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-grace-orange focus:bg-white w-full resize-none transition-all"
