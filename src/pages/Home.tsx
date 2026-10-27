@@ -479,8 +479,8 @@ export function Home() {
   return (
     <div className="bg-cream">
       <SEO
-        title="Grâce TV — La Bonne Nouvelle Partout Partout"
-        description="Chaîne de télévision chrétienne basée à Yaoundé. Sermons, enseignements, louange, films, articles et documents — vivez la Bonne Nouvelle en direct."
+        title="Grâce TV (Grace TV) — Chaîne chrétienne en direct, Yaoundé"
+        description="Grâce TV (gracetvs.com), la chaîne de télévision chrétienne de Yaoundé, Cameroun : direct 24/7, sermons, enseignements, louange, films et émissions — La Bonne Nouvelle Partout Partout."
         path="/"
         structuredData={[tvStationSchema, webSiteSchema]}
       />

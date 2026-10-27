@@ -5,7 +5,7 @@ export const tvStationSchema = {
   '@context': 'https://schema.org',
   '@type': 'TelevisionStation',
   name: 'Grâce TV',
-  alternateName: 'Grace Television',
+  alternateName: ['Grace TV', 'Grace TVs', 'GraceTVs', 'Grace Television', 'Grâce Télévision'],
   url: SITE_URL,
   logo: `${SITE_URL}/logo-gracetv.png`,
   image: `${SITE_URL}/og-image.png`,
@@ -29,7 +29,15 @@ export const webSiteSchema = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
   name: 'Grâce TV',
+  alternateName: ['Grace TV', 'GraceTVs', 'gracetvs.com'],
   url: SITE_URL,
+  inLanguage: 'fr',
+  publisher: { '@type': 'Organization', name: 'Grâce TV', url: SITE_URL, logo: `${SITE_URL}/logo-gracetv.png` },
+  sameAs: [
+    'https://www.youtube.com/@gracetelevision-hc4tv',
+    'https://www.instagram.com/chapelledeleternelmonetendard',
+    'https://web.facebook.com/DrAlphonseEssomba',
+  ],
 };
 
 // Schema Person — fondateur (page À propos)
