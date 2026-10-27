@@ -822,11 +822,11 @@ export function About() {
               <form onSubmit={handleOrderSubmit} className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Nom complet</label>
-                  <input type="text" required value={orderName} onChange={e => setOrderName(e.target.value)} placeholder="Jean Dupont" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
+                  <input aria-label="Nom complet" type="text" required value={orderName} onChange={e => setOrderName(e.target.value)} placeholder="Jean Dupont" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-gray-700 uppercase tracking-widest mb-2">Téléphone</label>
-                  <input type="tel" value={orderPhone} onChange={e => setOrderPhone(e.target.value)} placeholder="+237 6XX XXX XXX" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
+                  <input aria-label="Téléphone" type="tel" value={orderPhone} onChange={e => setOrderPhone(e.target.value)} placeholder="+237 6XX XXX XXX" className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-gold transition-all" />
                 </div>
                 {orderStatus === 'error' && (
                   <p className="text-xs text-red-600 font-bold bg-red-50 p-3 rounded-xl border border-red-200">⚠️ {orderErrorMsg}</p>

@@ -20,7 +20,8 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
       headers: { 'Content-Type': 'application/json' },
     });
 
-  if (!plId || !apiKey) return empty();
+  // Format d'ID de playlist YouTube uniquement (évite les clés de cache arbitraires).
+  if (!plId || !apiKey || !/^[\w-]{10,64}$/.test(plId)) return empty();
 
   const cache    = (caches as any).default as Cache;
   const cacheKey = new Request(`https://internal-cache.dev/pl-items-${plId}`);
@@ -30,6 +31,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   try {
     const apiUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${encodeURIComponent(plId)}&maxResults=50&key=${apiKey}`;
     const res    = await fetch(apiUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data   = (await res.json()) as any;
 
     const items = (data.items || [])
@@ -59,8 +61,9 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
     await cache.put(cacheKey, response.clone());
     return response;
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status : 500,
+    console.error('playlist-items error', err?.message);
+    return new Response(JSON.stringify({ error: 'Service YouTube momentanément indisponible' }), {
+      status : 502,
       headers: { 'Content-Type': 'application/json' },
     });
   }

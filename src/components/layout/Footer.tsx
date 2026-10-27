@@ -81,7 +81,7 @@ export function Footer() {
               </p>
             ) : (
               <form className="space-y-3" onSubmit={handleSubscribe}>
-                <input
+                <input aria-label="Adresse email"
                   type="email"
                   required
                   value={email}

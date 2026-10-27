@@ -1,4 +1,4 @@
-const SITE_URL = 'https://ceme-27o.pages.dev';
+const SITE_URL = 'https://gracetvs.com';
 
 // Schema TelevisionStation — page d'accueil
 export const tvStationSchema = {

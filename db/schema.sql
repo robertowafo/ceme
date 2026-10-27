@@ -63,7 +63,8 @@ CREATE TABLE IF NOT EXISTS donations (
   contrib_type   TEXT NOT NULL DEFAULT 'Offrande',
   payment_method TEXT NOT NULL DEFAULT 'OM',
   reference      TEXT,
-  submitted_at   TEXT NOT NULL
+  submitted_at   TEXT NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'confirmed'  -- 'pending' | 'confirmed' (migration 002)
 );
 
 CREATE TABLE IF NOT EXISTS prayer_requests (

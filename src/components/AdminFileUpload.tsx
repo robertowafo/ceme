@@ -174,7 +174,7 @@ export function AdminFileUpload({
 
       {mode === 'link' ? (
         <div>
-          <input
+          <input aria-label="Lien (URL)"
             type="url"
             required={required}
             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white"

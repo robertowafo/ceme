@@ -291,7 +291,7 @@ export function SupportGraceTV() {
                       </div>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-xs">Montant libre (FCFA) :</span>
-                        <input
+                        <input aria-label="Montant"
                           type="number"
                           value={customAmount}
                           onChange={e => { setCustomAmount(e.target.value); setSelectedPreset(''); }}
@@ -306,7 +306,7 @@ export function SupportGraceTV() {
                       <label className="block text-xs font-bold uppercase tracking-wider text-gray-800">3. Vos informations</label>
                       <div>
                         <span className="block text-xs text-gray-500 mb-1.5 font-medium">Nom complet</span>
-                        <input
+                        <input aria-label="Nom"
                           type="text"
                           value={donorName}
                           onChange={e => setDonorName(e.target.value)}
@@ -316,7 +316,7 @@ export function SupportGraceTV() {
                       </div>
                       <div>
                         <span className="block text-xs text-gray-500 mb-1.5 font-medium">Numéro de téléphone</span>
-                        <input
+                        <input aria-label="Téléphone"
                           type="tel"
                           value={donorPhone}
                           onChange={e => setDonorPhone(e.target.value)}
