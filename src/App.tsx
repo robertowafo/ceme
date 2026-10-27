@@ -79,7 +79,7 @@ export default function App() {
               <Route path="priere" element={<PrayerGraceTV />} />
               <Route path="lecture" element={<Lecture />} />
               <Route path="contact" element={<Contact />} />
-              <Route path="admin" element={<Admin />} />
+              <Route path="admin" element={<><meta name="robots" content="noindex, nofollow" /><Admin /></>} />
 
               {/* ----- Église CEME ----- */}
               <Route path="eglise" element={<EgliseLayout />}>

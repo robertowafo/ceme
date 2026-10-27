@@ -68,10 +68,21 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Grâce TV — La Bonne Nouvelle Partout Partout" />
     <meta name="twitter:description" content="Chaîne de télévision chrétienne basée à Yaoundé. Diffusion 24/7, partout." />
-    <meta name="twitter:image" content="/og-image.png" />
+    <meta name="twitter:image" content="https://gracetvs.com/og-image.png" />
+    <meta name="theme-color" content="#0f2742" />
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Contenu de repli lisible sans JavaScript (robots, partages, connexions lentes).
+           Remplacé par l'application dès qu'elle démarre. -->
+      <main style="font-family:system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem;line-height:1.5">
+        <h1>Grâce TV — La Bonne Nouvelle Partout Partout</h1>
+        <p>Chaîne de télévision chrétienne basée à Yaoundé, Cameroun. Diffusion 24/7 de cultes, sermons, études bibliques, musique chrétienne et programmes d'évangélisation.</p>
+        <nav aria-label="Navigation principale">
+          <a href="/live">Direct</a> · <a href="/emissions">Émissions</a> · <a href="/eglise/sermons">Sermons</a> · <a href="/eglise/blog">Blog</a> · <a href="/a-propos">À propos</a> · <a href="/contact">Contact</a>
+        </nav>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
