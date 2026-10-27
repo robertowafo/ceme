@@ -4,7 +4,7 @@
  * dans le <head>). Aucune dépendance externe.
  */
 
-const SITE_URL = 'https://ceme-27o.pages.dev';
+const SITE_URL = 'https://gracetvs.com';
 const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`;
 
 type SEOProps = {

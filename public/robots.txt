@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 
-Sitemap: https://ceme-27o.pages.dev/sitemap.xml
+Sitemap: https://gracetvs.com/sitemap.xml
