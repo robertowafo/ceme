@@ -1,0 +1,4 @@
+Contact: mailto:contact@chapelle-eternel.org
+Expires: 2027-10-27T00:00:00.000Z
+Preferred-Languages: fr, en
+Canonical: https://gracetvs.com/.well-known/security.txt

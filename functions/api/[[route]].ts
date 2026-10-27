@@ -36,6 +36,7 @@ type Bindings = {
 type Variables = { user: JwtPayload }
 
 interface JwtPayload {
+  jti?: string
   sub: string
   email: string
   name: string
@@ -52,14 +53,21 @@ async function signSession(payload: JwtPayload, secret: string): Promise<string>
   const key = new TextEncoder().encode(secret)
   return new SignJWT(payload as any)
     .setProtectedHeader({ alg: 'HS256' })
+    .setJti(crypto.randomUUID())
     .setExpirationTime('1d')
     .sign(key)
 }
 
 async function verifySession(token: string, secret: string): Promise<JwtPayload | null> {
+  // Un secret faible rendrait les jetons forgeables : on refuse de fonctionner avec.
+  if (!secret || secret.length < 32) {
+    console.error('JWT_SECRET absent ou trop court (< 32 caractères) : toutes les sessions sont refusées')
+    return null
+  }
   try {
     const key = new TextEncoder().encode(secret)
-    const { payload } = await jwtVerify(token, key)
+    // Algorithme imposé : sans cela, un jeton HS384/HS512 serait aussi accepté.
+    const { payload } = await jwtVerify(token, key, { algorithms: ['HS256'] })
     return payload as unknown as JwtPayload
   } catch {
     return null
@@ -106,6 +114,31 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 
 const app = new Hono<HonoApp>().basePath('/api')
 
+// Défense en profondeur contre le CSRF (en plus de SameSite=Strict) : une requête
+// qui modifie des données doit provenir de notre propre site. Les clients sans en-tête
+// Origin (application mobile, curl) ne sont pas concernés : ils n'ont pas de cookie.
+app.use('*', async (c, next) => {
+  const method = c.req.method
+  if (method !== 'GET' && method !== 'HEAD' && method !== 'OPTIONS') {
+    const origin = c.req.header('Origin')
+    if (origin) {
+      let originHost = ''
+      try { originHost = new URL(origin).host } catch { /* origine invalide → refusée ci-dessous */ }
+      if (originHost !== new URL(c.req.url).host) {
+        return c.json({ error: 'Origine non autorisée' }, 403)
+      }
+    } else if (c.req.header('Sec-Fetch-Site') === 'cross-site') {
+      return c.json({ error: 'Origine non autorisée' }, 403)
+    }
+    // Corps JSON limité (les uploads passent par /upload, plafonné séparément).
+    const len = Number(c.req.header('Content-Length') || 0)
+    if (!c.req.path.endsWith('/upload') && len > 1_000_000) {
+      return c.json({ error: 'Requête trop volumineuse' }, 413)
+    }
+  }
+  await next()
+})
+
 // Erreurs de validation → 400 lisible ; tout le reste → 500 générique (le détail
 // part dans les logs, jamais dans la réponse).
 app.onError((err, c) => {
@@ -128,6 +161,9 @@ async function authenticate(c: Context<HonoApp>): Promise<
   if (!token) return { res: c.json({ error: 'Non authentifié' }, 401) }
   const payload = await verifySession(token, c.env.JWT_SECRET)
   if (!payload) return { res: c.json({ error: 'Session expirée' }, 401) }
+  if (payload.jti && (await c.env.RATE_LIMIT.get(`rv:${payload.jti}`))) {
+    return { res: c.json({ error: 'Session expirée' }, 401) }
+  }
   const isSuper = !!payload.isSuperAdmin && normEmail(payload.email) === normEmail(c.env.ADMIN_EMAIL)
   if (!isSuper) {
     const row = payload.isAdmin
@@ -308,6 +344,11 @@ app.post('/auth/google', rateLimit('auth-google', 20, 10 * 60), async (c) => {
 })
 
 app.post('/auth/logout', async (c) => {
+  // Le jeton est invalidé côté serveur (pas seulement effacé du navigateur) : un
+  // jeton volé cesse de fonctionner dès la déconnexion.
+  const token = getCookie(c, SESSION_COOKIE)
+  const payload = token ? await verifySession(token, c.env.JWT_SECRET) : null
+  if (payload?.jti) await c.env.RATE_LIMIT.put(`rv:${payload.jti}`, '1', { expirationTtl: SESSION_SECONDS })
   deleteCookie(c, SESSION_COOKIE, { path: '/' })
   return c.json({ success: true })
 })
@@ -322,6 +363,13 @@ app.post('/auth/login', rateLimit('auth-login', 10, 10 * 60), async (c) => {
   if (body.password.length > 256) return c.json({ error: 'Identifiants invalides' }, 401)
   const password = body.password
   const normalized = normEmail(body.email)
+  // Verrou par compte : une attaque répartie sur de nombreuses IP (que le rate limit par
+  // IP ne voit pas) est stoppée après 10 échecs en 15 minutes sur le même email.
+  const lockKey = `lf:${normalized}`
+  const failures = Number((await c.env.RATE_LIMIT.get(lockKey)) || 0)
+  if (failures >= 10) {
+    return c.json({ error: 'Trop de tentatives sur ce compte. Réessayez dans quelques minutes.' }, 429)
+  }
   const row = await c.env.DB.prepare('SELECT password_hash FROM admins WHERE email=?')
     .bind(normalized).first<{ password_hash: string | null }>()
   // Toujours dériver un hash, même si le compte n'existe pas : évite de révéler
@@ -329,8 +377,10 @@ app.post('/auth/login', rateLimit('auth-login', 10, 10 * 60), async (c) => {
   const stored = row?.password_hash || await dummyHash()
   const valid = await verifyPassword(password, stored)
   if (!row?.password_hash || !valid) {
+    await c.env.RATE_LIMIT.put(lockKey, String(failures + 1), { expirationTtl: 900 })
     return c.json({ error: 'Identifiants invalides' }, 401)
   }
+  await c.env.RATE_LIMIT.delete(lockKey)
   const isSuperAdmin = normalized === normEmail(c.env.ADMIN_EMAIL)
   const name = normalized.split('@')[0]
   const token = await signSession(
@@ -1200,12 +1250,13 @@ app.get('/youtube/video-info', async (c) => {
     }
   }
   const id = (playlistId ?? videoId) as string
-  if (!(await canQueryVideoInfo(c, id))) return c.json({ error: 'Non autorisé' }, 403)
 
+  // Cache d'abord (entrée créée seulement après contrôle d'accès), puis contrôle.
   const cache = caches.default
   const cacheKey = new Request(`https://internal-cache.dev/yt-info-${id}`)
   const cached = await cache.match(cacheKey)
   if (cached) return cached
+  if (!(await canQueryVideoInfo(c, id))) return c.json({ error: 'Non autorisé' }, 403)
   const done = async (body: unknown) => {
     const res = new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=3600' } })
     await cache.put(cacheKey, res.clone())
@@ -1348,8 +1399,10 @@ app.post('/newsletter', rateLimit('newsletter', 5, 600), async (c) => {
       'INSERT INTO newsletter_subscribers (id, email, subscribed_at) VALUES (?,?,?)'
     ).bind(id, email, new Date().toISOString()).run()
   } catch (e: any) {
+    // Déjà abonné : même réponse qu'une nouvelle inscription, pour ne pas permettre de
+    // deviner qui est abonné en testant des adresses.
     if (e?.message?.includes('UNIQUE') || e?.message?.includes('unique')) {
-      return c.json({ error: 'Cette adresse email est déjà abonnée.' }, 409)
+      return c.json({ success: true })
     }
     throw e
   }
@@ -1668,16 +1721,18 @@ app.get('/youtube/channel-playlists', async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY
   if (!channelUrl || !apiKey || channelUrl.length > 300) return c.json([])
 
-  // Uniquement les chaînes enregistrées comme partenaires : sans cette liste
-  // blanche, chaque URL arbitraire consommait du quota YouTube (jusqu'à 100
-  // unités par recherche) et permettait de le vider.
-  const knownPartner = await c.env.DB.prepare('SELECT 1 FROM partners WHERE youtube_url=?').bind(channelUrl).first()
-  if (!knownPartner) return c.json([])
-
+  // Le cache d'abord : une entrée n'existe que pour une chaîne déjà validée, et la
+  // réponse est immédiate (sans aller-retour vers la base D1).
   const cache = caches.default
   const cacheKey = new Request(`https://internal-cache.dev/yt-ch-pls-${encodeURIComponent(channelUrl)}`)
   const cached = await cache.match(cacheKey)
   if (cached) return cached
+
+  // Seulement les chaînes enregistrées comme partenaires : sans cette liste blanche,
+  // chaque URL arbitraire consommerait du quota YouTube (jusqu'à 100 unités par
+  // recherche) et permettrait de le vider.
+  const knownPartner = await c.env.DB.prepare('SELECT 1 FROM partners WHERE youtube_url=?').bind(channelUrl).first()
+  if (!knownPartner) return c.json([])
 
   try {
     let channelId = ''

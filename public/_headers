@@ -1,18 +1,18 @@
-# En-têtes de sécurité de base sur tout le site.
-# Pas de CSP ici : le site charge des iframes YouTube, Google Fonts, l'OAuth
-# Google et des images R2 cross-origin — une CSP mal calibrée casserait ces
-# fonctionnalités sans un audit dédié page par page.
+# En-têtes de sécurité de tout le site.
+# CSP : les règles sans risque sont appliquées en blocage ; la politique complète
+# (scripts, styles, images, frames, connexions) reste en Report-Only le temps de
+# vérifier dans la console qu'aucune page légitime n'est bloquée (YouTube, Google
+# OAuth/Maps, polices, images R2). Quand la console est propre : retirer « -Report-Only ».
 /*
   X-Content-Type-Options: nosniff
   X-Frame-Options: SAMEORIGIN
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(), microphone=(), camera=()
-  Strict-Transport-Security: max-age=31536000
-  # CSP en mode observation uniquement (n'empêche rien) : les violations apparaissent
-  # dans la console du navigateur et permettent de calibrer une vraie CSP sans casser
-  # YouTube, Google Fonts/OAuth, Fontshare ni les images R2. À durcir (retirer
-  # « -Report-Only ») une fois la console propre sur toutes les pages.
-  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com; font-src 'self' https://fonts.gstatic.com https://cdn.fontshare.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://www.google.com https://player.vimeo.com; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self'
+  Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=(), usb=(), interest-cohort=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+  X-Permitted-Cross-Domain-Policies: none
+  Content-Security-Policy: object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
+  Content-Security-Policy-Report-Only: default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.youtube.com https://s.ytimg.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://api.fontshare.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com https://cdn.fontshare.com data:; img-src 'self' data: blob: https:; media-src 'self' blob: https:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://accounts.google.com https://www.google.com https://maps.google.com https://player.vimeo.com; connect-src 'self' https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'
 
 # Assets Vite (noms de fichiers hashés — invalidés automatiquement à chaque build)
 /assets/*

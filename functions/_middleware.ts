@@ -26,6 +26,16 @@ export const onRequest: PagesFunction = async (context) => {
 
   const response = await context.next()
 
+  // Le fallback de l'application renvoie index.html (200) pour toute URL inconnue :
+  // les scanners croient alors que /.env, /.git/config, /backup.sql… existent, et
+  // Google indexe des « soft 404 ». Une URL qui ressemble à un fichier (extension ou
+  // segment caché) et qui n'a donné que la page d'accueil est un vrai 404.
+  const looksLikeFile = /\.[A-Za-z0-9]{1,8}$/.test(url.pathname) || /(^|\/)\.(?!well-known\/)/.test(url.pathname)
+  const servedHtml = (response.headers.get('content-type') || '').includes('text/html')
+  if (isRead && response.status === 200 && servedHtml && looksLikeFile && !url.pathname.endsWith('.html')) {
+    return new Response('Not found', { status: 404, headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' } })
+  }
+
   // Aperçus de branches et ancienne adresse : ne pas les indexer.
   if (url.hostname.endsWith('.pages.dev')) {
     const res = new Response(response.body, response)

@@ -1,3 +1,4 @@
+import { safeUrl } from '../lib/safeUrl';
 import React, { useState, useEffect } from 'react';
 import {
   Lock,
@@ -1458,7 +1459,7 @@ export function Admin() {
                               </td>
                               <td className="py-4 text-right">
                                 <div className="flex items-center justify-end gap-2">
-                                  <a href={docItem.url} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><ExternalLink className="w-4 h-4" /></a>
+                                  <a href={safeUrl(docItem.url)} target="_blank" rel="noopener noreferrer" className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><ExternalLink className="w-4 h-4" /></a>
                                   <button onClick={() => handleEdit(docItem)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-gold transition-colors"><Edit2 className="w-4 h-4" /></button>
                                   <button onClick={() => handleDelete(docItem.id)} className="p-1.5 rounded-lg hover:bg-white/5 text-white/60 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                 </div>
@@ -2222,7 +2223,7 @@ export function Admin() {
                                     )}
                                   </div>
                                   <div className="flex items-center gap-1.5 shrink-0">
-                                    <a href={p.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                                    <a href={safeUrl(p.youtubeUrl)} target="_blank" rel="noopener noreferrer"
                                       className="p-1.5 rounded-lg hover:bg-white/5 text-white/40 hover:text-red-400 transition-colors" title="Ouvrir la chaîne YouTube">
                                       <Youtube className="w-4 h-4" />
                                     </a>
