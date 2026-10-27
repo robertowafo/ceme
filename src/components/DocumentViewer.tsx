@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Download, Maximize2, Minimize2, ExternalLink, FileText, Loader } from 'lucide-react';
+import { safeUrl } from '../lib/safeUrl';
 
 interface DocumentViewerProps {
   doc: {
@@ -60,7 +61,7 @@ export function DocumentViewer({ doc, onClose }: DocumentViewerProps) {
 
             <div className="flex items-center gap-2 shrink-0 ml-4">
               <a
-                href={doc.url}
+                href={safeUrl(doc.url)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
@@ -69,7 +70,7 @@ export function DocumentViewer({ doc, onClose }: DocumentViewerProps) {
                 <ExternalLink className="w-4 h-4" />
               </a>
               <a
-                href={doc.url}
+                href={safeUrl(doc.url)}
                 download
                 className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gold/10 hover:bg-gold/20 text-gold text-xs font-bold transition-colors"
                 title="Télécharger"
@@ -102,7 +103,7 @@ export function DocumentViewer({ doc, onClose }: DocumentViewerProps) {
               </div>
             )}
             <iframe
-              src={viewerUrl}
+              src={safeUrl(viewerUrl, 'about:blank')}
               className="w-full h-full border-0"
               title={doc.title}
               onLoad={() => setIframeLoaded(true)}

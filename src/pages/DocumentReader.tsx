@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, ExternalLink, FileText, Loader, AlertCircle } from 'lucide-react';
 import { getStudyDocuments } from '../lib/dbService';
+import { safeUrl } from '../lib/safeUrl';
 
 export function DocumentReader() {
   const { id } = useParams<{ id: string }>();
@@ -79,7 +80,7 @@ export function DocumentReader() {
 
         <div className="flex items-center gap-2 shrink-0 ml-4">
           <a
-            href={doc.url}
+            href={safeUrl(doc.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white transition-colors"
@@ -100,7 +101,7 @@ export function DocumentReader() {
       <div className="flex-1 relative overflow-hidden">
         {isPdf ? (
           <embed
-            src={doc.url + '#toolbar=1&navpanes=0&scrollbar=1&view=FitH'}
+            src={safeUrl(doc.url, 'about:blank') + '#toolbar=1&navpanes=0&scrollbar=1&view=FitH'}
             type="application/pdf"
             className="w-full h-full border-0"
           />

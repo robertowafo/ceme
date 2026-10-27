@@ -1,3 +1,4 @@
+import { safeUrl } from '../lib/safeUrl';
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -837,7 +838,7 @@ export function Emissions() {
                         </button>
                       )}
                       <a
-                        href={activePartner.youtubeUrl}
+                        href={safeUrl(activePartner.youtubeUrl)}
                         target="_blank" rel="noopener noreferrer"
                         className="flex items-center gap-1.5 bg-white/5 hover:bg-red-600/20 border border-white/10 hover:border-red-500/30 text-white/80 hover:text-white text-[11px] font-bold uppercase tracking-wider px-2.5 sm:px-3.5 py-2 rounded-xl transition-all"
                       >
@@ -905,7 +906,7 @@ export function Emissions() {
                     <div className="relative z-10 text-center py-16 px-4">
                       <Youtube className="w-12 h-12 text-white/15 mx-auto mb-3" />
                       <p className="text-white/40 text-sm">Aucune playlist trouvée sur cette chaîne.</p>
-                      <a href={activePartner.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                      <a href={safeUrl(activePartner.youtubeUrl)} target="_blank" rel="noopener noreferrer"
                         className="inline-flex items-center gap-2 mt-4 text-grace-orange text-sm font-bold hover:underline">
                         Voir la chaîne YouTube <ExternalLink className="w-4 h-4" />
                       </a>

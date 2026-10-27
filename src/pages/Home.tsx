@@ -1,3 +1,4 @@
+import { safeUrl } from '../lib/safeUrl';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
@@ -1004,7 +1005,7 @@ export function Home() {
                         />
                       )}
                       <a
-                        href={p.youtubeUrl}
+                        href={safeUrl(p.youtubeUrl)}
                         target="_blank" rel="noopener noreferrer"
                         className="group inline-flex items-center gap-2 text-grace-blue hover:text-grace-orange font-bold text-sm uppercase tracking-wider transition-colors"
                       >

@@ -47,9 +47,11 @@ export function posInt(value: unknown, field: string, max: number): number {
 export function url(value: unknown, field: string, required = false, max = 2048): string | null {
   const v = str(value, field, max, required)
   if (v === null) return null
-  const scheme = v.match(/^([a-zA-Z][a-zA-Z0-9+.-]*):/)
-  if (scheme && !/^https?$/i.test(scheme[1])) throw new ValidationError(`URL non autorisée : ${field}`)
-  if (v.startsWith('//')) throw new ValidationError(`URL non autorisée : ${field}`)
+  // Les navigateurs ignorent tabulations/retours à la ligne dans une URL : « java\tscript: »
+  // serait exécuté. Aucun caractère de contrôle ni espace n'est donc toléré.
+  if (/[\u0000-\u0020\u007f-\u009f\\]/.test(v)) throw new ValidationError(`URL non autorisée : ${field}`)
+  // Liste blanche : http(s) absolu, ou chemin relatif à ce site ("/uploads/x.jpg").
+  if (!/^https?:\/\/[^/]/i.test(v) && !/^\/(?![/\\])/.test(v)) throw new ValidationError(`URL non autorisée : ${field}`)
   return v
 }
 
