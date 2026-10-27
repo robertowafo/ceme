@@ -297,13 +297,15 @@ export function Home() {
     // Émissions curées : chacune devient sa propre section avec SES épisodes.
     fetch('/api/programs').then(r => r.ok ? r.json() : []).then(async (progs: typeof programs) => {
       setPrograms(progs);
-      for (const p of progs) {
-        if (!p.playlistId) continue;
+      // En parallèle : chaque émission s'affiche dès que ses épisodes arrivent, sans
+      // attendre les précédentes (avant : une requête après l'autre).
+      await Promise.all(progs.map(async (p) => {
+        if (!p.playlistId) return;
         try {
           const r = await fetch(`/api/playlist-items?playlistId=${encodeURIComponent(p.playlistId)}`);
-          if (!r.ok) continue;
+          if (!r.ok) return;
           const items: { videoId: string; title: string; thumbnail: string }[] = await r.json();
-          if (!Array.isArray(items) || items.length === 0) continue;
+          if (!Array.isArray(items) || items.length === 0) return;
           const videos: VideoContent[] = items.map(v => ({
             id: `ev-${p.id}-${v.videoId}`,
             title: v.title,
@@ -313,7 +315,7 @@ export function Home() {
           }));
           setProgVideos(prev => ({ ...prev, [p.id]: videos }));
         } catch { /* ignore cette émission */ }
-      }
+      }));
     }).catch(() => {});
 
     // Chaînes partenaires gérées depuis le dashboard admin (comme dans Emissions).
@@ -322,15 +324,16 @@ export function Home() {
     // remonter des vidéos dont l'intégration a été désactivée par leur propriétaire.
     getPartners().then(async (list) => {
       setPartners(list);
-      for (const p of list) {
+      // En parallèle (avant : un partenaire après l'autre, ~1 s chacun).
+      await Promise.all(list.map(async (p) => {
         try {
           const plRes = await fetch(`/api/youtube/channel-playlists?channelUrl=${encodeURIComponent(p.youtubeUrl)}`);
-          if (!plRes.ok) continue;
+          if (!plRes.ok) return;
           const playlists: YTPlaylist[] = await plRes.json();
-          if (!Array.isArray(playlists) || playlists.length === 0) continue;
+          if (!Array.isArray(playlists) || playlists.length === 0) return;
           const best = playlists.reduce((a, b) => (b.videoCount > a.videoCount ? b : a), playlists[0]);
           const viRes = await fetch(`/api/playlist-items?playlistId=${encodeURIComponent(best.id)}`);
-          if (!viRes.ok) continue;
+          if (!viRes.ok) return;
           const items: { videoId: string; title: string; thumbnail: string }[] = await viRes.json();
           const videos: VideoContent[] = items.slice(0, 12).map(v => ({
             id: `pv-${v.videoId}`,
@@ -341,7 +344,7 @@ export function Home() {
           }));
           setPartnerVideosMap(prev => ({ ...prev, [p.id]: videos }));
         } catch { /* ignore ce partenaire */ }
-      }
+      }));
     }).catch(() => {});
   }, []);
 

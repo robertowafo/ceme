@@ -1250,12 +1250,13 @@ app.get('/youtube/video-info', async (c) => {
     }
   }
   const id = (playlistId ?? videoId) as string
-  if (!(await canQueryVideoInfo(c, id))) return c.json({ error: 'Non autorisé' }, 403)
 
+  // Cache d'abord (entrée créée seulement après contrôle d'accès), puis contrôle.
   const cache = caches.default
   const cacheKey = new Request(`https://internal-cache.dev/yt-info-${id}`)
   const cached = await cache.match(cacheKey)
   if (cached) return cached
+  if (!(await canQueryVideoInfo(c, id))) return c.json({ error: 'Non autorisé' }, 403)
   const done = async (body: unknown) => {
     const res = new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'max-age=3600' } })
     await cache.put(cacheKey, res.clone())
@@ -1720,16 +1721,18 @@ app.get('/youtube/channel-playlists', async (c) => {
   const apiKey = c.env.YOUTUBE_API_KEY
   if (!channelUrl || !apiKey || channelUrl.length > 300) return c.json([])
 
-  // Uniquement les chaînes enregistrées comme partenaires : sans cette liste
-  // blanche, chaque URL arbitraire consommait du quota YouTube (jusqu'à 100
-  // unités par recherche) et permettait de le vider.
-  const knownPartner = await c.env.DB.prepare('SELECT 1 FROM partners WHERE youtube_url=?').bind(channelUrl).first()
-  if (!knownPartner) return c.json([])
-
+  // Le cache d'abord : une entrée n'existe que pour une chaîne déjà validée, et la
+  // réponse est immédiate (sans aller-retour vers la base D1).
   const cache = caches.default
   const cacheKey = new Request(`https://internal-cache.dev/yt-ch-pls-${encodeURIComponent(channelUrl)}`)
   const cached = await cache.match(cacheKey)
   if (cached) return cached
+
+  // Seulement les chaînes enregistrées comme partenaires : sans cette liste blanche,
+  // chaque URL arbitraire consommerait du quota YouTube (jusqu'à 100 unités par
+  // recherche) et permettrait de le vider.
+  const knownPartner = await c.env.DB.prepare('SELECT 1 FROM partners WHERE youtube_url=?').bind(channelUrl).first()
+  if (!knownPartner) return c.json([])
 
   try {
     let channelId = ''
